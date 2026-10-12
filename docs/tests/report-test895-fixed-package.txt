@@ -1,0 +1,80 @@
+#895 exact fixed Linux package review — TEST ONLY, INCOMPLETE
+Observed 2026-10-10 03:53 Asia/Shanghai. #895 remains doing 2/3.
+
+Package and source binding
+PR795 product head 3593d8a56e4c4d0f8ff62b8b1a3b31749d5a4d91
+Tested merge c6d1030dd5c035af3ba78f425ef5733692b48ae3
+Merge parents a48e697c92bf8a647a62f48890f2b59da7da9590 and product head above
+Linux run37979747081 / job113986923846: SUCCESS
+Product head checks: 26 SUCCESS / 1 SKIPPED
+Artifact11641541172 TEST-ONLY-linux-deb-c6d1030dd5c035af3ba78f425ef5733692b48ae3
+Artifact digest 32ef814744bbbf78cea4ddc8e1c27af6bc3ea43ca070f21fc9a0564d255e678d
+ANet_0.2.227_amd64.deb SHA256
+5c773ddc916b1676b13f9bdd4f221948c445bf4ebec153988b6fa12ac95383de
+Downloaded archive checksum matches SHA256SUMS; TEST-ONLY.txt source matches
+the exact tested merge, NOT the PR head. No branch artifact is a release.
+Embedded Hub manifest: preview.120, v3, x86_64-unknown-linux-gnu,
+sourceIntegrity sha512-lluvIp478F3UiFXC8v4Dy8x1uvb/UhgXPWvRi5R2ii3lB4nYEqFn4KUZBO6mH7WRoEQBaGnqKhNFWLekTxpsOw==
+preBundleSha256 8a4fd81ab61026802c2dc19a7ea2a66f201d30da2e870909b51732c850543f5e
+
+Native screenshot review from that CI artifact
+Stop, Start and Restart confirmation dialogs visually reviewed: confirmation
+text is now readable white on blue; correct action and v2-native target shown.
+SHA256 native-opencode-lifecycle/lifecycle-*-confirm.png:
+stop 0ed5e1111298c8dfcc692555e7dff124a58680ac9a84c972586b37d137f4e021
+start 3bbf7924de534c0c5fc8edcd5d2d97c326b67cf4091d63000e3507f93cf8c170
+restart 49986e44f8cb817897fc404be429e4d7a1f94f8be107c45c172644b1a3ac4d7d
+No native dark-theme or deletion claim; those remain separate component evidence.
+
+Local same-package cancellation replay (not a clean-install claim)
+Built tests/linux-native-opencode/overlay.Dockerfile with candidate archive,
+SOURCE_COMMIT=c6d1030dd5c035af3ba78f425ef5733692b48ae3,
+DEB_SHA256=5c773ddc916b1676b13f9bdd4f221948c445bf4ebec153988b6fa12ac95383de,
+DEB_FILE=ANet_0.2.227_amd64.deb, FIXTURE_IMAGE=anet-native-opencode:850-lifecycle.
+Image 8c5c94a3c869ba78f58bc520679a6c8e11a8d01181fae0d5188c7d603648b159.
+The exact new deb is installed with checksum/source checks and ldd validation.
+All fixture scripts from db806b4 copied at build time; no mutable bind mounts.
+Docker --network none, UID10001, cap-drop ALL, no-new-privileges, shm256m.
+Run sh /fixture/keyring.sh xvfb-run -a -s '-screen 0 1280x900x24 -nolisten tcp'
+    bash /fixture/opencode-lifecycle-ui.sh
+Only provider is a loopback fixture; actual runtime @opencode/cli 2.0.22,
+private agent-node preview.128. Proof task dispatch uses REST, not native task UI.
+
+Normal cancellation run: anet895-fixed-native-cancel, exit1, NOT ACCEPTED.
+Native auth, wrong-token401, scan-zero-mutation and daemon install passed.
+Failed during UI create prerequisite, BEFORE any cancellation:
+AssertionError: native create failed: OpenCode launcher exit=0 signal=none; TUI session mismatch
+Bridge log reported V2 preview ready. Retained non-secret records agree on
+generation ses_eddc7c94effe0qFVY28eDmUGls; attach PID804/ticks465387264,
+bridge PID729/ticks465386541, serve PID766/ticks465386902.
+No failing-time /proc argv snapshot was retained, so root cause is not proven.
+
+Independent wrong-button negative: anet895-fixed-native-cancel-negative, exit1.
+TEST_CANCEL_SUBMIT=1; exact new-package creation/model prerequisites PASSED:
+PASS: native UI created exact V2 config with daemon launch proof/live process identities
+PASS: native-created V2 node returned provider-only response via real runtime
+PASS: native model change applied new revision/generation and actual provider model
+Then deliberately clicked Confirm instead of Return and failed precisely:
+AssertionError: native cancellation mutated lifecycle state
+This is an accepted negative, NOT a passed normal cancellation sequence.
+
+Diagnosis direction (inference, not a fix)
+Backend source edc68a4: attach-tui.ts renderAttachRecordShell publishes record
+BEFORE exec. create-node-daemon.ts waits for launcher exit then calls
+inspectLaunchHealth once; launcher-health.ts requires matching --session argv.
+A pre-exec record/argv window could explain the observed intermittent failure.
+Generation records agree and a second independent run passed creation; neither
+fact proves the timing hypothesis. Need deterministic atomic reproduction and
+failing-time argv evidence; preserve identity/session guard, no blind retries
+or weakened assertion. No backend source or installed package changed here.
+
+Evidence retained at /tmp/anet895-fixed-cancel.varh4i/{failed-create,negative}
+plus failed-attach.json/failed-health.json (no profile, database or keyring copy).
+Failed attach SHA f23d2b642397a17d29a475186d6a807973661f79ae8ecf41ea4fb5291c8d1c0d
+Failed health SHA c69c43c05c4a010e10df58f63c71f2d9e16a6b74f8b6435d69a1e3f590694be5
+Repository scripts and exact artifact binding above, not temporary paths, are
+the rebuild authority. Both stopped replay containers removed after capture.
+
+Open: new-package normal cancellation; creation timing diagnosis; latest-head CI;
+#894 true V1 compatibility and final review. Old850 cancellation evidence does
+not substitute. No merge, production deployment or public release performed.

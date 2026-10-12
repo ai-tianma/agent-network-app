@@ -1,0 +1,130 @@
+#894 native V1 diagnostic — TEST ONLY, NOT full acceptance or release
+Observed: 2026-10-10 04:40–04:57 Asia/Shanghai.
+
+Outcome
+-------
+The real native wizard creates/registers a V1 node and displays "v1-native 已上线".
+Its confirmation page labels Runtime "OpenCode（TUI 共存）" and generation V1.
+The actual child config has runtime=opencode-cli, opencodeGeneration=v1,
+model=opencode/mimo-v2.6-flash-free, NO opencodeMode, NO unsafe-tools flags.
+The authoritative node_create_requests row is succeeded/error=NULL.
+The node directory has config.json and logs, but no opencode-attach record.
+
+This is legacy headless registration, NOT a live V1 copresence proof. Do NOT
+close #894/#829/#539, lower the TUI assertion, or silently grant unsafe tools.
+No claim that V2 introduced this existing V1 mode/label mismatch.
+
+Source corroboration
+--------------------
+App src/opencode-create-options.ts deliberately omits V1 flags for old-Hub
+compatibility. The wizard's shared runtime display still says TUI copresence.
+Backend agent-node/src/runtime/create-node-daemon.ts childConfigFieldsFromSpec
+sets opencodeMode=copresence only for V2. agent-node/src/cli.ts defaults a missing
+opencodeMode to headless. V1 does not produce the V2 launch-health record.
+Do not add a fabricated V2 ACK to the V1 test. A change to V1 launch semantics
+needs compatibility review; a label clarification can be evaluated separately.
+
+Exact inputs (reused accepted candidate, not a new release)
+---------------------------------------------------------
+App product head: 7625a6f658129a09dcabda9aa082fe662bcce0f6
+Tested merge: d736c033de7495e6c78a54e01589270a41d430f6
+Artifact: 11643238114, run37984339247/job114002431497 (TEST-ONLY)
+ANet_0.2.227_amd64.deb SHA256:
+a587a45f0f280f64f3f0a2825ed23aa05fb33f38c636740baf3cf0227a077740
+The overlay checked source label, SHA256, dpkg install and dynamic linkage.
+Existing native base: anet-native-opencode:359-confirm
+sha256:8c5c94a3c869ba78f58bc520679a6c8e11a8d01181fae0d5188c7d603648b159
+Candidate replay base: anet-native-opencode:762-replay
+sha256:e75defcf15c6f20fe26d5250c4cb9a022be4cf2187990b2f54af67683301217c
+V1 package stage: anet894-v1:portable-home
+sha256:1ac56124b582ee9d74a4760ec71f1819efe43b60436bd0bb6776a89901f33719
+Actual opencode-ai@1.18.34, entire package copied at its trusted package path.
+Rebuild stage instructions are in tests/linux-native-opencode-v1/README.md.
+No native package was rebuilt or relabeled as main/release by this experiment.
+
+Layered execution
+-----------------
+All dynamic execution was in Docker via sg docker; UID10001, --network none,
+--cap-drop ALL, no-new-privileges, no host credentials/source/runtime mounts.
+
+1. Initial image build failed before tests: package bin is opencode.exe, not
+   opencode. Corrected the fixture symlink, preserving the package tree.
+2. Initial atomic health request timed out (3s). Aligned fixture safe-discovery
+   env (including OPENCODE_PURE=1) with the product and kept a bounded 30s wait.
+   No UI test ran before the corrected atomic prerequisite passed.
+3. anet894-v1-native-atomic-safe exit0:
+   PASS actual pinned version 1.18.34; /global/health healthy/version;
+   unauthenticated401; authenticated /session create/readback.
+   Image sha256:5c6b73b788b875873754d59957e042f183a16aae6e620f02ee7170206530ac4e.
+   NO model prompt/reply and no native-created-session claim from this step.
+4. Initial native run correctly disabled V1 because opencode.ai is unreachable
+   in --network none. This was fixture availability, not runtime acceptance.
+5. Added a loopback CONNECT-status fixture via product-supported HTTPS_PROXY.
+   Only CONNECT opencode.ai:443 gets 200; other targets get502; no TLS tunnel,
+   vendor connection or model provider is implemented. Real Hub/native IPC,
+   Secret Service, private installer, daemon and executable are not mocked.
+6. Native model-step layout differs from V2: no custom text input. A diagnostic
+   run stayed at model selection; reviewed screenshots, then corrected mouse
+   coordinates to select the existing default and submit the actual V1 form.
+7. anet894-v1-native-startup-final exit1, image
+   sha256:d27d027deb3c0981bd5ab700cd26d869031241e7294be4ca930eb4b4122ebb16:
+   native Secret Service/auth passed; wrong token401 passed; scan did not write
+   credentials/register; real UI installed exact private daemon pair and the
+   authenticated online supervisor matched. Before create: no node/request.
+   UI created V1; actual DB row succeeded; observed config above and green
+   registration screen. The strict copresence wait then failed:
+   AssertionError: native V1 create did not produce verified live startup
+   This is NOT a passing positive or a passing missed-click negative.
+8. Updated observer to emit a redacted mode-mismatch record and fail immediately
+   on succeeded+headless, before waiting for attach. Docker syntax build passed;
+   exact early-failure replay anet894-v1-mode-repro exited1 at the intended
+   assertion, after all native auth/install/create prerequisites passed:
+   AssertionError: V1 UI labels copresence but created config defaults to headless
+   Image sha256:59b6af10b79aca039b932bbd6d5630333274d29d3594ee539f1249145ef954e3.
+   Redacted record: request cr_866753ca-4adb-4c9f-8828-b502e8e16b83,
+   status succeeded, generation v1, effective_mode headless, unsafe_tools false.
+   v1-mode-mismatch.json SHA256:
+   ff5aa12fb72f312e43494ad6af6ef2632670f87e016fc994e7ec17a83f388dcb
+   The post-mode live-process/session/policy checks have NOT yet passed.
+
+Screenshots personally reviewed (step7)
+--------------------------------------
+v1-generation.png: V1 selected; no unsafe-tools consent.
+SHA256 01c645a09c1666175a06ce0bc7a88351ad20dd0c41b77f1e87a3a0325dfd1c60
+v1-confirm.png: v1-native, V1, TUI label, default free model, isolated workdir.
+SHA256 a2f362dd3a42a274b8e9056a9c2dcc087a9177513258d6ce7df32895c813dfa4
+v1-final.png: green "v1-native 已上线", network2/2. Not a rendered TUI.
+SHA256 ff522411b44c154c11bec363875b459e3900dacc3f664fde56dc6ec960cbdbe5
+
+Evidence / limits
+-----------------
+Local evidence: /tmp/anet894-native-v1-evidence.edWogO/
+Subdirectories: atomic-first, atomic-safe, create-offline,
+create-layout-diagnostic, create-headless-diagnostic, mode-repro.
+All six named containers were verified exited and removed at04:57 after
+evidence copy. Unrelated containers were left untouched. No runtime remains
+from this suite; test images/evidence remain for inspection/rebuild.
+These are convenience copies, not sole rebuild inputs. Scripts, source/dep
+pins, package hashes and failure description are in Git. Prior artifact expires
+under GitHub retention; rebuilding its exact tested merge is the fallback.
+No model delivery, native V1 copresence, model switching, lifecycle, missed-click
+negative, multi-user or full safety claim. Stop at the failed prerequisite;
+do not run later lifecycle tests to accumulate green samples.
+
+Separate CI evidence (not caused by this unpushed diagnostic)
+-----------------------------------------------------------
+Backend PR2559 exact93202f7530471b89b4db977a4c562d869620a8d3:
+test812 job114014097342, test720 job114014097406 and test750 job114014097299
+all failed during Docker Hub metadata HEAD429; their tests did not start.
+L0+L1 report-only job114014088768 also reports numerous image-build429 failures.
+Run37987636445 still had test738 running at04:55. A single-job rerun attempt
+was rejected ("job ... cannot be rerun"); no retry is claimed as launched.
+Do not change product assertions/baselines to address registry throttling.
+App PR795 exacte579b5284dac353ceb08eb90dc2df4a222bde663 at04:52:
+27SUCCESS/1SKIPPED/1IN_PROGRESS. Old762 package acceptance/#895done stays
+separate; this report does not imply new-head allgreen, merge or release.
+Fresh correction at04:57: linux-deb job114013925199 completed SUCCESS at
+2026-10-09T20:57:04Z; exact e579 rollup now28SUCCESS/1SKIPPED. No new artifact
+download/hash/screenshots review was performed for e579; native diagnostic
+above still uses only the separately bound762 candidate bytes. This new
+test/report commit will have its own CI, not inherited e579 results.

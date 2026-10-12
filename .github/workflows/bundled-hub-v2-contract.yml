@@ -1,0 +1,79 @@
+name: Bundled Hub V2 contract (TEST ONLY)
+on:
+  pull_request:
+    paths:
+      - 'local-hub-sidecar/**'
+      - 'src-tauri/src/local_hub.rs'
+      - 'tests/bundled-hub-v2-contract/**'
+      - 'tests/bundled-hub-provenance/**'
+      - 'tests/opencode-launch-window/**'
+      - '.github/workflows/bundled-hub-v2-contract.yml'
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'Contract gates or the historical V1 source-candidate package bootstrap'
+        type: choice
+        options: [contract, v1-package-bootstrap]
+        default: contract
+permissions:
+  contents: read
+jobs:
+  contract:
+    if: github.event_name != 'workflow_dispatch' || inputs.focus != 'v1-package-bootstrap'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: docker build -t anet-bundled-hub-contract:test -f tests/bundled-hub-v2-contract/Dockerfile .
+      - run: docker run --rm --network none anet-bundled-hub-contract:test
+  shipped-source:
+    if: github.event_name != 'workflow_dispatch' || inputs.focus != 'v1-package-bootstrap'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: docker build -t anet-hub-provenance:test -f tests/bundled-hub-provenance/Dockerfile .
+      - run: docker run --rm --network none anet-hub-provenance:test
+  launch-window:
+    if: github.event_name != 'workflow_dispatch' || inputs.focus != 'v1-package-bootstrap'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: docker build -t anet-launch-window:test -f tests/opencode-launch-window/Dockerfile .
+      - run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-launch-window:test
+  v1-package-bootstrap:
+    if: github.event_name == 'workflow_dispatch' && inputs.focus == 'v1-package-bootstrap'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build only the exact historical candidate and installed-package boundary
+        run: docker build --build-arg APP_SOURCE_COMMIT="$(git rev-parse HEAD)" -t anet-v1-bootstrap:test -f tests/linux-v1-package-bootstrap/Dockerfile .
+      - name: Actual preparation and production package resolver (no desktop or model)
+        run: docker run --name v1-package-bootstrap --network none --cap-drop ALL --security-opt no-new-privileges anet-v1-bootstrap:test
+      - name: Preserve bounded evidence and remove only this container
+        if: always()
+        run: |
+          mkdir -p out/bootstrap
+          cleanup_failed=0
+          if docker container inspect v1-package-bootstrap >/dev/null 2>&1; then
+            docker inspect --format '{{.State.Status}} exit={{.State.ExitCode}} image={{.Image}}' v1-package-bootstrap >out/bootstrap/container-state.txt || cleanup_failed=1
+            docker cp v1-package-bootstrap:/evidence/. out/bootstrap/ || cleanup_failed=1
+            docker rm -f v1-package-bootstrap || cleanup_failed=1
+          fi
+          test "$cleanup_failed" -eq 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TEST-ONLY-v1-package-bootstrap-${{ github.sha }}
+          path: out/bootstrap/
+          if-no-files-found: error

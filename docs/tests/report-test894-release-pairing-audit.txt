@@ -1,0 +1,93 @@
+#894 / #829 — release-pairing handoff audit (NOT a test pass or release)
+Observed 2026-10-10 10:10–10:11 Asia/Shanghai.
+Read-only repository, GitHub API and npm registry inspection; new dynamic tests=0.
+
+Exact inputs
+Backend PR2559: ded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a, OPEN/Draft.
+Backend main: 80c6ab5b883a2056784326e73a6b6ec09ac0ce2c.
+GitHub compare ded59ce7...main: status behind, ahead_by=0, behind_by=7,
+merge_base=80c6ab5b883a2056784326e73a6b6ec09ac0ce2c.
+Thus the candidate is seven commits beyond observed main, NOT merged.
+App source inspected: 917d9d9bc304d81bf2fd1b8b99fccca5c7697fc7, PR795 OPEN/Draft.
+
+Existing immutable public pair (direct registry reads, not dist-tags)
+@sleep2agi/agent-network@2.3.0-preview.162:
+  dist.shasum=01c9732e27f9489a707e6dd809761ff187a1b50f
+  dist.integrity=sha512-29jkpw51STA6T+o1d8wXFbwyl5GUbuHT5DAhsU+wMRWPECj9Rzlzf6M6BbOF8y5lp6GoQPnaySpA4eghw51rJg==
+@sleep2agi/agent-node@2.5.0-preview.128:
+  dist.shasum=7cbe2ca414ce42f24e56f95da5a9f96af124804a
+  dist.integrity=sha512-5uFOeJvwQICs46UBVSmHH5WbDXiS3PE8iY8iCk5WFidMCybkEtKacRcHIf/rwbJ64H+VXzoRldJRY0EhEQfJlg==
+Both metadata responses omit gitHead. Metadata is not downloaded-tarball hash
+verification or proof of main provenance. Do not equate these artifacts with
+the source candidate that retained .128 in its TEST ONLY manifest.
+
+Dependency map / smallest remaining delivery sequence
+1. Finish exact-head review and CI of the runtime fix on original PR2559.
+   Backend pair authority: agent-network/src/opencode-agent-node-pair.ts.
+   Its unit test binds both package.json versions to the exact pair; changing
+   agent-node alone is intentionally rejected. Prepare reviewed NEW package
+   versions, synchronized pair constants/lockfiles and install/upgrade notes.
+   No new version number is allocated or public version overwritten here.
+2. Merge reviewed source/version inputs, then build both public packages only
+   from a full40SHA proven an ancestor of current main. Publish agent-node
+   before its consuming CLI, verify registry bytes/visibility and preserve
+   exact provenance. Do not republish branch candidate bytes as main output.
+   Backend .github/workflows/release.yml binds checkout/build to commit and
+   .github/scripts/verify-release-main.sh rechecks HEAD/fullSHA/main ancestry
+   both before build and before publication. publish requires all four gates;
+   the report-only verdict is not the publication condition. Gate2 checks
+   PINNED_* assignments, not the PAIRED_* module: it is NOT independent proof
+   that the exact runtime pair is published. Verify that pair explicitly.
+3. Only after the selected pair is available and verified, update together:
+   src-tauri/src/local_daemon_packages.rs,
+   src/local-daemon.test.ts, tests/local-daemon-packages/Dockerfile,
+   tests/local-daemon-packages/README.md and relevant acceptance inputs.
+   Re-run isolated policy, actual private-prefix installation, native empty-
+   prefix installation/authentication and V1/V2 model/lifecycle gates in order.
+   Record backend source/registry package hashes separately from app source,
+   tested merge, desktop deb SHA, screenshots and terminal job outcomes.
+4. Preserve old-prefix refusal until a reviewed explicit upgrade exists.
+   local_daemon.rs preflights BOTH existing components before installing
+   missing packages, writing Hub credentials or stopping/starting the daemon.
+   Old/broken/partial components are rejected, not upgraded. Merely changing
+   pins will therefore block existing .162/.128 prefixes; it does not migrate
+   them. Staging, backup, explicit confirmation, process replacement, failure
+   restoration and preservation of user config/token/model/DB require their
+   own native acceptance within the original workstream. Do not delete user
+   directories, accept arbitrary versions, or replace guard failures with a
+   floating install. Local-Hub DB rollback evidence does NOT establish daemon
+   npm-prefix upgrade rollback.
+5. Public desktop delivery follows main-only rebuild and review, not PR CI
+   artifact promotion. release-desktop-auto-update.yml checks fullSHA/main
+   but its current matrix is macOS/Windows. linux-deb-package.yml is explicitly
+   TEST ONLY. Linux public distribution/anet.sh remains #843/#809 work, not a
+   release already provided by the green Linux test job.
+
+Evidence boundaries / remaining CI at observation
+Backend exact ded59ce7: 167 SUCCESS / 1 IN_PROGRESS (168 total).
+Remaining test738-codex-fork-on-resume-failure:
+run38014106333/job114100905516, started01:57:22Z; build/run step in progress.
+No failure conclusion and no reliable completion ETA at this observation.
+App exact917d9d9: 19 SUCCESS / 1 SKIPPED / 9 IN_PROGRESS (29 total):
+linux-deb run38015692204/job114105313917 and eight stub drives on run38015692126.
+Do not inherit old7ec7, candidate0acf or prior model/lifecycle results as this
+head's new CI success. Existing source-candidate native proofs remain exactly
+scoped in report-test894-v1-source-candidate.txt and
+report-test894-v1-native-lifecycle.txt; neither is clean registry installation.
+The new V1 lifecycle fixture is not yet a required CI job.
+
+Recovery / cleanup
+Authoritative installer/start remains src-tauri/src/local_daemon.rs; exact
+pair policy remains local_daemon_packages.rs. Private prefix is under
+~/.anet/app/local-daemon/anet; configuration remains in its isolated HOME.
+This audit changes no service launcher, port, proxy/tunnel or environment.
+Credentials continue through the local Hub native session; no secrets copied.
+No automated daemon-prefix upgrade/rollback is asserted. Preserve current
+prefix/config when validation refuses installation. Software rebuild does not
+restore user Hub database, OS keyring, runtime sessions or backup contents.
+No containers/processes created, no production/global npm changes, no tests
+rerun, no merge, publish, tag or updater modification. Static diff review only.
+
+Next checkpoint: 2026-10-10 10:30 Asia/Shanghai, exact CI and review handoff.
+This audit list is complete; package/release ETA remains contingent on review,
+new immutable versions and native install/upgrade/rollback acceptance.

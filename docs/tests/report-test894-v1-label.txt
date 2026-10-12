@@ -1,0 +1,87 @@
+#894 — V1 creation-mode label correction, TEST ONLY
+Observed: 2026-10-10 05:07 Asia/Shanghai.
+Product/test commit: 21ffed101548a2a0642ae3c220b34bbb6037ebc4.
+Original PR795, no new implementation ticket, no merge or publication.
+
+Decision and scope
+The native diagnostic in report-test894-native-v1.txt reproduced a real
+label/behavior mismatch in its exact old package. The current creation API
+intentionally preserves V1's legacy payload; daemon childConfigFieldsFromSpec
+selects copresence only for explicit V2, and the CLI defaults missing mode to
+headless. This patch corrects the wizard, NOT the runtime mode:
+- Shared runtime row says OpenCode, without an unconditional TUI promise.
+- V1 selector and confirmation say V1 (compatible default, headless).
+- V1 note explicitly says this entry does not request TUI copresence or prove
+  that a TUI started. V2 retains its experimental copresence label and consent.
+- No creation flags, permissions, tokens, launch proof or runtime code changed.
+The old native diagnostic's strict failure remains intact. No full native V1
+compatibility or safe-default model-delivery acceptance is claimed here.
+
+New layered Docker evidence (no host tests)
+Input cached dependency image manifest-list:
+8abf6f80a683abe1cd52c9819c7617efb0d4f703818c1c30e766334e0a850462
+Canonical dependency rebuild: tests/node-confirm-contrast/Dockerfile and
+README.md; its previous image evidence is report-test895.txt. Current source
+replaces that image's app source; package-lock.json is compared byte-for-byte.
+Current test image manifest-list:
+483c24fdf2b3c5791f5571e088a0cf9fb5eac93f3c45779d0132721e78ff02f6
+All Docker commands used sg docker. Build and both runs used network none.
+1. Locked dependency comparison, focused opencode-create-options assertions,
+   TypeScript build typecheck, production Expo web export: PASS.
+2. New driver against inherited OLD /web-confirm export: exit 1, exact
+   AssertionError: shared OpenCode runtime label must not promise TUI copresence for V1
+   Navigation succeeded first. This is the targeted negative, not a timeout.
+   Printed SOURCE_COMMIT binds the new driver; the OLD bundle is bound by
+   the input image above, not misrepresented as a 21ffed1 product bundle.
+3. SAME driver against new /web-v2 export: exit 0, completed 21:06:56Z.
+   Desktop/phone x light/dark all pass V1 labels on selection/confirmation,
+   default generation, consent reset, V1 legacy flag omission and completion,
+   exact V2 flags, model validation, launch proof gating, late failure,
+   old-Hub rejection without downgrade, and unchanged Codex copresence flags.
+   Desktop-light also retains the 45-second slow-poll deadline/late-proof gate.
+   No page errors. Hub/IPC are page-local fixtures, NOT native or live Hub E2E.
+4. Personally reviewed desktop-dark and phone-light confirmation screenshots:
+   actual dark/light appearance, visible OpenCode runtime, explicit headless
+   generation/mode and readable create button. No clipping observed there.
+
+Reproduction (after rebuilding the locked dependency fixture)
+sg docker -c 'docker build --network none --build-arg DEPENDENCY_IMAGE=anet-confirm:895-fixed --build-arg SOURCE_COMMIT=21ffed101548a2a0642ae3c220b34bbb6037ebc4 -t anet-v1-label:21ffed1 -f tests/opencode-v2-create/Dockerfile .'
+sg docker -c 'docker run --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e EXPECTED_SOURCE_COMMIT=21ffed101548a2a0642ae3c220b34bbb6037ebc4 anet-v1-label:21ffed1'
+For the exact old-product negative, the same image/driver uses
+-e WEB_DIR=/web-confirm; rebuilding the negative requires the OLD dependency
+fixture recorded above, not an arbitrarily newer web export.
+The changed drive is already registered as a stub in tests/drives.json and
+runs in PR shards. The report follow-up also adds wizard/options/suite paths
+to linux-deb-package.yml so future isolated label changes trigger native builds.
+That workflow routing addition is not itself a completed native package gate.
+
+Evidence retained (temporary convenience, not rebuild authority)
+/tmp/anet894-v1-label.kf4ZdO
+positive.log sha256 f186ddee7fc33b03db779a0e30b0f665c7cee4d6f8b19a8566caa914b9be5511
+negative.log sha256 1b8399f2b28135312e0a12e9daf1197769c3765e457b7d7958b62fdc19c9ed8b
+desktop-dark-v1-mode-confirm.png sha256 552c6d68a5aac5621bd10d21137ec27b266615ac67708cf1b77664da9748c650
+phone-light-v1-mode-confirm.png sha256 6e88bb76029d5b4311f9d421292e4541fdca32e5c9b2bca1ee98a1d38ea7b6ea
+Other matrix screenshots saved but not individually visually reviewed here.
+Both exact named containers verified exited (positive 0, negative 1), evidence
+copied, then removed. Images retained; no unrelated containers touched.
+
+CI and recovery boundaries
+Backend PR2559@93202f75 last original run completed: test738 SUCCESS at
+20:59:33Z; four failures remain. test720/test750/test812 individually diagnosed
+manifest 429; report-only has multiple build429, not every subtest classified.
+App a0075ca is an OLD test-only head: 13 individually diagnosed Docker Hub
+unauthenticated-pull failures, four platform unit jobs and web export succeed;
+8 stub jobs still running at this iteration's first check. Not new-head proof.
+Repository-secret name checks found no DOCKER/REGISTRY-named secrets; this
+does not prove absent organization/environment credentials. Workflows inspected
+did not use registry login. No secrets read/changed and no mirror substituted.
+Use cached, lock-checked inputs locally; retry only an applicable failed job
+after the source run completes, not all passed tests or a hot retry loop.
+
+No service, launcher, proxy/port, secret source, schema or data change. Existing
+repository startup/recovery docs remain authoritative. Source revert/rebuild
+rolls back these labels; no running installation was upgraded. No persistent
+state or backup required by this change, no new recovery rehearsal claim.
+#894 remains doing 1/3: native V1, main exact inputs and final review open.
+New native package, exact deb/source binding and screenshots still required;
+do not reuse the old package's acceptance as this product patch's evidence.

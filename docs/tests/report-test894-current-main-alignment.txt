@@ -1,0 +1,279 @@
+#894 / original PR795: current-main alignment and one real registration gate
+OBSERVED_AT=2026-10-12 13:14+08
+SOURCE PREPARATION ONLY; no new native acceptance or public release.
+
+Normal merge, no rewritten history:
+- Original branch86acbd183fbadd94189049310fec756b8402e4a2 plus exact current
+  main56a8f5f541510a1013135dd1a6947dc3f2f9500a. Ten conflicts reconciled.
+- Keep current-main installer170/136, hash-pinned GitHub download fallback,
+  stop-before-upgrade order, configured child PATH, Hub127 lock/integrity, current
+  Provider creation/control UI and all newer version/release files unchanged.
+- Reapply only the V1 headless labels/note and retain the Node confirmation
+  contrast difference. No lost Provider/secret/clone/relogin feature.
+- Old162/128 policy module retained for historical test-only compilation, not
+  consumed by the current production installer or represented as current policy.
+
+Current inputs:
+- Formal public CLI170/runtime136: source main
+ f86012a30c75f59abeeed3221647f5d2847bd969, archive SHA256 pins in manifest/Dockerfile.
+- Formal Hub127: source main31b0dbdae3192f471c8812574c118795658120f0.
+  Full anonymous archive ef9ed47cff0a1d6b65ef100dbf684f4e2c430e802ee75809bdb4db3c62fc6e54;
+  full frozen source archive dc84654c67487474f630dbb867cfee46f1d35ddb350a7fa6a3dd82394afd71cd.
+  Updated contract/source comparison pins to342 regular package files, not320.
+  Existing precise corruption/substitution/symlink controls preserved.
+  Downloads/hash reads are diagnostics; no local package execution/testing.
+
+Only manual current-v1-registration Actions slice:
+- Source-bound TEST-ONLY desktop build/package inspect -> native startup/auth
+  -> hash-verified public pair/version/help -> real native Daemon install/create
+  -> actual Hub request/profile/token/roster and live headless worker checks.
+- The public pair is reused unchanged in a disposable private prefix. No source
+  candidate overlay, no false npm170 registry-readability or fresh-install claim.
+- Existing V1 TLS/auth/session prerequisite runs; model requests, V2 lifecycle,
+  historical migrations/faults and full model/cancellation matrix are not run.
+- Full historical assertions remain available for explicit full/ready PRs. Large
+  automatic native matrix is skipped on Draft integration, NOT counted as PASS.
+  Wiring contract retains its8 precise negative controls and checks new manual
+  source separation/sandbox/cleanup. No branch protection/release guard changed.
+- All execution in Actions Docker. Always preserve redacted evidence and remove
+  only owned containers; artifacts TEST-ONLY. No local Docker/tests/global npm or
+  production accounts/config/identity/process/DB changes.
+
+Remaining: actual current-pair native result, screenshot review, original broad
+full-suite reconciliation and review. Draft cannot be claimed ready to merge or
+published merely because these inputs are aligned. Old native/diagnostic failures
+remain historical exact-source results, not reclassified or inherited.
+13:15 is source/CI-start checkpoint. Earliest native result13:35–14:00 if runner,
+source build and prerequisites work; final publication has no reliable ETA yet.
+
+Incremental CI receipt, OBSERVED_AT=2026-10-12T05:28:28Z (13:28+08):
+- Exact tested head903cd6431ba9544a6823d95461314679272a579f;
+  manual run38207129801/job114673078863 completed FAILURE13:25:26.
+- Bound desktop build/package validation SUCCESS13:24:15; native startup and
+  credential authentication prerequisite SUCCESS13:25:09. Contract prerequisite
+  SUCCESS independently. These results are not native registration acceptance.
+- Public CLI170/runtime136 archive checksum downloads both succeeded. The
+  current-prefix fixture then failed before executing either package: USER node
+  could not read root-owned Docker ADD /tmp/cli.tgz (npm EACCES, exit243).
+  Not an npm visibility error or a demonstrated product/Hub registration error.
+- Correct only the readability of the two public, hash-verified archives to0644
+  while still root, before the existing unprivileged install. Credentials,
+  package bytes/hash/version pins, product source and all downstream assertions
+  unchanged. No local tests; correction still requires its own Actions result.
+- Native fixture build, V1 atomic prerequisite and real UI registration were
+  SKIPPED after this failure, not PASS. Owned-container cleanup and artifact
+  upload SUCCESS; artifact11727639157 TEST-ONLY-current-v1-registration-903...
+  archive digest49d446bd3c5ff05575843772a74f45a9c126f6af998451ffde14e544522a29d5
+  is NOT the deb SHA. This node has not downloaded or reviewed its screenshots.
+- Previous13:35–14:00 result window is conditional and now depends on this
+  fixture correction and a new bound run; no merge/publication claim.
+
+Incremental native UI receipt, OBSERVED_AT=2026-10-12T05:44:53Z (13:44+08):
+- Exact app/fixture source945cecf3722b9daadeb8e32bd7a0bd7b9f1e7aae;
+  run38208152886/job114676278739 reached native UI and ended FAILURE.
+- Desktop build SUCCESS13:39:58; native startup/auth SUCCESS13:41:03;
+  public CLI170/runtime136 SUCCESS13:41:38; registration fixture and V1 atomic
+  auth/session prerequisite also succeeded. Archive EACCES correction verified.
+- Native UI failed at verify-session.py: profiles/index.json absent. No node
+  submit, create request/worker or model/lifecycle acceptance was reached.
+- Downloaded exact artifact11728676878, inspected welcome.png and final.png:
+  1200x800 local-workspace button covers404–440; old600,470 click opened the
+  remote-Hub username/password page. Fix only the fixture target to600,422,
+  matching the existing native workspace driver. No API/profile seeding, no
+  product login mutation or assertion relaxation. Updater's TEST-ONLY endpoint
+  warning in the screenshot is not this registration failure.
+- Full downloaded deb50,367,088B has SHA256
+  5e4e15b31aac772cc295132da4c5384982fe815e0a0532e02862a9c1c57f8256.
+  SHA is from actual deb bytes, not artifact ZIP digest1283da6c2ee2161a...
+  Cleanup and TEST-ONLY evidence upload succeeded. No local installation/tests.
+- Add explicit opt-in fixture-only replay of those exact existing bytes. Actions
+  binds app source945 separately from the new driver/workflow source, rejects
+  product/build-input changes, verifies inner deb hash and TEST-ONLY marker.
+  Fresh native environment/auth/UI still execute; full desktop compile is
+  SKIPPED on replay, not counted as a new compile PASS. Default rebuild remains.
+  Nothing may publish this branch artifact or use it in an updater/release.
+- Next result requires the corrected driver's own Actions execution. Original
+  full-suite reconciliation, screenshot review of created node, review/main and
+  formal release are not completed by automatic34SUCCESS/4SKIPPED PR checks.
+
+Current-public-pair UI receipt, OBSERVED_AT=2026-10-12T05:52:23Z (13:52+08):
+- Fixture84e5bf2b4f3a8a88c96e7bba43e02cb3a9eb51af, actual app945 and exact
+  deb5e4e15b3... retained. run38209503570 used opt-in artifact replay:
+  binding/native auth/public pair/fixture/atomic prerequisites succeeded;
+  full compile SKIPPED, not PASS. Actual local-workspace click now succeeded.
+- Actual native scan/install registered the private public170/136 daemon and
+  confirmed child PATH/readiness. Native submit then reached the real Hub but
+  failed runtime_capability_check_failed/unclassified13:51:51. This is no
+  longer the welcome-click/setup failure, and remains NOT accepted.
+- Artifact11728821551 downloaded and v1-final.png reviewed: actual UI shows
+  pending create; preserved refusal JSON has one original request and null
+  child_node_id. Model/lifecycle/TUI not tested. Owned containers exited and
+  cleanup/upload succeeded. No local execution or production modification.
+- Published f860 create-node-daemon source attributes the V1 capability refusal
+  to a child dying within5000ms after spawn; its stderr is intentionally ignored
+  there. Existing evidence therefore does not establish the early-exit cause.
+- Add one bounded failure-only diagnostic in the original Actions fixture: only
+  after the original rejected child's token is confirmed revoked, invoke the
+  same public CLI against that same V1 private profile with the daemon's POSIX
+  minimal environment, capture redacted startup output, and reap only its owned
+  process group after12s. No new identity/task/profile or package/source overlay.
+  This diagnostic is a replay with a revoked token, NOT the original startup,
+  registration acceptance or a fix; original rejection still fails the suite.
+
+Failure-only diagnostic receipt, OBSERVED_AT=2026-10-12T06:06:00Z (14:06+08):
+- Fixture850906b905c6ecb706d4f3c77a3b5a029e181016/run38210469208 remained
+  FAILURE after the real native refusal. Cleanup/upload SUCCESS14:04:31.
+  Artifact11728598213 downloaded; v1-startup-diagnostic.json confirms revoked
+  token, original request still failed, diagnostic exit1 without timeout.
+- Same-public-CLI replay refused BEFORE registration with the concrete reason:
+  OpenCode safe runtime base /run/user/10001 missing; expected0700 or trusted
+  host-level ANET_OPENCODE_SAFE_BASE. The test image only useradd'ed smoke and
+  did not supply a login-manager runtime directory. Published f860 minimalEnv
+  does not forward an ambient safe-base override into daemon children.
+- Supply only that ordinary private OS directory in the current Docker fixture,
+  owned by smoke/mode0700. No env override, no product/package mutation, no
+  reduced private-root or registration assertion, no new identity/model task.
+  Diagnostic explains a reproducible pre-Hub refusal; it is not the original
+  successful creation. Corrected real UI registration still must run in Actions.
+
+Accepted CURRENT public-pair core, OBSERVED_AT=2026-10-12T06:13:24Z (14:13+08):
+- Fixture dad7c42531586d65a766cf741d2c1be8edc6ff0b;
+  run38211007236/job114685042005 completed SUCCESS14:11:16.
+  Real native registration step SUCCESS14:11:11; cleanup SUCCESS14:11:12.
+  Contract prerequisite SUCCESS independently; historical linux-deb SKIPPED.
+- Actual app source945cecf3722b9daadeb8e32bd7a0bd7b9f1e7aae and reused deb
+  5e4e15b31aac772cc295132da4c5384982fe815e0a0532e02862a9c1c57f8256 remain
+  separate from fixture source. Full desktop compiler SKIPPED, not a new build
+  or release. Public CLI170/runtime136 from exact mainf860 unchanged; Hub127
+  from31b0 unchanged. No source-candidate overlay or npm visibility claim.
+- Native local profile/Secret Service/401 refusal, scan's zero registration,
+  native install/online daemon/actual readiness and actual UI create succeeded.
+  One request cr_8fdc1ea4-fb1b-4397-a183-10d7442d67c9 binds node
+  node_8fdc1ea4-fb1b-4397-a183-10d7442d67c9/network net_bbce2501859b,
+  private0600 V1 headless safe config, active token, matched API roster and
+  live worker PID546/start_ticks23405. Identity remained stable during observer.
+  Model selection opencode/mimo-v2.6-flash-free persisted; no model dispatch.
+- Downloaded artifact11728543877 (51,133,216B; ZIP digest
+  2d8cdaf078aa75bd5199f9cf0040c858b3972802e0deda0f29d4368eb6053972).
+  Recalculated actual deb hash matches above. Reviewed v1-complete.png: node
+  online2/2 and completion button, no loading state. Proof JSON source/hash match.
+  Both owned container snapshots exited0/image
+  sha256:ef492d47e4270de509343a4a768145940001a5d51acd8853d93773d05a530910,
+  then removed by successful cleanup. Failure-only replay was NOT executed.
+- This closes only current-pair native V1 registration core. Missing private
+  OS runtime directory was an actual fixture prerequisite: supplying0700 under
+  the same published gates now passes the original registration assertion.
+  Keep previous failing runs as separate history, not retrospective PASS.
+- NOT proved: external model/OAuth entitlements, ACP model reply, lifecycle,
+  V2 TUI/current native launch, fresh npm install, Windows/macOS native operation,
+  formal main merge/rebuilt publication or production activation. Original broad
+  checklist remains1/3 until those actual requested gates/review are reconciled.
+  Do not repeat this passing core merely to fill the next inspection window.
+2026-10-12 14:27+08 bounded current V2 follow-up (not execution acceptance)
+-----------------------------------------------------------------------
+Original PR795 only: add manual current-v2-create focus to the current public
+pair job, excluding the historical matrix and all V1 execution steps. Reuse
+the exact945 app/deb is opt-in and guarded by unchanged product/build inputs.
+V2 fixture uses real integrity-locked OpenCode2.0.22 with unchanged public
+CLI170/runtime136 and bundled Hub127. The native authentication/private pair
+prerequisites remain; then only real V2 auth/model transport and native UI
+explicit-consent creation plus one REST-observed model reply are run.
+The existing creation observer/assertions are unchanged. No lifecycle or new
+negative matrix is added. A Docker-only symlink selects the locked V2 binary
+instead of the inherited V1 executable. No public package/product changes.
+Source/fixture/deb identities stay separate, evidence/owned cleanup always run.
+At authoring: execution NOT STARTED, no new PASS or publication claim. Tests
+will run in Actions Docker only, not on the local machine or production.
+
+2026-10-12 14:36+08 current V2 first result and narrow fixture correction
+--------------------------------------------------------------------
+Run38212653443/current job114690270106 failed native creation at14:33:51;
+contract, package reuse/auth, public170/136 and real V2 auth/exact-model atomic
+steps SUCCESS. Historical matrix/V1/desktop compilation SKIPPED, not new PASS.
+Cleanup and artifact upload SUCCESS. Artifact11729772151 archive51,284,744B /
+digest24b0339f4c174b272025886386339ca4d7e2205e2e647f46299c351c480d2a9e.
+Downloaded exact inner deb50,367,088B/hash5e4e15b31aac772cc295132da4c5384982fe815e0a0532e02862a9c1c57f8256
+matches reused945 app; native container exited1/image5c4521919df2a262e78bc0604159a126922427a3de30117c997bfd8a5215c9e0 then removed.
+Personally reviewed runtime/consent/confirm/final screenshots: V2 selected at
+consent stage but unchecked checkbox now at594, not historical668. Next remains
+disabled; subsequent legacy clicks switched back toV1. Thus this run did not
+establish a V2 launch refusal or model reply after creation. Final screenshot
+remains runtime selection, not a spinning launch. No create-proof/bridge file.
+Fix only current-V2 fixture consent coordinate; keep historical default and
+original acceptance assertions. Capture accepted-consent/model screens before
+later input for exact current layout evidence. New run pending; not accepted.
+
+2026-10-12 14:43+08 current V2 second result
+-----------------------------------------
+Run38213305715@a4f67fa347d243cf501ed29f32616a0cffbaed49 failed native creation
+at14:41:09; prerequisites including real V2 exact model remain SUCCESS,
+cleanup/upload SUCCESS. Artifact11730567408 archive51,367,157B/digest
+6f449599aff08e7fa767753af50cb19556b2711a9e5727e2e36afa591feb1854.
+Personally reviewed accepted-consent/model/confirm/final screenshots: consent
+now checked and next opens the model page. Current input is497 and next590;
+old416/510 clicks did not enter the fixture model or advance. Final screenshot
+remains model selection, not submitted creation. No create-proof/bridge file.
+Keep this FAIL separate from the earlier checkbox failure and product launch.
+Fix these two positions only in explicit current-V2 mode; historical coordinates
+and exact creation/model/config/process assertions remain unchanged. Next run
+will reuse the same tested app/deb/public pair; no extra suite or local tests.
+
+2026-10-12 14:50+08 actual V2 admission refusal, not UI coordinate failure
+-----------------------------------------------------------------------
+Run38213926492@f8fdb07ea029c639b3ac3e0cf3c56c3a6870b2d5 failed14:46:58.
+Reviewed confirmation screenshot: exactV2/consent/stub-model/workdir submitted;
+actual daemon rejection opencode_v2_configured_model_missing. Native auth,
+public pair, real V2 atomic model transport remain SUCCESS; cleanup/upload
+SUCCESS. Artifact11730682423 archive51,329,867B/digest
+5587af1d5259a256ccaa0f34064de3dcb4671bac344175a4768d9638f6cd5783.
+The frozen public sourcef860 create-node-daemon.ts1183 reads existing project's
+OpenCode config; opencode-v2-configured-model.ts global/direct/.opencode order
+does not discover the old fixture's child-private .config seed. This is missing
+test machine configuration, not authority to remove alignment/no-fallback.
+Current-only fixture now writes a synthetic0600 target-project opencode.json
+before UI creation; public software will align the private child itself.
+Historical child-only preparation stays unchanged. No identity/token/profile
+is seeded. Original exact config/model/process/task assertions unchanged.
+Next Actions pending; no currentV2 creation/model response acceptance yet.
+
+2026-10-12 14:55+08 CURRENT V2 CORE ACCEPTED (TEST ONLY)
+----------------------------------------------------
+Run38214420529 / job114695803231 exact fixture089a425f6d040119a2b6131b609b2c9943915f30
+is SUCCESS: native V2 create/model step14:53:46, cleanup14:53:48, job14:53:53.
+Contract/native authentication/public170136/real V2 exact-model atomic gates
+SUCCESS; compilation/V1/historical matrix SKIPPED (no new build/V1 claim).
+Actual app945cecf3722b9daadeb8e32bd7a0bd7b9f1e7aae, inner deb50,367,088B /
+SHA2565e4e15b31aac772cc295132da4c5384982fe815e0a0532e02862a9c1c57f8256
+fully downloaded/rehashed. Same public backendmainf860 and Hub127/main31b0.
+Artifact11731261347 archive51,370,172B/digest
+25fbc359a04f18f4107bdc16b035bbabb617f0cb311ab37306b86d1f56840e9b
+is a ZIP digest, not the inner deb hash. App and fixture marker checked separately.
+Proof requestcr_b679e411-6fd7-4d08-953c-344d9e831d50 /
+node_b679e411-6fd7-4d08-953c-344d9e831d50/networknet_5ec05ea543c0:
+real native UI consent/create -> exact persistedV2/copresence/unsafe-tools,
+active child credential, daemon launch verdict/live bridge+serve+attach identities.
+One REST task returned [v2-native] ANSWER_NATIVE_CREATED894; provider journal
+has one matching chat/completions request, exact stub-model. No tool execution.
+Personally reviewed create-complete.png: v2-native green online and Done button,
+2/2 online, no spinner. Both containers exit0/image
+b4ab1abb06e8c5c4414d27dcf4fedeb1c95e951ca6ea15c3fc9331da14df685b then removed.
+No local tests/installation/production actions. Synthetic project provider and
+loopback service only; not vendor OAuth/entitlements or native UI task dispatch.
+Not clean package installation, model-switch/stop/restart, all-platform acceptance
+or public release. Earlier failures retain their exact outcomes. Successful V1
+run38211007236 remains separate. Report-only follow-up need not repeat this core.
+
+2026-10-12 15:08+08 review: preserve baseline, opt-in historical extension
+----------------------------------------------------------------------
+Current main already has the Linux package/native-auth workflow. Keep that
+baseline, source/hash/package checks, UI auth and publication rules unchanged.
+Only this PR's added migration/private162128/candidate/lifecycle extension is
+now explicitly manual full/v1-registration replay; its old120/162128/ded source
+inputs are not current acceptance. Assertions and cleanup-after-failure remain.
+The wiring contract checks the explicit selector and retained main baseline;
+all original eight mutations stay. Changed workflow selection needs its narrow
+Actions contract check, NOT a rerun of the already accepted native V1/V2 cores.
+Correct bundled contract README to actual127/main31b0/SHA256+lockSRI inputs.
+Read-only GitHub branch protection reports404 unprotected; rulesets list empty;
+required-check query reports none. No remote policy, bypass/admin or billing
+change. PR still Draft, current-head CI not yet terminal; no merge/publication.

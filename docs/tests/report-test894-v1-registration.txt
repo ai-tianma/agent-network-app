@@ -1,0 +1,84 @@
+#894 — Native V1 legacy registration slice (TEST ONLY)
+Observed: 2026-10-10 05:20 Asia/Shanghai. Original app PR795.
+This is new, narrow registration evidence, NOT a passing replacement for the
+strict copresence diagnostic, model delivery or complete V1 acceptance.
+
+Exact historical product inputs (not e31f2eb / 21ffed1 label-patch evidence)
+Product head: 7625a6f658129a09dcabda9aa082fe662bcce0f6
+Tested merge: d736c033de7495e6c78a54e01589270a41d430f6
+ANet_0.2.227_amd64.deb SHA256:
+a587a45f0f280f64f3f0a2825ed23aa05fb33f38c636740baf3cf0227a077740
+Native V1 input image:
+59b6af10b79aca039b932bbd6d5630333274d29d3594ee539f1249145ef954e3
+Its real OpenCode 1.18.34 version/health/401/session atomic evidence from
+report-test894-native-v1.txt is reused for the SAME image, not counted anew.
+New registration image manifest-list:
+5b833c3518db83f502a8b2899d081d1d03151abaa579cd35d5a9830e24983d68
+Test source base: e31f2eb45e4131baba22a91f9d90f4a4cee0b92e + this test delta.
+Observer SHA256:
+693376130f62f5e1b808cbea5428d75e9826724bb3fcb83a582bd6ffea4109b4
+Shared native UI driver SHA256:
+6b0abdebbb895aa976a682fca7c04b1cd2c365e277a1a8b7ab0cfe0e0c4e1396
+Original strict copresence observer remains UNCHANGED, SHA256:
+c8634865ae88850ef5f5aa4d94dae40dec717409e2ce6f67b9d3be49cae7cca2
+The new image explicitly selects a separate observer with TEST_V1_OBSERVER;
+the original suite's default is still /fixture/v1-verify.py. No assertion in
+that observer was removed, no old failing test relabeled as successful.
+
+Why this separate gate
+The current compatibility payload creates legacy headless V1. Source inspection
+of agent-node processWithOpencode shows the headless ACP runtime opens on task
+dispatch. A TUI attach record or V2 launch_verified_at is not its registration
+contract. The previous false copresence UI label was fixed separately in
+21ffed1, but that NEW product still lacks its own native package acceptance.
+
+Actual layered results, all Docker via sg docker
+1. Build verifies inherited exact source/deb hash, shell/Python syntax. PASS.
+2. Each fresh container runs real native Secret Service write/read/delete,
+   local profile/API auth and wrong-token401. UI scan must leave daemon
+   config/credentials/roster absent; actual native install then binds its
+   private daemon config to an authenticated online create-capable supervisor.
+3. Positive native X11 create: exit0 at 2026-10-09T21:17:40Z.
+   Before-submit: no request, child config or matching worker.
+   After-submit: exactly one succeeded request; REST/SQLite/profile/roster
+   network and child identity agree; child token exists and is not revoked;
+   owner-only profile, opencode-cli/V1/default headless/model exact;
+   unsafe-tools false, no attach file or invented V2 launch proof.
+   Exactly one live process uses this config; PID713/startTicks465905839 stay
+   unchanged over the two-second observation and matching roster remains idle.
+   IDs are disposable fixture identities, not production nodes.
+4. Independent missed-submit negative starts ONLY after positive passes.
+   All preceding native authentication/install/before-submit gates pass.
+   No request/config/worker/roster identity appears during 15-second wait.
+   Exit1 at 21:19:14Z with the exact terminal assertion:
+   native V1 registration did not bind a live headless worker
+   This is not a timeout in authentication/install or any-error-is-pass result.
+5. Personally viewed positive completion and negative final screenshots:
+   positive shows v1-native online; negative remains on confirmation, with
+   create button untouched. The OLD package still visibly has the misleading
+   copresence label. This is not evidence that the label patch shipped.
+
+Native desktop/IPC/Hub/private daemon/registration are real. Only vendor
+availability is the prior loopback CONNECT-status fixture; it provides no TLS
+or model transport. Observer uses GET/read-only SQLite/proc, no API mutation.
+No task was dispatched: no ACP handshake, model reply, full tool isolation,
+TUI, lifecycle, multi-user or formal-release claim. Config's safe-default flag
+does not independently prove tool-denial behavior during a model turn.
+
+Rebuild authority and cleanup
+tests/linux-native-v1-registration/{Dockerfile,README.md,verify.py}, shared
+tests/linux-native-opencode-v1/create-ui.sh and that suite's pinned fixture
+build instructions. Historical package can be rebuilt from the recorded Git
+commit and repository Dockerfiles; a temporary artifact/cache is not authority.
+Evidence convenience: /tmp/anet894-v1-registration.IZMtpa
+positive.log sha256 7809f5b2294ef23446ccdf6a5ce9d40f85ecd82392c83b6492926ee0959d42f9
+negative.log sha256 d1a04c79cb78f62f862c4853d142c12962115162c24a70f09f91fcf5863a1970
+v1-registration-proof.json sha256 f2c150dd5f8d9d75653689f5579e73cdda4ad9ec2d4886a5850001344d45d801
+v1-complete.png sha256 097eb21ace3346abbebebd6b9dcf6e3f92bb9e7bf6f7fc77229eed691a7728f8
+negative/v1-final.png sha256 2eb027d517d2daadfd6119c0e20b1414c242b646935c42b279d348a803437035
+Both named containers verified exited, logs/screens copied, then removed.
+No host test/global npm/production write. No running test container retained.
+No product file changed this iteration. No service/port/secret/schema/data
+change; disposable container services and recovery/rollback are documented in
+the suite README. No production backup or new recovery rehearsal claimed.
+#894 stays doing1/3; exact-main input, full native V1 and final review remain.

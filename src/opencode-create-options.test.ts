@@ -1,9 +1,12 @@
 import { strict as assert } from 'node:assert';
 import { buildCreateNodeSpec } from './create-node-request';
-import { describeOpenCodeCreateError, opencodeCreateError } from './opencode-create-options';
+import { describeOpenCodeCreateError, opencodeCreateError, OPENCODE_GENERATION_LABELS, OPENCODE_V1_NOTE } from './opencode-create-options';
 import { createRequestVerdict } from './create-request-status';
 
 const base = { name: 'v2-test', runtimeId: 'opencode-cli', model: 'stub/model', runtimeModels: [], permissionMode: 'default', maxTurns: '', budget: '', workdirField: {} };
+assert.equal(OPENCODE_GENERATION_LABELS.v1, 'V1（兼容默认 · headless）');
+assert.equal(OPENCODE_GENERATION_LABELS.v2, 'V2（实验性 TUI 共存）');
+assert.match(OPENCODE_V1_NOTE, /不请求 TUI 共存/);
 assert.equal(buildCreateNodeSpec(base).flags, undefined);
 assert.equal(buildCreateNodeSpec({ ...base, opencodeGeneration: 'v1', opencodeUnsafeTools: true }).flags, undefined);
 for (const consent of [undefined, false, 'true', 1]) {

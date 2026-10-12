@@ -76,8 +76,13 @@ try {
     await page.goto(`${web.url}?safeAreaSim=0,0,0,0`);
     await page.waitForFunction(() => !!window.__anetLayoutSweep);
     await open(page);
+    assert.equal((await page.getByTestId('runtime-row-opencode-cli').innerText()).includes('TUI 共存'), false,
+      'shared OpenCode runtime label must not promise TUI copresence for V1');
+    assert.equal(await page.getByTestId('opencode-generation-v1').innerText(), 'V1（兼容默认 · headless）');
+    assert.match(await page.getByTestId('opencode-v1-mode-note').innerText(), /不请求 TUI 共存/);
     assert.equal(await page.getByTestId('opencode-generation-v1').getAttribute('aria-checked'), 'true');
     await chooseV2(page);
+    assert.equal(await page.getByTestId('opencode-v1-mode-note').count(), 0);
     await page.getByTestId('opencode-generation-v1').click(); await chooseV2(page);
     await page.getByTestId('runtime-row-codex-app-server').click();
     await page.getByTestId('runtime-row-opencode-cli').click();

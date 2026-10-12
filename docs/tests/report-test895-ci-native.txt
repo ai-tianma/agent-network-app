@@ -1,0 +1,72 @@
+# #895 exact native package confirmation/cancellation acceptance
+
+Observed/reviewed 2026-10-10 04:33 CST. TEST ONLY; not a release.
+App PR795 tested head: 7625a6f658129a09dcabda9aa082fe662bcce0f6
+Tested merge: d736c033de7495e6c78a54e01589270a41d430f6
+Parents: a48e697c92bf8a647a62f48890f2b59da7da9590 (base), tested head above.
+GitHub run37984339247/job114002431497: SUCCESS.
+Fresh tested-head rollup: 28 SUCCESS / 1 SKIPPED, PR OPEN/DRAFT.
+This report-only follow-up does not inherit those checks as new-head results.
+
+Artifact11643238114:
+TEST-ONLY-linux-deb-d736c033de7495e6c78a54e01589270a41d430f6
+156159983 bytes, unexpired at retrieval.
+GitHub artifact archive digest (metadata, not deb hash):
+sha256:39bc24f573be69d27600aa52472148cb9b6c3defbaec763205353005515c31ee
+Downloaded ANet_0.2.227_amd64.deb SHA256 (locally recalculated):
+a587a45f0f280f64f3f0a2825ed23aa05fb33f38c636740baf3cf0227a077740
+Matches artifact SHA256SUMS. TEST-ONLY source label equals tested merge.
+Bundled Hub manifest: 0.9.0-preview.120, API v3, x86_64-unknown-linux-gnu;
+sourceIntegrity remains the previously audited preview.120 package integrity.
+
+Actual new evidence, no local rerun of CI's native workflow:
+- Native creation and actual V2 reply SUCCESS 04:23:29 CST.
+- Missed creation submit negative SUCCESS 04:24:39 CST.
+- Native model switch/stop/start/restart SUCCESS 04:28:01 CST.
+  Log contains all three independent cancellation checks:
+  PASS: native stop cancellation preserved requests/config/identity/process generation
+  PASS: native start cancellation preserved requests/config/identity/process generation
+  PASS: native restart cancellation preserved requests/config/identity/process generation
+- Missed model submit negative SUCCESS (before the cancellation negative).
+- Deliberate Confirm instead of Return negative SUCCESS 04:30:59 CST.
+  Prerequisite actual model change passed first; inner process exited exactly 1:
+  AssertionError: native cancellation mutated lifecycle state
+  The CI step checks both that prerequisite and the exact failure, not any error.
+- Lifecycle evidence copying and named-container cleanup SUCCESS 04:31:03 CST.
+
+Inspected all six native screenshots after downloading:
+stop/start/restart-confirm: correct v2-native target and action, white readable
+Confirm text on blue button; Return label visible. Not the old blue-on-blue.
+stop/start/restart-cancelled: dialog gone, respectively active/stopped/active
+display retained. Screenshot appearance alone does not prove zero writes:
+the verifier observes a complete 15-second polling interval, comparing request
+rows, config bytes/hash, revision/model, node/network identity, lifecycle state,
+child token validity, and live process generation (or old-process termination).
+
+SHA256 of reviewed native-opencode-lifecycle screenshots:
+stop-confirm 380509bacc6a9d3fc08a45a5d15bd598edc231d43daf18b4adcf464e23b2411f
+start-confirm f9671cd77d93ac3f0fa3f36042c5dd6ebfd8bbffcb9f9b7b5c0557f536bd8f4e
+restart-confirm 800d2ca3205f68cd1dfe977d92f75e481bde726d1239eee7ebbf7110bba48a2d
+stop-cancelled 0ed6b55a8abab4889e09aab899f4dc45a4e32268ff25fa0db148acdf89926a79
+start-cancelled 49457ecdfa57635f17f814d17e573a2392c0b1882b1a4a20e08a683e97e12a64
+restart-cancelled 203c812fb0830e95636a97b49fbe862584fec44d47abf4b47238ce44ad0de6dc
+
+Rebuild authority: .github/workflows/linux-deb-package.yml plus
+tests/linux-native-opencode/{Dockerfile,lifecycle-ui.sh,verify-lifecycle.py}.
+Real packaged desktop/X11/native IPC/Hub/private daemon/OpenCode 2.0.22;
+only provider uses the repository loopback model fixture. No external model
+service claim, no native task-submission UI claim, no V1-native claim.
+This closes #895's candidate-package confirmation/cancellation checklist only.
+No native dark-theme or delete-dialog coverage claimed here (component cases
+are separately recorded). No release, merge, production install or updater change.
+
+The previous local candidate's create failure remains historical evidence;
+one successful CI run does not prove launch-race elimination or non-flakiness.
+Backend PR2559's launch-window fix remains independent, not in this test package.
+#894/#829 main-source/native-V1/final-review requirements remain open.
+Artifact TEST-ONLY.txt contains a pre-validation warning; it is deliberately
+not rewritten into release approval after tests pass.
+
+Downloaded evidence retained at /dev/shm/anet-ci795-762-evidence.2ESVYf;
+that temporary path is not a rebuild input. GitHub artifact retention is 7 days;
+scripts, hashes, assertions and this review remain in Git for reproduction.

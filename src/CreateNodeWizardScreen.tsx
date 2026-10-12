@@ -13,7 +13,7 @@ import { defaultWorkdir, describeWorkdirError, randomHex6, workdirError, workdir
 import { checkNodeName, describeNodeNameRejection, folderError, normalizeNodeName, NODE_NAME_HINT } from './node-name';
 import { buttonStyle, buttonTextStyle, elevated } from './elevation';
 import { readinessFor, readinessSelectable } from './runtime-readiness';
-import { describeOpenCodeCreateError, opencodeCreateError, OPENCODE_V2_WARNING, type OpenCodeGeneration } from './opencode-create-options';
+import { describeOpenCodeCreateError, opencodeCreateError, OPENCODE_GENERATION_LABELS, OPENCODE_V1_NOTE, OPENCODE_V2_WARNING, type OpenCodeGeneration } from './opencode-create-options';
 import CodexProviderFields from './CodexProviderFields';
 import { ProviderConfigDemo } from './BackendPendingDemo';
 import DaemonRuntimeProviders from './DaemonRuntimeProviders';
@@ -90,7 +90,7 @@ const RUNTIMES: WizardRuntime[] = [
   //  models 留空 ⇒ 提交省略 model ⇒ daemon 起子节点时「OpenCode copresence requires an explicit
   //  provider/model」(2026-09-07 Mac mini 真跑抓到)。这里给 OpenCode 自带的免费模型(不需要任何 key,
   //  DEV 上 opencode-指挥狗 / opencode测试1号 就用它们);要用别的 provider 走 anet opencode auth-login。
-  { id: 'opencode-cli', label: 'OpenCode（TUI 共存）', models: ['opencode/mimo-v2.6-flash-free', 'opencode/north-mini-code-free'] },
+  { id: 'opencode-cli', label: 'OpenCode', models: ['opencode/mimo-v2.6-flash-free', 'opencode/north-mini-code-free'] },
 ];
 const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'bypassPermissions'];
 
@@ -622,7 +622,7 @@ export default function CreateNodeWizardScreen({ cfg, daemon, onBack, onExit, de
                     aria-checked={opencodeGeneration === g}
                     onPress={() => { setOpenCodeGeneration(g); setOpenCodeUnsafeTools(false); }}
                     style={[styles.choiceRow, opencodeGeneration === g && styles.choiceRowSelected]}>
-                    <Text style={styles.choiceText}>{g === 'v1' ? 'V1（兼容默认）' : 'V2（实验性 TUI 共存）'}</Text>
+                    <Text style={styles.choiceText}>{OPENCODE_GENERATION_LABELS[g]}</Text>
                   </Pressable>
                 ))}
                 {opencodeGeneration === 'v2' ? (
@@ -637,7 +637,7 @@ export default function CreateNodeWizardScreen({ cfg, daemon, onBack, onExit, de
                       <Text style={[styles.choiceText, { flex: 1 }]}>我了解风险，仅用于可信任务，允许所有本地工具</Text>
                     </Pressable>
                   </>
-                ) : null}
+                ) : <Text testID="opencode-v1-mode-note" style={styles.hint}>{OPENCODE_V1_NOTE}</Text>}
               </View>
             ) : null}
             {providerResetHint ? <Text testID="provider-reset-hint" style={styles.hint}>{providerResetHint}</Text> : null}
@@ -810,7 +810,7 @@ export default function CreateNodeWizardScreen({ cfg, daemon, onBack, onExit, de
               <Divider />
               <SummaryRow k="Runtime" v={runtimeDisplayLabel(RUNTIMES, runtime)} />
               {runtimeId === 'opencode-cli' ? (
-                <><Divider /><SummaryRow k="代际" v={opencodeGeneration === 'v2' ? 'V2 · 实验性 TUI 共存' : 'V1 · 兼容默认'} /></>
+                <><Divider /><SummaryRow k="代际 / 模式" v={OPENCODE_GENERATION_LABELS[opencodeGeneration]} /></>
               ) : null}
               <Divider />
               <SummaryRow k="模型" v={managedSelection?.model || model || runtime.models[0] || '跟随宿主登录'} />

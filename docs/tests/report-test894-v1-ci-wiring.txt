@@ -1,0 +1,49 @@
+TEST ONLY — #894 V1 source-candidate CI wiring
+Observed 2026-10-10 10:14–10:17 Asia/Shanghai.
+App parent67a419bd15ba34d399a847634ddfdefd2d124960 plus this commit's fixture.
+No product runtime, version pin, public package, installer or release change.
+
+Change
+Existing Linux TEST ONLY workflow gains a cheap prerequisite contract job and
+seven sequential native V1 candidate cases after the V2 native gates. Adds all
+six suite path filters, exact backend checkout ded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a,
+rebuilds the dependency/candidate images, binds current app merge/deb SHA,
+retains explicit non-registry candidate manifest and records image IDs.
+Positive environment/auth/session and selected-model precede unavailable-model
+refusal and exact wrong-oracle rejection. Full lifecycle precedes cancellation
+and missed-start negative controls. No continue-on-error or downstream always.
+Always evidence cleanup covers all seven exact names, records state/exit/image,
+does not skip removal on copy failure, and surfaces cleanup errors. Artifact
+remains TEST ONLY. Timeout90min is a resource bound, not a completion promise.
+
+New local Docker verification, not repeated native acceptance
+Build: sg docker -c 'docker build -t anet-v1-ci-contract:894 -f tests/linux-native-v1-ci/Dockerfile .'
+Run: sg docker -c 'docker run --name anet894-v1-ci-contract --network none --cap-drop ALL --security-opt no-new-privileges anet-v1-ci-contract:894'
+Unprivileged bun user; no host/socket/credential mounts; offline execution.
+Image sha256:4ee9b8140ff2ad6780e7026ab4a3a68075acace50d83315e07acf44e446029a9.
+Terminal exit0 at2026-10-10T02:16:54.727122698Z (10:16:54 CST).
+1 workflow contract +8 exact mutation controls passed:
+- missing suite trigger -> suite path trigger
+- floating backend source -> exact backend SHA
+- downstream always -> fail-closed prerequisite
+- continue-on-error -> no ignored prerequisite
+- loose nonzero negative -> precise negative exit
+- unrelated error -> precise negative assertion
+- conditional cleanup -> unconditional evidence cleanup
+- missing container -> all owned containers cleaned
+All workflow shell blocks passed bash -n inside Docker. git diff --check passed.
+Inspected exited container before removing exact anet894-v1-ci-contract at
+10:17 CST; no new running test containers remain. The image is retained.
+No native sample rerun locally. The prior source-candidate V1 and original V2
+reports remain separate evidence; wiring does not count them again.
+
+Limitations / recovery
+The contract checks orchestration, not Docker action behavior or native GUI.
+The updated remote workflow has not completed at this report's creation.
+No CI-green, branch-protection, main provenance, newly published package or
+formal release claim. This preserves the exact-pair/upgrade gaps listed in
+report-test894-release-pairing-audit.txt. No node management/production action.
+Authoritative rebuild instructions: tests/linux-native-v1-ci/README.md and
+the referenced workflow/Dockerfiles. Inherited apt inputs are not snapshot
+locked. No production launcher/ports/proxy/secret/backup/data changes.
+Disposable test cleanup does not restore or migrate user database/keyring.

@@ -1,0 +1,45 @@
+#894 full shipped-source comparison — TEST ONLY
+Observed 2026-10-10 03:49 Asia/Shanghai. No production or package pin changes.
+
+Inputs
+Hub @sleep2agi/commhub-server 0.9.0-preview.120
+npm SHA512 lluvIp478F3UiFXC8v4Dy8x1uvb/UhgXPWvRi5R2ii3lB4nYEqFn4KUZBO6mH7WRoEQBaGnqKhNFWLekTxpsOw==
+GitHub source edc68a4ca87bbb7ca4944093e8ff113a17078624, server/ tree
+Bun 1.3.14 image e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4
+Final test image e4f932a82530955e8d18e5faaf608a2ddebd24946bb313d7f63615e27eab2c03
+
+Fresh GitHub compare edc68a4...main: ahead_by32, behind_by0,
+merge_base edc68a4ca87bbb7ca4944093e8ff113a17078624,
+main 80c6ab5b883a2056784326e73a6b6ec09ac0ce2c.
+This is an observed ancestry check, not a permanent release authorization.
+
+Rebuild/run (repository root)
+sg docker -c 'docker build -t anet-hub-provenance:894 -f tests/bundled-hub-provenance/Dockerfile .'
+sg docker -c 'docker run --rm --network none anet-hub-provenance:894'
+
+Exit0, final probe output:
+PASS: all 320 published package files match exact main-ancestor server tree edc68a4ca87bbb7ca4944093e8ff113a17078624
+PASS: precise rejection — modified byte
+PASS: precise rejection — missing file
+PASS: precise rejection — extra file
+PASS: precise rejection — same-count substitution
+PASS: precise rejection — symlink
+
+Integrity checked BEFORE extraction. Offline non-root comparison, no exclusions,
+normalization or host mounts. Negative fixtures copied into container-local
+mkdtemp paths, each removed in finally. Container --rm cleaned after exit.
+The initial diagnostic also matched 320/320; final run adds all five negative
+controls. No runtime/application test is claimed by this suite.
+
+This closes the limited-four-file comparison gap only for shipped source bytes.
+It is NOT npm publisher identity, registry attestation, a claim that all repository
+files ship, binary reproducibility, V1 runtime compatibility, or a formal release.
+npm metadata lacked gitHead. Exact-main-SHA release gates and runtime acceptance
+remain independent. #894 stays doing until its remaining acceptance is satisfied.
+
+CI: new shipped-source job in bundled-hub-v2-contract.yml (PR path filter includes
+this suite). Local result above is not represented as a new CI result.
+Final formatting-only probe update was rebuilt and rerun with identical six PASS
+lines. Workflow YAML parsed in Docker using anet-confirm:895-fixed and its yaml
+dependency; asserted suite path trigger and shipped-source job. The native image
+does not include PyYAML, so that initial environment probe was not a YAML result.

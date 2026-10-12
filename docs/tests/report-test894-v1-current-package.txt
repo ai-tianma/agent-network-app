@@ -1,0 +1,88 @@
+TEST ONLY — #894 current package V1 headless registration and label review
+Observed: 2026-10-10 08:38–08:44 Asia/Shanghai.
+
+Exact candidate (same package as the newly accepted V2 Docker CI)
+App PR795 head7ec7a31004b4088887bc32cd6468dcb0962c0ad1.
+Tested merge3f0dded2175e50afddcb65897019bc863c4e2491, artifact11652362566.
+Deb SHA256 c1f442deb4d3187193a5964eb15ac3bbbbf934fbfa7c27b6dc33b06291cab064.
+See report-test894-package-7ec7.txt for download/hash/CI evidence. No old
+package result is substituted for these fresh native V1 executions.
+
+Inputs/rebuild
+Use the existing Dockerfiles and their README instructions; no scripts,
+product code, model selection or acceptance assertions changed this turn.
+1. tests/linux-native-opencode/overlay.Dockerfile, named candidate context from
+   the downloaded artifact, FIXTURE_IMAGE=anet-v2-explicit:894, exact tested
+   SOURCE_COMMIT/DEB_SHA256/DEB_FILE above. It checks source/hash/linkage and
+   installs the candidate. This overlay is not a clean-install claim.
+   Input image df97baaca0ae6ff15766894ece59f5a19a68fd0dd7dcd210ed5d364569b58bd3.
+   Output anet-native-current:894 manifest-list:
+   5a1417f1f94d6b39250e13833a28ed815a0f6d512239f5970a9890c833fd06ed.
+2. tests/linux-native-opencode-v1/Dockerfile, V1_IMAGE=anet-v1-acp:model-894
+   (a4da34588c129578154fe179c5888fe8578fb9b45a4806f39830f3c81a2625d2),
+   NATIVE_IMAGE=anet-native-current:894 and exact source/deb args.
+   The cached V1 input declares SOURCE_COMMIT=6d1e2b4e55697cf2f4518fdc0c04f19b253e3ef5.
+   Rebuild recipes are backend tests/test894-v1-runtime and
+   tests/test894-v1-acp-session; only the entire actual opencode-ai package
+   tree is copied by this stage,
+   not that image's agent-node source. Version1.18.34 is checked explicitly.
+   Output anet-v1-current:894 manifest-list:
+   e458807bdc892e2f46f7d7eaff185af80e46f89f22bee6f29f0e48966f69544f.
+3. tests/linux-native-v1-registration/Dockerfile, V1_NATIVE_IMAGE above,
+   same source/deb arguments. Output anet-v1-current-registration:894:
+   a99ffb216aa7854da1d0435a04f9a6f0e735d2f5149524219647ce1c7e6f04e0.
+All builds used --network none and sg docker; no registry substitution.
+
+Layered results
+Atomic prerequisite: anet894-v1-current-atomic exited0 at08:40:40.
+Actual V1 version/health, unauthenticated401, authenticated session round-trip.
+Only after that passed, anet894-v1-current-positive exited0 at08:41:57:
+real Secret Service/profile/auth/401; native scan with no identity side effect;
+private exact-pair installation/online supervisor; actual X11 create; exactly
+one request/config/token/roster identity and live worker, PID718/startTicks
+467131507 unchanged over the observer interval. V1/headless, unsafe_tools=false,
+model=opencode/mimo-v2.6-flash-free, owner-only profile, no invented V2 launch
+proof or TUI attach. No model task was dispatched.
+After the positive passed, independent anet894-v1-current-missed exited1 at
+08:43:20. The same native auth/install prerequisites passed; no request/config/
+worker/roster appeared after missed submit. It failed exactly with
+"native V1 registration did not bind a live headless worker" following
+"PASS: missed submit preserved absent request/config/worker/roster identity".
+This expected negative is not an environment or model failure.
+
+Visual review
+Personally reviewed positive v1-generation.png, v1-confirm.png, v1-complete.png
+and negative v1-final.png. Both generation and confirmation explicitly show
+V1 compatible-default headless, with a note that this does not request TUI.
+Positive shows online/Done; negative remains on unsubmitted confirmation.
+This closes the new-package visual-label evidence gap, not full V1 acceptance.
+
+Unchanged test identities
+create-ui.sh 6b0abdebbb895aa976a682fca7c04b1cd2c365e277a1a8b7ab0cfe0e0c4e1396
+registration observer 693376130f62f5e1b808cbea5428d75e9826724bb3fcb83a582bd6ffea4109b4
+strict copresence diagnostic c8634865ae88850ef5f5aa4d94dae40dec717409e2ce6f67b9d3be49cae7cca2
+The strict historical diagnostic was not modified, rerun or relabeled passed.
+Its README now distinguishes that historical mismatch from the corrected label.
+
+Evidence/cleanup/boundary
+Convenience copies: /tmp/anet894-v1-current.JcSe9I/{atomic,positive,missed}
+plus corresponding stdout/stderr logs. Scripts/inputs in Git are authority,
+not the temporary image/cache/path. Rebuild exact Git inputs when artifacts expire.
+v1-registration-proof.json SHA256:
+884940f98581d234aaf9ac769baf01d37d08f4a33e08460be88d20265658678b
+positive v1-confirm.png SHA256:
+82386ac563a4e96724a5750d1c00a534cb4a91c46bf02a76df038fe00eb7defa
+negative v1-final.png SHA256:
+091d65f5e07f91ec0cdc7d8632891774e34719452f2fbafc3c19af3bc92aabef
+All three named containers were inspected exited, evidence copied, then removed.
+Only disposable containers were removed; images/logs/evidence remain recoverable.
+Runs used ordinary UID10001, --network none, --cap-drop ALL,
+no-new-privileges and 256m GUI shared memory; no host credentials/source/data
+mounted. Loopback CONNECT-status fixture is only an availability input and
+cannot serve model traffic. No production/global package/service/secret/data
+change, release or new production recovery claim.
+V1 model reply, runtime tool isolation during a turn, native model/stop/start/
+restart compatibility and exact-main formal release remain unverified here.
+Backend safe ACP source tests are separate and cannot replace packaged-native
+model evidence. Next slice must first provide a TLS/auth/model fixture before
+attempting that native model gate; do not run lifecycle after a failed model gate.

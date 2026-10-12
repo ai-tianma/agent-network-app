@@ -1,0 +1,81 @@
+TEST ONLY — #894 / #829 / #539 native V2 explicit-selection regression
+Observed: 2026-10-10 08:00–08:07 Asia/Shanghai
+
+Failure and exact inputs
+App PR795 head: 3cf50cf70a02390e003914a3fa8c9a055648ff11
+Linux CI run37992842124 attempt2/job114043659623 failed at native V2 creation.
+Actual tested merge: a94019dfca712597ba6310ee7f757ab3d4ba0637
+Artifact11647652500: TEST-ONLY-linux-deb-a94019dfca712597ba6310ee7f757ab3d4ba0637
+Archive digest: 180a775ab5ded4fff437b14466f57eb914bacda2f1ea40932a1368ef3caaaf6f
+Downloaded ANet_0.2.227_amd64.deb, independently recalculated SHA256:
+dd75a0df5668c093f3dfdb960da34958407ef3810cec803aa9e3ffc718b7a9e2
+This matches the artifact SHA256SUMS, NOT its archive digest.
+
+CI failure: AssertionError: native V2 create did not produce confirmed launch.
+Reviewed create-consent.png: V1/headless remained selected. create-final.png
+was still on the model page. The driver assumed the former generation default;
+the compatibility-default change made its later clicks target the wrong flow.
+This is not a Docker registry failure. The four later native negative/lifecycle
+steps were SKIPPED, not passed. Earlier install/auth/migration/rollback passes
+remain separate from the failed creation gate.
+
+Narrow repair
+create-ui.sh now explicitly clicks V2, scrolls to its separate consent control,
+then continues the same real X11 flow. Product default/policy, model selection,
+Hub APIs, runtime and all verifier assertions are unchanged. No synthetic create
+request is injected to bypass the UI. verify-create.py SHA256 remains:
+2595739b9dd3aa108b791111adf03b621027b00076c5dca2d036ed258b0656b0
+create-ui.sh SHA256:
+4720cbe862e8c69a223eebb8878ee961953dd1128830cbd54f87a14d0a3ae66c
+
+Docker replay inputs (not clean installation)
+The previously named V2 cache image was absent: initial overlay build stopped
+before execution. Reused its cached V1-registration descendant instead:
+sha256:5b833c3518db83f502a8b2899d081d1d03151abaa579cd35d5a9830e24983d68
+overlay.Dockerfile now compares the V2 lockfile, explicitly reselects the already
+installed locked V2 binary and verifies opencode v2.0.22. No runtime download,
+version/source substitution or host package change. It also checks candidate
+source, deb SHA and native linkage before installing the exact failed CI package.
+Replay image anet-v2-explicit:894:
+sha256:df97baaca0ae6ff15766894ece59f5a19a68fd0dd7dcd210ed5d364569b58bd3
+
+Results, layered
+1. Fresh runtime atomic prerequisite exit0: pinned real V2 health, unauthenticated
+   HTTP401, actual session/provider reply and exact model.
+2. anet894-v2-explicit-positive exit0: actual native profile/auth/daemon setup,
+   explicit V2 consent, exact node/model/network, non-revoked child credential,
+   daemon confirmed launch and live process generations; subsequent REST task
+   returned [v2-native] ANSWER_NATIVE_CREATED894 through real OpenCode V2.
+3. Fresh anet894-v2-explicit-missed exit1: authenticated prerequisites succeeded,
+   no request/node identity after missed submit, and ONLY the expected assertion
+   'native V2 create did not produce confirmed launch'. Accepted negative.
+4. Fresh anet894-v2-explicit-lifecycle exit0: real native model switch to
+   stub/stub-model-next, stop/start/restart, old process exit and new live
+   generations with same node identity/model and actual provider replies.
+   Cancel stop/start/restart each preserved requests/config/process generation.
+Reviewed creation-complete, model-applied, started and restarted screenshots.
+No perpetual loading indicator on these final screens.
+
+Scope and remaining gates
+Provider is an isolated loopback fixture, not a live vendor/model reasoning
+claim. All native mutations use X11/real IPC; proof tasks use REST, not native
+task UI. This replay is NOT a clean-install result or a new release. This turn
+did not rerun the model-missed/cancel-wrong-button negative containers; the
+unchanged CI gates must still pass on the new exact head. Older V1 registration
+and backend safe ACP results are not native V1 model/lifecycle acceptance.
+Backend PR2559 c10c83a0a5dde3038f42e93576fb18ba68d2c547: fresh168SUCCESS.
+App new-head CI, review, exact main inputs and formal publication remain open.
+
+Reproduction/cleanup
+Use tests/linux-native-opencode/README.md and its independent Dockerfiles.
+Build overlay.Dockerfile with candidate named context containing the exact
+downloaded artifact, FIXTURE_IMAGE, SOURCE_COMMIT, DEB_SHA256 and DEB_FILE.
+Run the atomic.py prerequisite, default create CMD, TEST_CREATE_MISS_CLICK=1,
+then keyring.sh + xvfb-run + opencode-lifecycle-ui.sh. Docker invocations use
+sg docker; network none, cap-drop ALL, no-new-privileges, ordinary smoke user,
+256m shared memory for GUI. No host credentials/home/socket/data mounted.
+Evidence retained under /tmp/anet894-v2-failure.nG2Zrp (CI plus replay folders).
+Copy only /evidence, then remove the three exact stopped test containers.
+Scripts are repository startup authority; ports/credentials/databases are
+disposable in-container fixtures, not production backups. No production
+service/proxy/secrets/data/upgrade/rollback change or recovery claim.

@@ -38,6 +38,10 @@ const expectedTokens: Record<string, string[]> = {
   // 2026-09-29:主按钮的字统一从 elevation.ts 的 buttonTextStyle('primary') 来(它取 colors.onAccent,下面单独钉)。
   'SideThreadDrawer.tsx': ["askButtonText: { ...buttonTextStyle('primary')"],
   'MessagesScreen.tsx': ["type === 'broadcast') return colors.broadcast"],
+  'NodeDetailScreen.tsx': [
+    "style={[styles.retryBtnText, pendingAction === 'delete_node' && { color: colors.failed }]}",
+    "pendingAction === 'delete_node' && { backgroundColor: colors.card, borderColor: colors.failed, borderWidth: 1 }",
+  ],
   'CreateNodeWizardScreen.tsx': ["primaryBtnText: { ...buttonTextStyle('primary')"],
   'HostSupervisorPickerScreen.tsx': [
     "primaryBtnText: { ...buttonTextStyle('primary')",

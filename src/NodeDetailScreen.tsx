@@ -877,11 +877,11 @@ export default function NodeDetailScreen({
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm }}>
               <Pressable style={styles.retryBtn} onPress={() => { setPendingAction(null); setConfirmAlias(''); }}><Text style={styles.retryBtnText}>返回</Text></Pressable>
               <Pressable
-                style={[styles.retryBtn, pendingAction === 'delete_node' && { borderColor: colors.failed }, (actionBusy || (pendingAction === 'delete_node' && confirmAlias !== alias)) && { opacity: 0.4 }]}
+                style={[styles.retryBtn, pendingAction === 'delete_node' && { backgroundColor: colors.card, borderColor: colors.failed, borderWidth: 1 }, (actionBusy || (pendingAction === 'delete_node' && confirmAlias !== alias)) && { opacity: 0.4 }]}
                 disabled={actionBusy || (pendingAction === 'delete_node' && confirmAlias !== alias)}
                 onPress={() => void executeLifecycle()}
               >
-                <Text style={{ color: pendingAction === 'delete_node' ? colors.failed : colors.accent, fontWeight: '600' }}>{actionBusy ? '提交中…' : '确认'}</Text>
+                <Text style={[styles.retryBtnText, pendingAction === 'delete_node' && { color: colors.failed }]}>{actionBusy ? '提交中…' : '确认'}</Text>
               </Pressable>
             </View>
           </View>

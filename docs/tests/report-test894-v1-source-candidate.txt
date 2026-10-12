@@ -1,0 +1,120 @@
+TEST ONLY — #894 native selected-model integration with source-built runtime
+Observed 2026-10-10 09:48–09:55, Asia/Shanghai.
+
+Boundary correction
+The V1 selected-model fix belongs to separately installed agent-node, NOT to
+the desktop deb. Rebuilding the desktop alone still installs the existing
+public CLI .162 / node .128 pair. This run uses an explicitly TEST-ONLY source
+runtime candidate in a disposable reused private prefix. It is not a clean
+installation, new registry package, rebuilt desktop, formal release or proof
+that the currently published runtime includes the fix.
+
+Exact inputs
+Backend source: ded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a (PR2559).
+GitHub source archive SHA256:
+d6fd49fffa38c7231f3dd292502eadb617c38a293d0c6d10af0a9221c4983b65.
+Dependency package-lock SHA256:
+44059dc732b90d60867bd18ff14490eb83ac6dafe4471b58b509492ac470ca37.
+Real npm run build / npm pack --ignore-scripts produced
+TEST-ONLY-agent-node-ded59ce7.tgz, SHA256:
+8273d83c0b41fb87e1264e92aa5a9a09dfa9e544779a5edf27fe03893cc0f1f5.
+Built CLI SHA256:
+67c978fd4a744d67c47b9d7d8a8d6ceef17caba748e764169146d0255b03b8e9.
+Package retains inherited 2.5.0-preview.128 version; its separate test manifest
+explicitly says registry_artifact=false. Version string is NOT provenance.
+Native desktop remains App PR795 head7ec7a31004b4088887bc32cd6468dcb0962c0ad1,
+tested merge3f0dded2175e50afddcb65897019bc863c4e2491, version0.2.227 amd64,
+deb SHA256 c1f442deb4d3187193a5964eb15ac3bbbbf934fbfa7c27b6dc33b06291cab064.
+Its existing V2 CI package results remain independently bound to those inputs.
+
+Image/rebuild chain
+Authority: tests/linux-native-v1-candidate-runtime/{Dockerfile,README.md},
+tests/linux-native-v1-model/* and the prior exact-package/registration reports.
+Dependency image anet-v1-acp-model-bind:894:
+f604a376b77acb0fd1b46888de2d1c214a60996597d25f99791d7254a354b6f3.
+Its source recipe is backend tests/test894-v1-runtime/Dockerfile; the wrapper
+compares package-lock before reusing modules, downloads/verifies exact backend
+source and builds the actual candidate itself, rather than trusting old dist.
+Native model base anet-v1-model-two-catalogue:894:
+44b325e9e6c8d0e8fb155a268b76f2e25a56fefe11c5dc47000b0e50c43d3c4f.
+Native registration prerequisite image:
+a99ffb216aa7854da1d0435a04f9a6f0e735d2f5149524219647ce1c7e6f04e0.
+Final anet-v1-native-candidate:ded59ce7:
+4b77696124624dd3bb44df6a439f8cd6cf0034ea69b590bf1c030848517cbcd9.
+Build checks bash syntax/Python AST inside Docker. Openssl apt inputs remain
+not snapshot-locked; no claim of bit-reproducible images or main provenance.
+
+Isolation and driver
+All execution: sg docker, network none, cap-drop ALL, no-new-privileges,
+UID10001 and shm256m. No host credentials, home, sockets or production mounts.
+Optional test hook copies software only after actual native authentication;
+it refuses an existing prefix, does not seed Hub/daemon/node credentials or
+profiles, and retains native before/after registration assertions. Synthetic
+provider auth and explicit 0600 node-local fixture proxy/CA are separate.
+Real installed native desktop, Secret Service, local Hub, daemon, worker and
+OpenCode1.18.34. Closed verified-TLS fixture replaces external catalogue/model
+responses, with unauthenticated401 checked before the native workload.
+Real X11 creates V1 safe/headless and changes model. Only proof-task dispatch
+uses REST. No native chat-submission, external model-quality or tool-run claim.
+Observer verifies exactly one actual live worker executes the candidate CLI
+path/hash, not merely a matching version string. Actual ACP process must have
+OPENCODE_PURE=1 and wildcard deny. Main task is identified by system role and
+unique prompt, separately from title generation. Default gpt-4.1 is distinct
+from selected gpt-4.1-selected, so silent fallback cannot satisfy the oracle.
+
+Positive: anet894-candidate-positive
+Started01:48:37Z, exited0 at01:50:10Z (09:50:10 CST).
+All layered native authentication/scan/install/readiness/create/config gates
+passed. Live candidate workerPID773, safe ACP PID801; config revision1 and
+selected openai/gpt-4.1-selected. Actual authenticated main request used the
+selected model and returned exact FIXTURE_ONLY_V1_ACP_RESPONSE.
+Personally reviewed v1-model-before.png and v1-model-replied.png: latter shows
+v1-native idle, current selected non-default model and green acknowledgement.
+This is a model-settings screenshot, NOT a chat-result screenshot.
+
+Unavailable model: anet894-candidate-unavailable
+Started01:51:55Z, exited0 at01:53:27Z (09:53:27 CST), same final image.
+TEST_SELECTED_MODEL=openai/not-in-fixture; TEST_EXPECT_MODEL_REJECTION=1.
+All prerequisites passed; actual candidate workerPID764 and safe ACP PID793.
+The native UI saved the requested absent model at config revision1. The real
+task failed with exact upstream model-not-found plus refusing-default-fallback
+error; zero authenticated generations and no surviving observed ACP child.
+This is actual product rejection, not the deliberately wrong oracle below.
+Personally reviewed final settings screenshot: current ID is not-in-fixture,
+green configuration acknowledgement and node idle. UI currently accepts that
+configuration; the TASK rejects it. Do not claim client-side catalogue
+validation or #901 Provider/model-interaction completeness from this result.
+
+Independent wrong oracle: anet894-candidate-wrong
+TEST_WRONG_MODEL=1, same exact image; exited1 at01:54:49Z (09:54:49 CST).
+Native prerequisites, live candidate hash, actual UI model configuration and
+exact safe-ACP model reply passed FIRST. Then the verifier failed precisely
+at "native V1 provider model mismatch". No earlier infrastructure/registration
+failure substituted for this negative. The test-only expected value changes;
+the actual UI-selected model and provider behavior do not.
+
+Evidence and cleanup
+Convenience copies: /tmp/anet894-candidate.q2BTQk/{positive,unavailable,wrong}.
+Only redacted /evidence copied; no credentials or ephemeral private key exported.
+Positive proof SHA256:
+da0b56d86504987a537efff4b47a42221a8630da71ff09b8ec4b9ad2fc3ae7ff.
+Positive reviewed final settings screenshot SHA256:
+e6db8823c374c081be7e424431091114b7516452fe31a737ee6baceeadac52b8.
+Unavailable-model proof SHA256:
+00b69913c37458b2053788dbbb3ea4b45ed619f11e55dab4d713f32418980893.
+Unavailable reviewed final settings screenshot SHA256:
+74c0e086cc50765d1d65e58fbe43e8ecf7ebf706bbaf83eeac5bf45c53c6d2ea.
+All three exact containers were inspected exited with pid0, then removed after
+evidence copying. docker ps -a --filter name=anet894-candidate returned none.
+Images and copied evidence retained; disposable containers can be rebuilt.
+No downstream V1 lifecycle run or newly shipped artifact claimed.
+
+Remaining delivery gates
+V1 native lifecycle compatibility and exact paired published-installer inputs
+are not established by this model slice. Neither #894 nor formal release is
+complete. New main-only runtime versions and updated exact installer pins,
+fresh clean-install/upgrade/rollback acceptance and review remain necessary.
+No product change in this app patch; no npm/global install, merge, release,
+updater, production configuration, backup/data or service change.
+The scripts in Git, exact source references and prior base recipes are rebuild
+authority. Temporary evidence/images are convenience, not production state.

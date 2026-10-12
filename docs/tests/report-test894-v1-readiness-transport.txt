@@ -1,0 +1,93 @@
+TEST ONLY — #894 native V1 readiness gate and transport diagnosis
+Observed 2026-10-10 09:08 onward, Asia/Shanghai. MODEL NOT ACCEPTED.
+
+Exact installed candidate unchanged
+App PR795 head7ec7a31004b4088887bc32cd6468dcb0962c0ad1.
+Tested merge3f0dded2175e50afddcb65897019bc863c4e2491.
+Deb SHA256 c1f442deb4d3187193a5964eb15ac3bbbbf934fbfa7c27b6dc33b06291cab064.
+Backend source inspected c10c83a0a5dde3038f42e93576fb18ba68d2c547.
+All dynamic execution used Docker via sg docker, network none, UID10001,
+cap-drop ALL, no-new-privileges, 256m shared memory. No production changes.
+
+Change and scope
+The V1 create driver now has an optional TEST_V1_READINESS_GATE. Default
+historical registration does not enable it; the new model image does.
+Read-only GET /api/host-supervisors binds the installed daemon identity and
+requires actual opencode-cli ready plus measured blocked states for the other
+five fixture runtimes. Afterward the real picker's 10-second poll can consume
+the snapshot before native input. No fake capabilities, REST config mutation,
+product fallback change or weakened assertion.
+Code inspection: HostSupervisorPickerScreen polls every10s; missing readiness
+preserves legacy selectable rows; CreateNodeWizardScreen receives that selected
+daemon snapshot. Therefore online registration alone did not guarantee the
+layout used by the old fixed coordinates. Two fresh runs with the gate reached
+native creation and model configuration. This does not prove universal GUI
+timing stability or retroactively turn the prior failed samples into passes.
+
+Run1 anet894-v1-model-readiness-positive
+Image manifest-list c8677b89c7aceb2c50a0cbeec2e2005620ff2ddd0647df1d78a6fd085da4d7e3.
+Environment/auth/TLS401, native private-daemon install, actual readiness,
+native V1 registration, native model switch to openai/gpt-4.1, exact Hub/node
+config revision and real ACP session/new passed.
+At2026-10-10T01:12:08.648Z container exited1: native V1 proof task failed.
+Runtime session/prompt returned -32603 Cannot connect to API. Provider journal
+contained only the unauthenticated preflight401, not an authenticated model call.
+Final native screenshot reviewed: v1-native, selected openai/gpt-4.1, model
+change acknowledged. It still showed working at observer exit; not accepted
+as a final terminal-state UI screenshot. No wrong-model negative or lifecycle.
+Evidence copied before removing this stopped container.
+
+Run2 anet894-v1-model-transport-diagnostic
+Image manifest-list c0647156c9166a283dad47a08e8f5011f27da6e7bd7c3db5105249878943493f.
+Same exact package/gates/assertions; added only redacted observation of ACP
+configuration/environment and proxy CONNECT authorities. No headers, keys,
+full environment or command line exported. Creation and model-config gate pass.
+Actual ACP process PID859:
+  OPENCODE_PURE=1; OPENCODE_PERMISSION wildcard=deny.
+  Node's selected model: openai/gpt-4.1.
+  Generated runtime config model: null (no model field).
+  HTTPS_PROXY/SSL_CERT_FILE/NODE_EXTRA_CA_CERTS fixture matches: false.
+A separate read-only /proc check, emitting presence booleans only, verified
+HTTPS_PROXY, HTTP_PROXY, SSL_CERT_FILE, NODE_EXTRA_CA_CERTS and NO_PROXY were
+all ABSENT. Thus this is not merely a different proxy or certificate path.
+
+Interpretation / next step
+Transport: create-node-daemon minimalEnv() deliberately keeps PATH/HOME/LANG
+and explicitly supplied extras, not arbitrary daemon environment. The fixture
+incorrectly assumed parent proxy/CA inheritance. Correct fixture transport
+through existing per-node configuration; do NOT widen isolation/denylist.
+Model selection is a separate gap: CLI's V1 openOpencodeRuntime/opencodeThink
+calls do not pass MODEL, while child-env renders model only from persistent
+OpenCode config. Observed generated config has no model. Active upstream model
+identity is not proven by that absence alone; do not label the connection error
+as a proven model-selection error. A future transport pass with a one-model
+catalog must also not be used to claim general explicit model alignment.
+Keep this distinction from #901's TUI Provider/model-directory requirement.
+No model config was pre-seeded to manufacture success. Do not run downstream
+wrong-model/lifecycle gates before a real positive passes.
+
+Scripts at run2
+create-ui.sh ed008d2144f09fc77c7e6d481ad5e708cadb1ca58cd7368f082bebb7f9362f90
+readiness.py e4d1a360748ae8aaf6bf2a024768966de3287a7028740fbe33d7cc0947f798a2
+verify.py 01a76b2a9aa70347be126a1aa06e5a2a6d58c25ac03a84c90d31d6b5b2cbb9a5
+provider.py 64aae88f6dce061388e40719959888bb090eb25f6c058fa64211e18443a55e89
+Convenience evidence: /tmp/anet894-v1-readiness.tI1sYE (not authority).
+The new fixture remains unaccepted and is not wired into required CI.
+No product edits, source push, merge or release in this iteration.
+
+Terminal / cleanup update 09:16 CST
+Run2 exited1 at2026-10-10T01:15:48.037Z, exact assertion
+"native V1 proof task failed". Runtime again reported session/prompt -32603
+Cannot connect to API; no authenticated fixture model request. CONNECT journal
+contained api.openai.com preflight, nodejs.org and opencode.ai readiness probes;
+it is not an authenticated model-request log.
+Both named containers were inspected exited1, evidence copied, then removed.
+docker ps -a --filter name=anet894-v1-model returned no containers. No further
+negative or lifecycle test was started. Images and evidence retained.
+Diagnostic v1-acp-observation.json SHA256:
+fc6dea41f30b1e614f99fbf1163944676a760667ea1eae9afe955651d02f0128
+Reviewed run1 final screenshot SHA256:
+eb3468ced84e31039ced8230233708956ffeb08655b9fb8a876d8244f331742c
+Next conditional window: 09:25–09:35 CST for explicit fixture transport and
+model-path investigation, not task completion or release. Existing V2 package
+acceptance is unchanged; V1 model acceptance remains open.

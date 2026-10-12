@@ -1,0 +1,154 @@
+#895 native cancellation observer — TEST ONLY
+Observed 2026-10-10 03:39 Asia/Shanghai. No product edits in this iteration.
+Scope: strengthened native stop/start/restart cancellation gate. NOT acceptance
+of the new #895 styling package; #895 remains doing 2/3.
+
+Package binding (both accepted runs)
+Product 85040c75b1dae2dc2e021fa3addece234e7673e2
+Tested merge b12bc1995d2d95f7b9c5a91876f61f8c3348d7db
+Deb SHA256 c9e3ccbc24e298724468561cfd61c6512ca4e271de207c16d139c5e4e1c573d6
+Fixture image c60748d08857e3f6f42643fd0a4aef9a8a85ae856ae842ee897849e9093b76ea
+App/IPC/Hub/private daemon/runtime are real; only model provider is loopback fixture.
+Runtime @opencode/cli 2.0.22. Proof tasks use REST, not native UI task dispatch.
+Docker --network none, ordinary UID10001, cap-drop ALL, no-new-privileges.
+Existing exact-package atomic/authentication prerequisites were already validated;
+each fresh UI run again checks real authentication, install and creation.
+
+Final cancellation driver hashes (unchanged during both accepted runs)
+lifecycle-ui.sh 7c7b0d0144e5e3b19c414c30ab8748465f689958a9a4cd56df9a997c448b4d86
+verify-lifecycle.py 25edb2c16da7627cc260aebe4962369316a00bf835ef5819b3c19f3cb1a9deba
+Positive: anet895-native-cancel-accepted, exit0; these two scripts mounted readonly.
+Negative: anet895-native-cancel-negative-frozen, exit1; scripts copied into the
+stopped disposable container BEFORE start, no working-tree mount.
+The negative also uses hardened create-ui.sh input delivery (80ms/key + 1s flush),
+SHA256 09e67e17fb0293a8eaf40a463d3aa872cab12a9e46e44b61cbc34c2a676073b7.
+Positive creation used the previously accepted image's create driver, with its
+exact model/create assertions intact and passed. Do not claim identical entire
+fixture inputs; the cancellation driver/observer and product ARE identical.
+
+New behavior evidence
+- Native Return before Stop, Start and Restart: fifteen seconds each with no
+  changed create/stop/config-update history, lifecycle state, complete config hash,
+  model/revision, identity or live generation; stopped processes stay absent.
+- Reopen + actual confirmation after every cancellation still succeeds, with
+  old process identities gone and real provider-model responses after start/restart.
+- TEST_CANCEL_SUBMIT=1 deliberately clicks Confirm instead of Return for Stop.
+  The final negative passes native create/model prerequisites then fails EXACTLY:
+  AssertionError: native cancellation mutated lifecycle state
+  It detects Hub state transition before waiting for asynchronous process cleanup.
+- YAML parsed inside Docker; dedicated CI negative requires exit1 AND exact
+  assertion text AND successful model prerequisite, not generic nonzero exit.
+- No deletion/native dark-theme claim. No new #895 product-package acceptance.
+- No all-suite rerun claimed; previous 380/380 belongs to previous iteration.
+
+Exploratory runs excluded from final acceptance
+1. Initial positive exit0; initial negative hit process-cleanup assertion before
+   reporting the already-changed Hub state. Added explicit state-first comparison.
+2. A negative typed truncated model stub/stub-model-ne before Apply: strict model
+   assertion rejected it. Added ctrl+a, slower typing and input flush wait.
+3. A running bind-mounted shell script was edited, causing stale interpreter
+   byte offsets and exit127. Invalidated, never counted as product failure/pass.
+4. Another negative created model stub/stub-mode (reviewed confirmation screenshot).
+   Exact creation assertion rejected it BEFORE cancellation. Added input delivery
+   wait in create-ui.sh too. This failed prerequisite is not a cancellation result.
+The final accepted positive/negative above are separate fresh containers. Fixture
+scripts and safety/model assertions were not relaxed. CI bakes scripts into images.
+
+Screenshot review
+Final stop/start/restart-cancelled screenshots visually reviewed: dialog dismissed,
+node remains respectively idle/offline/idle, correct model retained. Old package's
+same-color confirmation defect still exists; not represented as fixed visuals.
+SHA256:
+stop 9771a7aa2d5409f394fa6891c430df326f199d7d89956bd18c9ba48ae5617cbc
+start ec3c396b7bc460d8c31d124b05bc1981328e0677e94bd9a81883f24b95a320c1
+restart 9870b1c3f416bad171da5d12d5e530e752abcf55ff1d735f642289fae6e1744c
+Temporary evidence /tmp/anet895-native-cancel.6rj7eq/{accepted,negative-final}.
+Repository Dockerfile/README/scripts remain authority, not these temporary files.
+Seven named containers stopped/exited; evidence copied before cleanup. No host
+global npm changes, production services, credentials or databases altered.
+
+Remaining: own exact 3593d8a product package screenshots and cancellation behavior;
+new test-head CI; #894 V1 compatibility/provenance/review. No merge or release.
+
+Accepted positive log:
+dbus-run-session: ignoring unknown child process 920
+dbus-run-session: ignoring unknown child process 693
+dbus-run-session: ignoring unknown child process 688
+dbus-run-session: ignoring unknown child process 689
+dbus-run-session: ignoring unknown child process 1384
+GNOME_KEYRING_CONTROL=/tmp/tmp.a6FjtxKkSn
+PASS: isolated Secret Service ready (write/read/delete)
+PASS: isolated provider seeded; no node identity/config created
+TEST ONLY source=b12bc1995d2d95f7b9c5a91876f61f8c3348d7db deb_sha256=c9e3ccbc24e298724468561cfd61c6512ca4e271de207c16d139c5e4e1c573d6
+  Geometry: 1200x800
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: UI navigation/scan did not install or register daemon
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: UI navigation/scan did not install or register daemon
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: UI-created daemon profile matches authenticated online Hub supervisor
+PASS: native UI install registered matching online daemon; screenshots require review
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: provider healthy; no create request/node identity before UI submit
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native UI created exact V2 config with daemon launch proof/live process identities
+PASS: native-created V2 node returned provider-only response via real runtime
+PASS: real native V2 creation and actual runtime task; screenshots require review
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: lifecycle baseline has live exact identity/model and no config updates
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native model change applied new revision/generation and actual provider model
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native stop cancellation preserved requests/config/identity/process generation
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native stop removed exact runtime processes and retained model/identity
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native start cancellation preserved requests/config/identity/process generation
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native start restored same identity/new generation/model and actual reply
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native restart cancellation preserved requests/config/identity/process generation
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native restart restored same identity/new generation/model and actual reply
+PASS: native V2 model/stop/start/restart with authoritative state and real model replies; screenshots require review
+
+
+Accepted targeted negative log:
+GNOME_KEYRING_CONTROL=/tmp/tmp.QcI1fJD6o5
+PASS: isolated Secret Service ready (write/read/delete)
+PASS: isolated provider seeded; no node identity/config created
+TEST ONLY source=b12bc1995d2d95f7b9c5a91876f61f8c3348d7db deb_sha256=c9e3ccbc24e298724468561cfd61c6512ca4e271de207c16d139c5e4e1c573d6
+  Geometry: 1200x800
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: UI navigation/scan did not install or register daemon
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: UI navigation/scan did not install or register daemon
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+dbus-run-session: ignoring unknown child process 920
+PASS: UI-created daemon profile matches authenticated online Hub supervisor
+PASS: native UI install registered matching online daemon; screenshots require review
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: provider healthy; no create request/node identity before UI submit
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native UI created exact V2 config with daemon launch proof/live process identities
+PASS: native-created V2 node returned provider-only response via real runtime
+PASS: real native V2 creation and actual runtime task; screenshots require review
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: lifecycle baseline has live exact identity/model and no config updates
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: native model change applied new revision/generation and actual provider model
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+PASS: local profile/native Secret Service credential/API auth; wrong token rejected 401
+Traceback (most recent call last):
+  File "/fixture/opencode-verify-lifecycle.py", line 142, in <module>
+    assert state is not None and state[0] == before['lifecycle_state'], 'native cancellation mutated lifecycle state'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+dbus-run-session: ignoring unknown child process 691
+dbus-run-session: ignoring unknown child process 687
+dbus-run-session: ignoring unknown child process 688
+AssertionError: native cancellation mutated lifecycle state

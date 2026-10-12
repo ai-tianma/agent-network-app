@@ -28,11 +28,23 @@ on:
       - '.github/workflows/rust-check.yml'
       - 'scripts/with-linux-test-keyring.sh'
       - 'tests/linux-credential-store/**'
+      - 'tests/local-daemon-packages/**'
 
 permissions:
   contents: read
 
 jobs:
+  local-daemon-packages:
+    name: Private daemon package pair (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target policy -t anet-daemon-packages:test -f tests/local-daemon-packages/Dockerfile .
+      - run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-daemon-packages:test
+      - run: docker build --target private-prefix -t anet-daemon-prefix:test -f tests/local-daemon-packages/Dockerfile .
+      - run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-daemon-prefix:test
+
   rust-check:
     name: rust-check (ubuntu-latest)
     runs-on: ubuntu-latest
@@ -61,7 +73,8 @@ jobs:
             librsvg2-dev \
             libxdo-dev \
             dbus \
-            gnome-keyring
+            gnome-keyring \
+            libsecret-tools
 
       # toolchain 显式写出来:下面的 SHA 是 stable 分支的 commit,action.yml 的
       # 默认值也确实是 stable,但钉 SHA 之后「这条 ref 叫什么」不再有意义,

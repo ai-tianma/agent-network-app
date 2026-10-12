@@ -1,0 +1,135 @@
+TEST ONLY — #894 native V1 headless lifecycle candidate
+Observed 2026-10-10 09:58–10:05, Asia/Shanghai. See terminal outcomes below; the presence of
+this test suite is not acceptance or release evidence by itself.
+
+Exact source/artifact scope
+App test-script parent0acf1d70962b1369542493ace2bc25b46b8c59b5 plus the fixture
+changes recorded by this report's commit. Product desktop remains the old
+tested merge3f0dded2175e50afddcb65897019bc863c4e2491 from PR795 head7ec7a310,
+deb SHA256 c1f442deb4d3187193a5964eb15ac3bbbbf934fbfa7c27b6dc33b06291cab064.
+Backend candidate ded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a, source-built archive
+8273d83c0b41fb87e1264e92aa5a9a09dfa9e544779a5edf27fe03893cc0f1f5,
+CLI SHA67c978fd4a744d67c47b9d7d8a8d6ceef17caba748e764169146d0255b03b8e9.
+This is the same explicit TEST-ONLY reused-prefix source candidate, NOT npm
+registry bytes, a new deb, clean install, main provenance or formal release.
+See report-test894-v1-source-candidate.txt for source archive/lock/build chain.
+
+New test slice
+tests/linux-native-v1-lifecycle/{Dockerfile,run.sh,verify.py,README.md}.
+Extends exact base image4b77696124624dd3bb44df6a439f8cd6cf0034ea69b590bf1c030848517cbcd9.
+Initial lifecycle imagef1a10de9058cd2073df3d80dc0c57011ac46cb1f334d0cd70b962fb2df120ea8.
+No network during build or runtime; Docker syntax/AST checks passed.
+Commands use sg docker, --network none, --cap-drop ALL, no-new-privileges,
+UID10001 and shm256m. No host credentials, Docker socket, source/home mount.
+Only external availability/catalogue/model output is a closed loopback TLS
+fixture. Native desktop/Secret Service/local Hub/daemon/worker/OpenCode1.18.34
+are real. All lifecycle writes are native X11; only proof-task dispatch is REST.
+
+Observer contract
+The inherited selected-model reply must pass first. Baseline binds exact node,
+network, active original token, config revision and candidate CLI hash on the
+live worker. V1 is headless, not V2 copresence: no fabricated launch-health or
+attach-file evidence. Process identity is PID/start ticks plus live descendants.
+Stop requires old worker/descendants gone and model/identity retained. Start
+and restart require a new worker with the same node/model; restart requires an
+applied restart-only revision. Each then gets its own marked real ACP task and
+phase-specific proof; old reply cannot stand in for a new one. ACP PURE and
+wildcard-deny are observed, not generalized into a tool-execution test.
+Cancellation compares authoritative requests/state/config/revision/token and
+processes for 15 seconds. Independent wrong-confirm and missed-start controls
+may run ONLY after complete positive success, and need their precise assertion.
+
+Recovery / limits
+Rebuild from the repository Dockerfiles and exact prior candidate references.
+Inherited apt inputs are not all snapshot-locked; no bit-reproducibility claim.
+Disposable fixture ports/secrets are documented by those scripts. No production
+launcher, reverse-proxy/tunnel, environment secret source, database/schema,
+backup data or deployment/rollback procedure is changed. Rebuild/rollback is
+scoped to test containers, not live nodes. No npm publish, release/updater,
+global package change, merge or production operation.
+
+Positive terminal outcome
+anet894-v1-lifecycle-positive, started01:58:32Z, exited0 at02:02:09Z
+(10:02:09 CST), imagef1a10de9058cd2073df3d80dc0c57011ac46cb1f334d0cd70b962fb2df120ea8.
+No preliminary failure or weakened assertion in this positive execution.
+Environment/auth/native install/readiness/create/selected-model gates passed.
+Stop/start/restart cancellations each preserved authoritative state for15s.
+Real stop removed the baseline worker+ACP, retained original token/model.
+Real start and restart each produced a distinct live worker and actual safe
+ACP reply using openai/gpt-4.1-selected, with the exact candidate CLI hash.
+Same node_b8ca0407-3163-4eae-a735-8940614b82d6/net_c73dafa483e0 throughout:
+  baseline worker775@467598319, ACP802@467598684, revision1;
+  started worker1034@467606615, ACP1074@467606901, revision1;
+  restarted worker1182@467610760, ACP1217@467611048, revision2.
+Old process identities were proven non-live before accepting the replacements.
+Three distinct task prompts/phase-specific proofs produced exact fixture-only
+responses; no old reply or just-idle status substitutes for start/restart proof.
+
+Visual review
+Personally reviewed exact-run overview, stop confirmation, stopped, start
+confirmation, started, restart confirmation and restarted screenshots. Stop
+shows offline and retained model; start/restart show idle and model unchanged,
+with readable confirmation/cancel controls and submitted/online messages.
+Screenshots are lifecycle/settings views, not native chat-result views. Actual
+reply evidence comes from authenticated task results and provider journals.
+
+Positive evidence SHA256
+baseline: 5fbe17b92982387fb3c9f2485ab0ac39eaf75bef14880a7f45bc54e054c1ce4e
+started: 8a8deddbec023f0312339f7c64189eae869f3a618339f9603c36246e1c1a2fe4
+restarted: 9ea2422bcad8001a47d81e2b4cedd00cdf76a5eb0bd5b695ba534b6c9debe8d1
+restart model proof: a20550c395e5676e1385a9c4fc35ca526c176137d4d35137f372692ebb62bfd4
+reviewed restart PNG: a6959d52480bf16f631de2231734fe8b7cb115d95a3f213368590d0dcc2e511f
+
+Next integration dependency (read-only source check)
+src-tauri/src/local_daemon_packages.rs still pins CLI2.3.0-preview.162 and
+agent-node2.5.0-preview.128. src/local-daemon.test.ts and
+tests/local-daemon-packages/Dockerfile independently bind that public pair.
+The candidate has different CLI bytes despite its inherited version string.
+Formal delivery requires new reviewed main-only runtime package versions and
+matching exact installer/test pins; rebuilding only the desktop is insufficient.
+No pair versions, source guards or existing-package validation were changed.
+
+Wrong-cancel negative
+anet894-v1-lifecycle-cancel-wrong, TEST_V1_CANCEL_SUBMIT=1, same exact image.
+Started02:02:15Z, exited1 at02:04:00Z (10:04:00 CST).
+All native prerequisites and actual selected-model reply passed before the
+driver deliberately confirmed Stop rather than cancelling. The read-only
+observer rejected the authoritative lifecycle change precisely with
+"native V1 cancellation mutated lifecycle state", not an environment failure.
+The final screenshot was reviewed but caught the modal close animation and
+stale idle badge; it is NOT a terminal-state visual acceptance screenshot.
+Negative verdict is the exact Hub-state assertion following the real action.
+Cancel-before evidence SHA256:
+24ae5fefe1fb44ba808df07dcf0e1fa2778d8bb791db7d1b1943171190021e65.
+
+Missed-start negative
+anet894-v1-lifecycle-start-missed, TEST_V1_START_MISS_CLICK=1, same exact image.
+Started02:02:17Z, exited1 at02:05:09Z (10:05:09 CST).
+Prerequisites/model reply, stop cancellation, real stop and start cancellation
+passed. Deliberately missing the start confirmation left original identity,
+config, requests and stopped lifecycle unchanged with no worker throughout a
+15-second observation. It then failed precisely with
+"native V1 start confirmation did not apply". This is not a startup timeout or
+infrastructure failure. Final screenshot personally reviewed: node offline,
+selected model retained, start modal still awaiting confirmation.
+Cancel-before-start evidence SHA256:
+f9659cac5d2421ab069d66fc0f54684b1f4e8e8ea4d94abf73a66c78a67b33b1.
+Reviewed missed-start final PNG SHA256:
+6bc1891e6dda530f588d3b77f5c1e9727f53278edbae9da51b3178f69a2dad89.
+
+Final denominator and cleanup
+Three independent runs: one full positive exit0, two exact expected-negative
+exit1 results. Negatives started only after the full positive exited0. All
+three used the identical lifecycle image; no post-positive assertion changes.
+Source hashes at those runs:
+Dockerfile 8b548c5df938d97b70ecd48d663f6099253e71f9ee0cf0be991b1c198826657f
+run.sh 62c875c090639255a1a5a6cd05e3f1caeef7bf16bc034c8d733938a30c7e52c4
+verify.py 03dda3c3ff3dfeb97a5d27961fa870fb7d590d228b1d8edf471831875fb97524
+model verify.py f47d272bc86a277a409dfa316d57afac156af829c44dad8baa1b8f148660c210
+Evidence copied to /tmp/anet894-v1-lifecycle.pt6n1S/{positive,cancel-wrong,start-missed}
+(convenience only). Only redacted evidence copied, not credentials/private keys.
+All three containers were inspected exited with pid0, then exactly those three
+were removed. docker ps -a --filter name=anet894-v1-lifecycle returned none.
+Images/copied evidence retained. No other containers or user data removed.
+This closes the candidate lifecycle test slice, not #894's main/paired-package
+and formal-delivery gates. #901 Provider catalogue/selection UI is separate.

@@ -1,0 +1,75 @@
+#895 — Lifecycle confirmation contrast, Docker regression
+Observed: 2026-10-10 03:21 Asia/Shanghai
+Scope: TEST ONLY, original app PR795; no merge, release, production mutation,
+global npm installation or claim about production TM node health.
+
+Source identity
+- Base commit: c6c7d59cdc5d041cf4241742659d974b7f321350.
+- Product delta: ONLY two style expressions in src/NodeDetailScreen.tsx.
+- Fixed product file SHA256:
+  f887bfe54a8a38272c532d264fbe2548f911c7120b82aa2c15ed07a268206283
+- Final drive SHA256:
+  35ac5f9685a16388d8c827502a1e7b4630e3cca4f1ae2ff723cac36856f7f2ad
+- Before image manifest-list:
+  1bf63084763363edc0a6451f765a281d1504b0b02ff7e940a32a13bf728610b6
+- Fixed image manifest-list:
+  8abf6f80a683abe1cd52c9819c7617efb0d4f703818c1c30e766334e0a850462
+- Both images built from digest-pinned independent Dockerfile. Final driver
+  read-only mounted into BOTH images; product bundles not modified after build.
+  Canonical rebuild entry: tests/node-confirm-contrast/Dockerfile + README.md.
+
+Layered evidence
+1. Build environment, locked dependencies, focused semantic/visual/danger/API/
+   drive-registry tests, TypeScript typecheck and actual Expo web export PASS.
+2. Authentication/Hub/IPC here are synthetic page-local fixtures only. Real
+   native authentication is NOT asserted by this browser suite.
+3. Final exact drive against old product: exit 1 at
+   "confirm text contrast light/start_node: 1.00 < 4.5".
+   RGB foreground/background both (27,101,219). This is the targeted negative,
+   not a navigation error or timeout. Later layers stop on this failure.
+4. Final exact drive against fixed product: exit 0, all eight cases PASS:
+   light start/restart/stop = 5.34:1; light delete = 4.83:1;
+   dark start/restart/stop = 7.12:1; dark delete = 4.71:1.
+   Every case asserts actual rendered theme/background, cancel zero writes,
+   exactly one confirmed MCP call and exact action/node/network/safety payload.
+   Delete: blank and wrong alias remain disabled; exact alias enables submit;
+   destructive outline/text retained. No force/delete-config silently added.
+   Page errors: none. All runs use --network none.
+5. Full npm test inside fixed Docker image: exit 0, 380/380 test files PASS.
+
+Fixture correction, not hidden evidence
+The exploratory first drive passed but screenshot review showed its dark
+label still rendered light, and screenshots caught Modal fade-in. It is NOT
+counted as two-theme acceptance. Final drive seeds theme_mode_v1, asserts
+actual theme colors and waits for ancestor opacity/animations to settle.
+Both the precise old-product negative and fixed eight-case positive were
+freshly rerun with this SAME corrected driver.
+
+Screenshots
+Final light-start and dark-delete screenshots visually reviewed: opaque
+dialogs, readable confirm text, distinct actual themes, destructive outline.
+All eight saved in /tmp/anet895-confirm.xM4w1o/final (temporary convenience;
+repository Dockerfile/drive are the reproducible authority).
+SHA256:
+light-start 71100a66b39069f2f8c9960530d0391fb92ab281276f1c6f520154f870203166
+light-restart 66eb4c8bdc3bddeab329f8e094f85e35c0aceba38f99dec36a431628a835f0ea
+light-stop c248ab8fdc1948d87598f1a603e3f75bfa253136de79452cc380c6c30570adf3
+light-delete b3adbd3ecfe265a1bff0452de289e8163eca4f1a2788e620d3187f04e5295a39
+dark-start 0da635b5394685990e41ddf92510cd7dda027fdc624df75b9c8f8da4dc16cccd
+dark-restart 251f845f28a07ca16f4862c42b1802a860683f9a3070640df178cc0d1df1686a
+dark-stop 44740832a61cbf6ecce0f383ba72104492bad877485a28c0954949fb484b3b1d
+dark-delete 801fadc5e6bdb9386d64cf328ad0c1f8c6c0c4f2972d436a86dc15ef388a20e8
+
+Pending gates / claim boundary
+- #895 stays doing, 2/3 at most. New product needs its OWN native .deb gate
+  and actual confirmation/cancellation screenshot + behavior review.
+- Original 85040c75 native package/lifecycle results belong to THAT product;
+  c6c7d59 pending CI also cannot attest to this new product fix.
+- Register rendered drive in PR shards; explicitly include NodeDetailScreen
+  and this suite in Linux package workflow paths so new native gate runs.
+- No change to lifecycle semantics, permission boundary, identity or API.
+- No new service, startup path, proxy/port, secret, schema or data state.
+  Existing repository local-workspace recovery instructions remain authority;
+  source revert/rebuild is the style rollback. No recovery rehearsal claimed.
+- Five named disposable test containers verified exited before cleanup;
+  screenshots preserved first. Docker images retained for evidence only.

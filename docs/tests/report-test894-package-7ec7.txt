@@ -1,0 +1,75 @@
+TEST ONLY — #894 / #829 exact native V2 package evidence review
+Observed: 2026-10-10 08:32–08:34 Asia/Shanghai.
+This is a read-only review of completed Docker CI, not a new test execution.
+
+Exact inputs
+App PR795 head: 7ec7a31004b4088887bc32cd6468dcb0962c0ad1
+Tested merge: 3f0dded2175e50afddcb65897019bc863c4e2491
+Run38007673021 attempt1 / job114080124267: SUCCESS, completed08:32:54.
+PR rollup: 28 SUCCESS / 1 SKIPPED, all terminal.
+Artifact11652362566: TEST-ONLY-linux-deb-3f0dded2175e50afddcb65897019bc863c4e2491
+Archive size: 156196782 bytes. GitHub-reported archive digest (not deb hash):
+934082fa21fc660ce6f786712e194fd6cb2678cfa0dd2b10b4b75c9fec88ffaa
+Downloaded ANet_0.2.227_amd64.deb: 50240030 bytes.
+Independently recalculated deb SHA256, matching artifact SHA256SUMS:
+c1f442deb4d3187193a5964eb15ac3bbbbf934fbfa7c27b6dc33b06291cab064
+TEST-ONLY.txt and create/lifecycle proof source fields match tested merge.
+The artifact's static pre-test disclaimer is not rewritten by this review.
+Bundled manifest: commhub0.9.0-preview.120, APIv3, x86_64-unknown-linux-gnu,
+preBundleSha256=59bd0221d4d1afa58b41034ef97687f120f4dfb717448a937af10f5dd9460bab.
+This review does not newly establish binary reproducibility/main provenance.
+
+Layered CI results (all existing job steps, no rerun)
+Full source build; offline package/architecture checks; clean Ubuntu install;
+ordinary-user native window; wrong-source/early-exit controls; native Secret
+Service/auth and unavailable-keyring rejection; real workspace UI/missed click;
+previous .66 database upgrade to .120 and exact failed-upgrade rollback: passed.
+Private daemon exact-pair installation/reuse, partial/old pair/nonzero/timeout
+rejection and real UI install/missed click: passed before V2 execution.
+Pinned real OpenCode2.0.22 authentication/model transport and exact wrong-model
+control passed. Native V2 creation and actual reply passed08:25:24; missed
+creation submit rejected precisely08:26:30. Native model switch, stop/start/
+restart plus cancellation checks passed08:29:49; missed model submit negative
+passed08:31:11; deliberate confirmation rejected by cancel oracle08:32:41.
+
+Downloaded proof review
+Create proof binds exact source/deb, native_ui_create=true, runtime=opencode-cli,
+model=stub/stub-model, subsequent_task_driver=REST, ANSWER_NATIVE_CREATED894.
+Lifecycle baseline/model/start/restart records bind the same source/deb and
+same node/network. Four distinct live generations/process identities recorded;
+model changes to stub/stub-model-next and remains through start/restart.
+Stopped record has old_processes_gone/model_retained/identity_active fields;
+the stop record itself does not carry a separate source/deb hash.
+Negative logs contain exact missing-create and missing-model assertions after
+explicit no-mutation PASS records. Wrong-cancel log reaches actual model-change
+PASS then fails specifically: native cancellation mutated lifecycle state.
+No generic crash is substituted for these expected negative outcomes.
+
+Personally inspected screenshots from this exact artifact
+native-opencode-create/create-complete.png: v2-native online, Done button.
+native-opencode-lifecycle/lifecycle-model-applied.png: new model and success.
+native-opencode-lifecycle/lifecycle-stop-confirm.png: readable Return/Confirm.
+native-opencode-lifecycle/lifecycle-stopped.png: offline, stop submitted.
+native-opencode-lifecycle/lifecycle-started.png: idle, node online.
+native-opencode-lifecycle/lifecycle-restarted.png: idle, restart submitted.
+No indefinite loading indicator on these final screenshots. This is not an
+exhaustive visual review of every screen or proof of native task dispatch.
+
+Scope and remaining work
+Real native X11/IPC, Hub, daemon and runtime; only model provider is a loopback
+fixture. Proof tasks use REST. No external vendor/model-quality claim.
+V1 native model/lifecycle compatibility, final review, exact-main release
+inputs and formal publication remain separate. Do not close #894 on this
+result alone or inherit this package evidence onto a later PR head.
+Backend PR2559 exactc10c83a0a5dde3038f42e93576fb18ba68d2c547 remains
+168SUCCESS, Draft/Open; not merged/released by this review.
+
+Rebuild and cleanup
+Authority: .github/workflows/linux-deb-package.yml and tests/linux-*/Dockerfiles
+and README files at the tested Git input. Local artifact copy:
+/tmp/anet894-package-7ec7.5HPkPo (convenience only; not a recovery dependency).
+CI evidence-preservation/container-removal steps completed successfully before
+upload. This review downloaded files only, launched no runtime/container and
+made no production/global-package/service/proxy/secret/data changes.
+Artifact retention is seven days; rebuild exact Git inputs after expiration.
+No release asset, npm version, updater channel or production backup was changed.

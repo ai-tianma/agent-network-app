@@ -1,5 +1,13 @@
 export type OpenCodeGeneration = 'v1' | 'v2';
 
+// Generation, not the shared runtime ID, determines this wizard's creation mode.
+// Keep V1's legacy payload unchanged: it does not request TUI copresence.
+export const OPENCODE_GENERATION_LABELS: Record<OpenCodeGeneration, string> = {
+  v1: 'V1（兼容默认 · headless）',
+  v2: 'V2（实验性 TUI 共存）',
+};
+export const OPENCODE_V1_NOTE = 'V1 沿用兼容创建协议，默认以 headless 后台模式运行；此入口不请求 TUI 共存，也不代表 TUI 已启动。';
+
 export const OPENCODE_V2_WARNING = 'V2 是高风险预览：所有本地工具可用，可读写文件、执行命令。仅用于可信任务；不是安全沙箱。当前仅 Linux 链路完成候选验证，其他平台尚未验收。';
 
 export interface OpenCodeCreateOptions {

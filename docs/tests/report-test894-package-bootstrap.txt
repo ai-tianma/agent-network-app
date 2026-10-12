@@ -1,0 +1,113 @@
+#894 / original PR795: package-boundary atomic diagnosis
+OBSERVED_AT=2026-10-12 12:42+08
+PREPARATION ONLY; no new test pass or product fix claimed.
+
+Original native run38202449262 failed at startup capability; child output was
+discarded. Do not repeat the same desktop build without new diagnostic evidence.
+
+Source review found a concrete hypothesis: the source-candidate preparer applies
+npm tar member modes to an already installed package. The production resolver
+rejects a non-executable dist/cli.js even when invoked via Node. npm installation
+and npm tar extraction may have different bin modes. This is NOT yet a proven
+cause of the previous native failure; actual archive/prepared modes were absent.
+
+Added one manual v1-package-bootstrap slice to the existing bundled-Hub contract
+workflow. Default contract/PR gates remain. Docker builds the frozen backend
+ded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a (archive SHA256 checked), then uses the
+actual npm pack, original prepare.py and source production package resolver.
+Installed/archive/prepared modes, payload hash and one constant refusal code
+are exported. No arbitrary stderr, profile, credential or process argv exported.
+Only a synthetic empty-profile sentinel is created in the disposable container.
+
+It does NOT build Rust/deb or launch a Daemon/Hub/OpenCode/model. A resolver pass
+cannot clear the native registration failure. A refusal gives only a narrower
+package-boundary cause to fix and verify before the original native gate.
+Run is Docker in Actions, non-root UID10001, network none/cap-drop ALL at execution,
+always cleanup and TEST-ONLY artifact. No local test or production change.
+
+Actual result — 2026-10-12 12:44+08
+- run38204895184/job114666095733 locked01eb39bf9f2d7566b56f05a338e6f9a33255bd6a
+  SUCCESS04:43:37Z. Installed/archive/prepared mode755; production resolver accepted.
+  Permission hypothesis NOT REPRODUCED, no permission fix justified. Native failure
+  remains open; this success is not registration/model/native product acceptance.
+- Cleanup/upload succeeded. TEST-ONLY artifact11727405288,1135B, archive digest
+ 85350e82194001c52e2e331ff540ef5fc618d869a4e44130672e056fb8f2b702.
+  Three unrelated manual contract jobs SKIPPED, not newly passed.
+- Next bounded slice adds actual installed CLI162/OpenCode1.18.34 pre-Hub launch,
+  using source-candidate128 and the original safe/default created profile fields.
+  Its rejecting HTTP fixture is NOT a real Hub: only startup-to-request is observed,
+  no identity registration/SSE/model assertion. Output is constant reason enums,
+  process-lifetime and request counters plus at most20 startup tail lines (240chars each)
+  with private fixture paths replaced and credential-related lines omitted.
+  No full startup log, config, environment, arbitrary argv or credentials export.
+  This does not recompile desktop, change product or lower the native gate.
+
+Second atomic run — 2026-10-12 12:49+08
+- run38205115983/job114666773229 locked89b330494c5a56089c6d30ed9b538f57e3bfb59a
+  FAILURE. Package resolver passed; CLI refused the diagnostic's hand-written
+  profile because its runtime binding was missing (zero HTTP requests). This is
+  a fixture preparation error, NOT proof of the original native failure's cause:
+  the real daemon uses writeCreatedOpencodeProfile, which creates that binding.
+- Corrected fixture calls that exact source production creator, not a handmade
+  binding or an admission bypass. Original native refusal remains separate.
+- Same-head unit run38205110590 failed typecheck in Ubuntu/Windows and two Docker
+  UI jobs because the Docker-only .ts probe imported /source. Changed it to .mjs
+  executed by Bun, preserving the actual source imports and App typecheck scope.
+  This is not an environmental failure or a relaxed App assertion.
+- Always cleanup/upload succeeded; TEST-ONLY artifact11727042664,1825B,
+  archive digest3009bde2ebf7b3e5bcecaffb5113e33ee9718d8c1be610e2d688eb8c33ccf086.
+  Retain this failed attempt; no product/production/release change.
+
+Third setup correction — 2026-10-12 12:51+08
+- run38205323134@5d3318e0665eee5519626532b6cc10f1120ba1fc failed before
+  CLI launch: real profile writer already made the empty auth directory, and
+  the fixture's mkdir lacked exist_ok. Allow that existing directory but still
+  refuse any existing auth.json before writing a synthetic key. No product change.
+- Same-head Ubuntu unit/typecheck succeeded; other jobs were not yet terminal
+  at the observation. Do not count this setup failure as a product assertion.
+
+Fourth atomic — 2026-10-12 12:54+08
+- run38205477062@ab51c20b3e5f01d957a59eb3bdcbd39198121139 built and prepared the
+  exact candidate/profile successfully. Actual CLI exited1 before any HTTP request.
+  No runtime launch marker; error-keyword filtering retained no diagnostic line.
+  Thus a real pre-Hub refusal exists in this standalone pair, but its cause is
+  still UNKNOWN and is not yet matched to the original native rejection.
+- Keep at most20 fixture-only startup tail lines,240chars each, replacing fixture
+  paths and omitting credential-related lines. Translated/icon admission errors
+  must not be silently discarded. No product guard change or full native rerun.
+  Cleanup/upload successful; TEST-ONLY artifact11727465974,1689B, archive digest
+ 0ad333b46137856e2af11fe4aaca3af557ba2eedb5d1c660ab9416bea16185cc.
+
+Fifth atomic / exact reason — 2026-10-12 12:57+08
+- run38205684361@e27ba7dbaf3c4c092ab08b613781395c7702d178 ended FAILURE12:55:49.
+  Retained tail now identifies missing /run/user in this small Docker fixture;
+  CLI's safe runtime-base guard refused before any Hub request. This is NOT the
+  original native root cause: the existing native/runtime images create the
+  UID-specific runtime directory. Add the same root-created0755 parent and
+  smoke-owned0700 /run/user/10001; do not override/relax the product base guard.
+- TEST-ONLY artifact11727206971,1936B, archive digest
+ 4ebeb620a1ea922c1dd4d8c204326f4ec8fae0803943f2de842a941d239ee20d.
+  Cleanup/upload passed. Actual native request registration remains unverified.
+
+Final bounded result — 2026-10-12 13:00+08
+- run38205883371/job114669156918, actual tested full head
+ 74c181926b4978c5c19723111ea3f88c4f55d13d, SUCCESS04:59:10Z (12:59:10+08).
+  Actual CLI162/source-candidate128 passed production package admission and the
+  real profile writer, emitted the runtime launch marker, survived eight seconds
+  and made6 requests to the rejecting HTTP fixture. It then exited0 on the
+  observer's SIGTERM; this is controlled cleanup, not natural completion.
+- Fixture Hub rejects ALL requests. Therefore this is pre-Hub startup only:
+  no actual identity registration, SSE acceptance, model response, native UI or
+  release proof. It does not resolve or reclassify native run38202449262's failure.
+  Missing binding/auth-directory/runtime-base errors belonged to this diagnostic
+  fixture and are corrected; no product guard or admission policy was changed.
+- Cleanup/upload SUCCESS; TEST-ONLY artifact11727134023,2247B, archive digest
+ c9ecb47d9d09adee19a9883b4ba623155ece80e90e0b0b3190c054fc54788451.
+  No branch product published. No local tests/Docker or production mutations.
+- App same-head unit run38205858033 was4SUCCESS/1 WindowsIN_PROGRESS at12:59;
+  preceding e27 unit38205679364 all5SUCCESS. Separate heads/results; not all green
+  on74 until Windows actually completes. Original PR remains Draft/conflicting.
+- Stop expanding this standalone probe or repeating its successful build.
+  Next original-card slice: reconcile current-main inputs and inspect the actual
+  created request/profile/launch boundary with controlled real Hub evidence.
+  Do not revive the stale162/128 fixture as current170/136 installation acceptance.

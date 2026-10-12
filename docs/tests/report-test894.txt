@@ -1,0 +1,766 @@
+Hub #894: bundled local Hub V2 contract gap (diagnostic, NOT a passing V2 gate)
+Observed: 2026-10-10 00:15–00:16 Asia/Shanghai.
+App main inspected: 003bcb04bc3b3972321cae2cdd1f74d205fec3d5.
+Test package source: 8fb42f173ab52737153d58750d3753da9e16dcfe.
+Complete build image: anet-linux-deb:8fb42f1
+Previously recorded image ID: sha256:e6be76163b8405d7bde1426f6699e32f4131ddbb613c0239fed116f8b0a6fff5
+Deb SHA256: b7986d30619148081c864d5c4ef9aaec6e6883eaeca1329c7dee866693e3f677.
+
+Source facts:
+- local-hub-sidecar/package.json pins @sleep2agi/commhub-server 0.9.0-preview.66.
+- src-tauri/src/local_hub.rs EXPECTED_HUB_VERSION uses the same version.
+- src-tauri/src/local_daemon.rs installs CLI and agent-node from @latest.
+  This is an observed floating input, not evidence of current npm contents.
+- Packaged dependency src/create-node-validate.ts:49 FLAG_KEYS contains only
+  permissionMode, dangerouslySkipPermissions, maxTurns, budget, timeout.
+  Lines 280 onward reject unlisted keys with flag_key_unknown.
+- No opencodeGeneration/opencodeUnsafeTools/launch_verified_at occurrences were
+  found in that installed dependency's src tree. Current backend source at
+  2d964c3533e81c2e8005f6525b69be80b754722e contains V2 validation and launch proof.
+
+Docker-only direct contract reproduction, --network none, no mounts:
+  import {buildAnetArgs} from
+    '/app/local-hub-sidecar/node_modules/@sleep2agi/commhub-server/src/create-node-validate.ts';
+  const spec = {name:'test894', runtime:'opencode-cli', model:'stub/stub-model'};
+  buildAnetArgs(spec); // V1 baseline accepted
+  buildAnetArgs({...spec, flags:{opencodeGeneration:'v2', opencodeUnsafeTools:true}});
+  // must throw flag_key_unknown for the current bundled version
+
+Observed stdout (probe exit 0 means diagnosis reproduced, NOT V2 support):
+PASS: bundled V1 baseline
+CONFIRMED GAP: bundled preview.66 rejects V2 with flag_key_unknown
+
+This is the packaged dependency's validation function, not an HTTP/UI create
+test. The real native UI bootstrap gate #893 is independent and remains valid
+within its narrower scope. It cannot close native V2 create/model/stop-start.
+
+Next: determine an exact main-derived compatible Hub/daemon input. Keep release
+gates separate from TEST ONLY source builds; do not silently replace the sidecar,
+remove opt-in checks, update global npm, or move public distribution tags.
+Test V1 compatibility, explicit unsafe opt-in refusal/acceptance and launch proof
+before running dependent native runtime UI layers. No production was modified.
+
+Rebuild: repository tests/linux-deb-package/README.md at the recorded source
+rebuilds the complete image and locked dependency. Run this diagnostic with bun
+in that image. No pre-existing host credentials, databases, ports or services
+are required; no data backup is consumed. Version changes require new exact
+source/hash evidence. Containers are --rm; rollback affects only the test branch.
+
+Incremental candidate selection, 2026-10-10 00:21–00:25 Asia/Shanghai:
+Registry reads in Docker resolved Hub preview=0.9.0-preview.120,
+agent-node preview=2.5.0-preview.128 and CLI preview=2.3.0-preview.162.
+Stable tags still resolved agent-node .58 / CLI .76; do not infer V2 support
+from their tag names. No registry tag was changed.
+
+Hub .120 SHA512 is pinned in tests/bundled-hub-v2-contract/Dockerfile.
+Package metadata did not provide gitHead. GitHub main at observation was
+80c6ab5b883a2056784326e73a6b6ec09ac0ce2c; compare API confirms release preparation
+edc68a4ca87bbb7ca4944093e8ff113a17078624 is an ancestor (behind=0).
+Candidate create-node-validate.ts/db.ts/tools.ts/server.ts hashes each match that
+ancestor; the probe asserts those exact hashes. This is not whole-tarball
+provenance certification.
+
+Candidate .120 offline pure-contract gate passed: V1 accepted, missing V2 consent
+rejected with opencode_v2_requires_unsafe_opt_in, exact V2 argv generated,
+launch_verified_at source present in migration, ack handler and REST read.
+Initial test incorrectly expected '--opencode-unsafe-tools true'; inspection
+confirmed the CLI contract is a valueless boolean switch. Replaced this with
+a stricter full-argv equality assertion and reran successfully; no product
+assertion was weakened or removed.
+
+CI correction, 2026-10-10 00:30 Asia/Shanghai:
+PR795 head faf4c12a8a95d2585bd7090a4d3d4612c66c8e38 failed app typecheck.
+Run 37958992815 jobs 113916698778 (avatar), 113916698738 (people loading),
+113916698793 (Ubuntu unit) all show TS2591 node:fs/node:crypto and TS2307
+container-only /candidate/src/create-node-validate.ts. The new Bun probe was
+incorrectly included in Expo's application compilation, not a failed avatar
+or people-loading behavior assertion. Added only its exact fixture directory
+to tsconfig.build.json exclusions; its independent Docker gate remains intact.
+
+Docker regression: npm run typecheck exited 0 in anet-linux-deb:8fb42f1,
+with only the changed config and current probe directory mounted read-only.
+This reuses the recorded base app/dependency image, not a new full-package build.
+Rebuilt independent candidate image and ran offline/non-root: all 15 contract
+assertions still passed. Fresh full branch CI remains required; no migration,
+rollback or updated-package native bootstrap is claimed by these checks.
+
+Prepared product-side pin .66 -> .120, Rust expected-version change and lockfile
+regenerated inside Docker. Full packaged bootstrap/migration/rollback remain
+pending. Daemon installer is NOT changed to a floating preview or silently
+upgraded. Candidate protocol success is not end-to-end/native V2 completion.
+
+Increment, 2026-10-10 00:32-00:36 Asia/Shanghai:
+Fresh CI at head 504b582944ec3b128aa25cd63da30d9c86da530e passed typecheck,
+but Ubuntu unit run 37959634606 job 113918867610 had 379/380 test files pass.
+The sole failure was src/local-hub-sidecar.test.ts retaining old exact .66
+expectation. Updated that explicit expectation to .120 (not a dynamic or range
+comparison); its 14 checks now pass in offline Docker with current source.
+
+Added tests/linux-hub-migration Docker fixture and CI upgrade/rollback stages.
+Old seed inputs: package and full transitive lock from main a48e697c92bf8a647a62f48890f2b59da7da9590,
+SHA256 608a3156ce8a955717645d19a903dc734ec201e7ebbec270c67e225af4a0d149
+and 8c83d15f740b9d6b2231026f5393e5243deee734dbbede7020d47056e58c23ac.
+Seed-only image anet-migration-seed:894 built and ran offline/non-root, exit 0;
+old .66 APIs generated identity, node and task before clean shutdown.
+
+Wrapper negative controls used the known old .66 native package, source
+8fb42f173ab52737153d58750d3753da9e16dcfe, deb SHA256
+b7986d30619148081c864d5c4ef9aaec6e6883eaeca1329c7dee866693e3f677.
+Both reached the native same-version path and were then correctly rejected:
+upgrade exit 1: FAIL: resulting Hub version mismatch
+rollback exit 1: FAIL: cross-version .66-to-.120 snapshot missing
+Thus same-version startup cannot stand in for cross-version migration here.
+
+Positive .66-to-.120 migration/byte-exact rollback remain UNVERIFIED until the
+new full package is available and the newly wired CI steps pass. Containers
+were --rm, with private test keyrings and no production data/host credentials.
+Only sanitized console logs, not seeded DB/keyring/passwords, are CI artifacts.
+
+CI increment, 2026-10-10 00:50-00:53 Asia/Shanghai:
+Head e8cc425f32a7f35498927fb9113c77f7673617b9 ended 24 SUCCESS / 1 SKIPPED /
+1 FAILURE. linux-deb run37960195872/job113920783539 failed at the native
+startup/authentication atomic gate, BEFORE UI or migration. Build, clean install
+and window checks passed. UI, migration and rollback were SKIPPED, not passed.
+Packaged source (CI merge): ba234814a025806af34275109cf46ff0b63a73f0;
+deb SHA256 b5de6327c7db88dac9feab689b78011fbb9bea7daa305abfadba344e0f5d48f0.
+
+Failure: D-Bus auto-activated another org.freedesktop.secrets service immediately
+after the helper printed its control path; log then reported invalid/unrecognized
+login.keyring and Secret Service: no result found. This is consistent with a
+startup race; the original daemonizing --unlock had no ownership/readiness gate.
+Changed TEST helper only: keep the daemon foreground, bound D-Bus ownership wait,
+require real secret-tool write/read/delete before running the workload, and clean
+up its own daemon PID. Rust CI installs the newly required libsecret-tools.
+Added CI negative control: daemon shadowed by /bin/false must fail before workload.
+
+Docker local validation of the revised helper, private bus/no network/UID10001:
+- one existing native atomic smoke passed using the previously recorded .66
+  package (8fb42f1 / b7986d3...), not a new .120 package acceptance claim;
+- five independent empty-container readiness rounds passed write/read/delete;
+- disabled daemon exited 1 with exact diagnostic:
+  FAIL: isolated Secret Service did not acquire D-Bus name
+  and never emitted UNEXPECTED_WORKLOAD.
+The new full CI package/bootstrap/migration/rollback remains required. No retry
+of an application assertion, credential mock, or production change was added.
+
+Separate prior-head evidence reviewed at 00:46: head504b582, run37959644582,
+test merge d80ed15844e5bdd282fa8b15b8118aee99c40a30, artifact11629949870,
+deb SHA256 2342a6ae7c62cae150be6936d613b3450a5e14b723ad180ebc8dae411c59e5e3.
+Downloaded manifest confirms Hub .120. Native bootstrap, real UI and negative
+controls passed, and before/after screenshots were manually inspected (welcome
+to Agent list). That workflow had NO migration steps; its success cannot replace
+the newer head's failing/untested gates above.
+
+Private-prefix diagnostic, 2026-10-10 01:04 Asia/Shanghai:
+Disposable Docker based on tests/linux-deb-package/Dockerfile image
+anet-linux-deb:8fb42f1; image ID
+sha256:e6be76163b8405d7bde1426f6699e32f4131ddbb613c0239fed116f8b0a6fff5.
+Inside the container only, installed with npm -g --prefix <mktemp directory>
+--ignore-scripts --no-audit --no-fund:
+  @sleep2agi/agent-network@2.3.0-preview.162
+  @sleep2agi/agent-node@2.5.0-preview.128
+Exit 0, 276 packages. Package JSON confirms the two exact versions under
+<prefix>/lib/node_modules/@sleep2agi/. The anet symlink resolves to
+agent-network/dist/bin/anet.cjs; direct agent-node/dist/cli.js --help exits 0
+and advertises opencode-cli. This corrects the earlier local-prefix layout
+experiment, not a claim that the native installer or V2 lifecycle passes.
+
+Limits: root container, temporary /tmp prefix, scripts disabled, no Hub
+registration, no daemon or OpenCode launch, no package integrity/provenance
+assertion in this diagnostic. The prefix/bin directory was NOT added to PATH;
+therefore anet --version's "agent-node not installed" output does not prove
+failure of the actual installer (which does add it). Help text alone does not
+prove V2 support. The trusted entrypoint resolver checks ancestor ownership
+and modes, so the temporary /tmp layout is not a trusted-path positive test.
+Container was --rm; no host global npm packages or production data changed.
+
+Source audit: app local_daemon.rs still pins both packages to floating latest;
+its existing-CLI path marks the probe step successful without checking the
+probe exit code/timed_out, and its existing-agent-node path accepts a package
+JSON version without exact pair validation. Backend opencode-agent-node-pair.ts
+requires exact CLI .162 / agent-node .128 and trusted package ancestry. This is
+a remaining installer validation/upgrade gap, not fixed by the Hub .120 pin.
+
+New-head CI acceptance, 2026-10-10 01:07-01:09 Asia/Shanghai:
+PR795 head 2f0dbf47f735cbac688b2fc6b5c5c110bdb60085: 25 SUCCESS / 1 conditional
+SKIPPED, no pending/failure. linux-deb run37962304739/job113927925866 SUCCESS.
+Test merge source: 1fb4848f9caae929ffa9b9ddc8b4741871f8ebdc.
+Artifact11632313194: TEST-ONLY-linux-deb-1fb4848f9caae929ffa9b9ddc8b4741871f8ebdc.
+ANet_0.2.227_amd64.deb SHA256:
+7c9e0d3a32c6e3fee4bff866b3f26a04ba66dc2873bc0bdd427a88566c2c46d0.
+Downloaded artifact and verified the deb checksum. Initial sha256sum -c lookup
+failed because the manifest retains CI's out/ prefix while gh download flattens
+the artifact root; stripping only that filename prefix yields OK, with the
+original expected hash unchanged. This was a path lookup, not a hash mismatch.
+Bundled manifest confirms Hub .120 / API v3 / Linux x86_64, same sourceIntegrity
+as recorded above. preBundleSha256 is
+0a4a7ab870745c8753630d1468233d50ea670b79bc5ff85dfa1671ff9a9fbf8f;
+preBundleSize 96229504. Do not infer byte-identical rebuilds across CI runs.
+
+Native startup/auth, missing Secret Service negative, real UI credential flow,
+and missed-click negative all passed. Manually reviewed downloaded before/after
+screenshots: welcome/Create local workspace -> Agent list with 0 agents, not a
+loading spinner. Negative logs retain exact missing-Service and missed-click
+failures; CI asserts these expected failures rather than treating them as passes.
+
+New .66-to-.120 migration and failed-migration rollback steps both passed in
+offline disposable containers. Upgrade verifies old identity/node/task retained
+and .120 metadata plus cross-version snapshot. Wrong-credential rollback verifies
+byte-exact previous database, previous endpoint/port/version, no stale supervisor
+lock and retained cross-version snapshot; wrapper independently requires .66
+metadata afterward. These are NEW .120 package positives, unlike earlier .66
+same-version negative checks. No production state or credentials were used.
+
+Remaining: daemon exact input/old-install compatibility and complete native V2
+create/model/start/stop flow. PR remains draft; this evidence does not mark #894
+or #829/#539 complete, authorize merging, or turn a TEST ONLY artifact into a
+formal package. This report increment is local pending the next scoped commit.
+
+Cleanup review (read-only, no test rerun): CI job completed successfully at
+2026-10-09T17:07:16Z. Atomic/keyring-negative/missed-click/migration containers use
+--rm; the named window/UI evidence containers are removed by their successful
+always() evidence-preservation steps after copying /evidence only. UI helper
+traps its own app PID (kill/wait), keyring helper traps its own daemon PID, and
+native migration smokes stop the local Hub and delete their test credential.
+The local prefix diagnostic container was --rm; a subsequent docker ps filtered
+to its image returned no running container. Downloaded TEST ONLY package/logs/
+screenshots are intentionally retained for review; GitHub retention is seven
+days, not a durable production backup. No broad host cleanup was performed.
+
+Installer policy candidate, 2026-10-10 01:19 Asia/Shanghai:
+Exact pair source was freshly read from backend main
+80c6ab5b883a2056784326e73a6b6ec09ac0ce2c,
+agent-network/src/opencode-agent-node-pair.ts (.162 CLI / .128 agent-node).
+The candidate pins these two new-install inputs and preflights BOTH existing
+private packages before npm install, Hub credential write or daemon start.
+CLI requires successful/non-timeout probe plus exactly one exact version banner;
+agent-node requires matching manifest identity/version/entrypoint and successful
+real help execution. Old, newer-but-unpaired, broken or partial installs fail
+without replacement. A dangling CLI symlink or a package directory missing its
+CLI bin is an existing broken installation, not permission to reinstall over it.
+No V2 unsafe flag or V1 config is changed; no automatic upgrade is implemented.
+
+Independent tests/local-daemon-packages/Dockerfile compiles the actual policy
+module with digest-pinned Rust, runs offline as UID65534: 6/6 tests passed.
+Tests include failed/timed-out processes printing a correct banner, ambiguous
+versions, old/newer versions, wrong package identity and missing/wrong entrypoint.
+Full actual Rust module compile/tests started in a disposable existing Linux
+build image, with the current src-tauri source mounted read-only and copied
+inside the container. Full compile is pending at this checkpoint; no result is
+inferred from the dependency-free policy test. Native installer path-level
+integration and new-head package gates remain required.
+
+The added private-prefix Docker stage also passed: ordinary user node (not root),
+/home/node/.anet/app/local-daemon/anet, matching prefix/bin on PATH, normal npm
+install scripts (not --ignore-scripts), 274 installed packages. Offline probe
+checked package versions against the product constants, both exact bin symlink
+targets, successful real CLI version and agent-node help, and no Hub auth file
+or daemon registration. This is a package atomic gate, NOT a call of the native
+installer and NOT a V2 lifecycle test. It supersedes the earlier root/tmp
+diagnostic for this limited directory/layout question only. Top-level pins still
+do not lock transitive resolution or establish complete npm payload provenance.
+
+Full Rust candidate validation completed in the disposable Linux build container:
+`cargo test --release --locked --manifest-path /app/src-tauri/Cargo.toml --lib local_daemon -- --nocapture`
+compiled the actual current app module successfully (7m21s), then 19/19 filtered
+tests passed (38 unrelated tests not run). This includes the six policy tests,
+not six additional tests to double-count, plus partial-directory/dangling-link
+checks and existing real shell timeout/detached-launch regressions. These tests
+use temporary test state, not a registered real daemon or production credentials.
+Both Docker commands exited 0 and used --rm. git diff --check passed.
+Earlier locally pending evidence above is consolidated with this installer
+candidate; the old 2f0dbf4 CI result remains bound to its old source/artifact.
+The new candidate still requires its own full CI/package and native installer
+integration gates; it is not approved for merge or release by these checks.
+
+2026-10-10 01:37 Asia/Shanghai — exact-pair source contract regression:
+Head 50723a6336dee211c835c8a0435423987765203d had four failed unit jobs
+(push + pull_request, Ubuntu + Windows). Read PR run37966240584 logs for
+jobs113941186022 and113941186118: both fail the same local-daemon.test.ts
+assertion requiring the obsolete floating @sleep2agi/agent-node@latest string.
+The replacement asserts the exact .162/.128 product constants, private-prefix
+installation of both constants, both-existing-package preflight before either
+installation or Hub credential write, and revalidation after fresh installation.
+Existing scan/old-daemon-stop assertions are retained. No product gate weakened.
+
+Docker targeted test: 31 checks passed. Full suite: 380/380 test files passed.
+Both used the existing anet-linux-deb:8fb42f1 image (image ID recorded above),
+network disabled, current worktree mounted read-only. Full run copied current
+source inside the disposable container to /app, retaining image dependencies;
+a separate offline cmp verified current package-lock.json equals image lock.
+Commands from repository root:
+sg docker -c 'docker run --rm --network none -v /dev/shm/anet-app-bundled-v2-contract:/candidate:ro --workdir /candidate --entrypoint /usr/local/bin/bun anet-linux-deb:8fb42f1 src/local-daemon.test.ts'
+sg docker -c 'docker run --rm --network none -v /dev/shm/anet-app-bundled-v2-contract/package-lock.json:/candidate-lock.json:ro --entrypoint cmp anet-linux-deb:8fb42f1 /candidate-lock.json /app/package-lock.json'
+sg docker -c 'docker run --rm --network none -v /dev/shm/anet-app-bundled-v2-contract:/candidate:ro --workdir /app --entrypoint sh anet-linux-deb:8fb42f1 -c "cp -a /candidate/. /app/ && node scripts/run-tests.mjs"'
+First full-suite invocation ran from /candidate without dependencies and was
+stopped after module-not-found errors; it is an invalid environment attempt,
+not a product result. Corrected run above printed 380/380. All owned containers
+used --rm and exited/were stopped; unrelated containers were not touched.
+This incremental test repair still needs new-head Ubuntu/Windows CI. Native
+daemon installer integration and complete V2 lifecycle remain outstanding.
+
+2026-10-10 01:46 Asia/Shanghai — real packaged daemon installer increment:
+New head25737e6121952515b1bc05f92d5f34e08246f91c four unit jobs now SUCCESS
+(Ubuntu/Windows, push/PR); Rust and private-pair Docker also SUCCESS. Its own
+linux-deb and stub gates remain pending at this observation; not all-green.
+
+Previous head50723a6336dee211c835c8a0435423987765203d linux-deb CI completed
+successfully: run37966243636/job113941196708, tested merge
+433823aed20a09b6159b3f30e137daf6265bd685. Artifact11633813373 name
+TEST-ONLY-linux-deb-433823aed20a09b6159b3f30e137daf6265bd685, digest
+sha256:6b44c4b620f05dac899a728c47d95cd99d55ac5d2de624e8f3b0649cb83abc2a.
+Downloaded ANet_0.2.227_amd64.deb SHA256
+f39631f06fbd99527de10a39e38e98423ee9aedc3686ed27aa95968814cb8dd1
+matches its SHA256SUMS. The artifact source note names the tested merge above.
+These are old-head package results, not new25737 evidence; product Rust source
+is unchanged between50723 and25737 (git diff only test/report), but sources and
+CI results remain explicitly separated. No new manual screenshot claim made.
+
+Added tests/linux-native-daemon independent Dockerfile + run/verify scripts.
+Diagnostic image anet-native-daemon:507 ID
+sha256:03e1cdfd5230892dcd26d20aeee471c794663007c71ff002d4ffc1cdb485d57e
+imports that exact accepted deb using Dockerfile.artifact, checks source note
+and sha256 before dpkg -i. The base fixture was built from native-workspace:893
+with current isolated keyring helper plus real Node/npm/cache/exact pair from
+anet-daemon-prefix:894. This import overlays an existing test install; it is NOT
+a clean-install result. The authoritative clean-install evidence remains the
+original CI job. No older binary was used to claim new installer acceptance.
+
+Layered actual executions, UID10001, --network none, --cap-drop ALL and
+--security-opt no-new-privileges, no production data or credentials:
+1. Empty prefix: packaged --smoke-local-daemon-install exit0, real npm offline
+   installation, exact versions, actual Hub supervisor registration and matching
+   node_id/profile rescan (asserted by native smoke), PASS.
+2. Existing exact prefix: initial fixture failed strict fingerprint check.
+   Diagnostic per-path hashes/modes established only prefix root mode changed
+   from16877 (directory0755) to16832 (directory0700); no package content/link
+   difference. ensure_private_dir intentionally tightens permissions. Corrected
+   seeded fixture to product-created0700; rerun retained strict full fingerprint
+   and PASSED with real daemon registration. No assertion was removed/masked.
+3. Partial agent-node entry: remove only dist/cli.js inside fresh container,
+   require native exit1 and exact pairing refusal (not arbitrary timeout), PASS.
+   Entire corrupted prefix remains unchanged; entry not replaced, no daemon
+   private Hub config, no daemon profile, no start.log. This is deliberate
+   corruption, NOT a real old-package compatibility result.
+
+Empty ran image default command. Exact/partial final checks used readonly mounts
+of the current run.sh/verify.mjs into the same bound diagnostic image, invoking
+sh /fixture/keyring.sh bash /fixture/native-daemon.sh exact (then partial).
+Only test scripts were mounted; application binary and packages stayed real.
+All containers used --rm. Native smoke attempts Hub/daemon stop; removal is the
+final cleanup boundary even for failures. Downloaded TEST ONLY evidence stays
+available for review, not a production backup.
+
+Workflow now gates policy/pair, native empty, exact, then partial in order after
+existing startup/auth/UI/migration checks; each failure prevents later steps.
+Docker YAML parse + explicit prerequisite/positive/negative step-order check
+passed; bash/node syntax validated in fixture build/runtime. git diff --check
+passed. New-head packaged CI must still execute this wiring; no merge/release.
+Remaining: real old CLI/node and other broken/timeout installer cases, V1
+compatibility and full native V2 create/model/start/stop lifecycle. #894/#829
+remain in progress; these three installer checks alone do not close them.
+
+2026-10-10 01:54 Asia/Shanghai — two real historical package refusal cases:
+Added Dockerfile.legacy, normal npm install scripts in a digest-pinned Node22
+builder, with two independent prefixes:
+  old-cli: actual CLI2.3.0-preview.76 + agent-node2.5.0-preview.128 (274 packages)
+  old-node: actual CLI2.3.0-preview.162 + agent-node2.5.0-preview.58 (273 packages)
+Both real CLI --version commands and actual old agent-node --help exited0.
+These are actual historical npm package installs, NOT modified manifest versions
+or CLI shims. Top-level pins still do not prove all transitive payload provenance.
+
+Diagnostic image anet-native-daemon:legacy-507 ID
+sha256:32ec0dcff7bc39c84ee986416c3643d2979cad5eb9ef2543ca77b965c5f3ff7b
+extends the already source/hash-bound507 package diagnostic described above;
+it does not claim to be a newly built96e6038 package. Both cases ran serially,
+only after the earlier actual empty/exact/partial installer gates had passed.
+
+sg docker -c 'docker build --build-arg NATIVE_IMAGE=anet-native-daemon:507 -t anet-native-daemon:legacy-507 -f tests/linux-native-daemon/Dockerfile.legacy .'
+sg docker -c 'docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:legacy-507'
+sg docker -c 'docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:legacy-507 sh /fixture/keyring.sh bash /fixture/native-daemon.sh old-node'
+
+Both commands exited0 for the verifier, requiring native installer exit1 and
+the precise expected CLI/agent-node pairing refusal plus the failed pairing
+step. Before/after manifests retain the actual expected versions, and full
+prefix file/mode/link fingerprints are unchanged. No private Hub credential
+file, daemon profile or start.log was created. Ordinary UID10001, offline
+runtime, real bundled Hub and Secret Service, no production state mounted.
+Containers used --rm; no old daemon was intentionally registered by either
+negative case. This tests safe refusal WITHOUT replacement, not automatic
+upgrade, preservation of an already running daemon, or V1 runtime compatibility.
+
+Native verifier/run script generalized their existing scenario dispatch to
+support these two cases; strict fingerprints and positive/partial assertions
+remain. Docker bash/node syntax passed. Docker YAML parse + explicit ordered
+positive gates before legacy build/refusal cases passed. No product source
+change. Workflow now records each historical refusal separately after the
+existing native positive/partial gates, and must pass anew on the eventual head.
+
+At01:54,96e603836a288f9308d2822982f7e1a956564ca5 had17SUCCESS/1SKIPPED/
+9running; its linux-deb still compiling at latest step read. Previous25737e6
+linux-deb run37967596661 completedSUCCESS separately. No aggregate all-green,
+new native CI acceptance, merge or release inferred from either observation.
+Next required: current-head CI, failed/timed-out CLI native probes and full
+V1/V2 session lifecycle. Existing policy unit negatives are not native evidence.
+
+2026-10-10 01:59 Asia/Shanghai — native CLI process-fault boundary:
+Two new explicit fault injections ran against the same source/hash-bound507
+diagnostic deb, using current run.sh/verify.mjs mounted read-only. Each starts
+with the exact real pair, replaces ONLY the private bin symlink with a wrapper,
+and keeps the real CLI package entry intact. Wrapper executes that actual entry,
+forwards its stdout/stderr, requires exit0 and the exact real version banner,
+then injects exit23 or a60-second hang for --version only. Other commands forward
+to the real entry. This is labelled fault injection, not a historical release.
+
+failed-cli: native exit1 with exact exit=Some(23), timeout=false refusal; PASS.
+timeout-cli: native exit1 with exact exit=None, timeout=true refusal; returned
+in35s including surrounding native operations. Product30s timeout unchanged;
+outer240s watchdog did not fire (exit124 would fail). PASS.
+Both require a separate recorded successful real version probe before injection,
+strict unchanged post-injection prefix file/mode/link fingerprint, and no private
+Hub credential, daemon profile or start.log. Both verifier commands exited0,
+ordinary UID10001, --network none, --cap-drop ALL, no-new-privileges, --rm.
+Afterward docker ps filtered to the diagnostic image returned no containers.
+
+Commands: same readonly run/verify mounts as prior diagnostic, image
+anet-native-daemon:507, sh /fixture/keyring.sh bash /fixture/native-daemon.sh
+failed-cli, followed only after success by timeout-cli. No production state or
+credentials mounted. Container destruction remains final cleanup for possible
+orphan probe children; this is not a claim of process-group cleanup by run_shell.
+Docker YAML parse and ordered native fault gates passed. New CI appends these
+cases after current-pair and historical-package checks. Existing positives are
+not recounted as new work and policy unit tests are not substituted for native
+results. No product code changed. Complete V1/V2 native session flow still open.
+
+2026-10-10 02:10 Asia/Shanghai — native UI to daemon handoff:
+Added independent tests/linux-native-daemon-ui suite. Real installed Tauri app,
+X11 mouse input, native IPC, Secret Service, bundled Hub and offline npm; no web
+export/HTTP/Tauri replacement and no --smoke-local-daemon-install invocation.
+Accepted package remains50723a6 product / tested merge
+433823aed20a09b6159b3f30e137daf6265bd685, deb SHA
+f39631f06fbd99527de10a39e38e98423ee9aedc3686ed27aa95968814cb8dd1.
+Diagnostic fixture overlays that accepted artifact, not a claim of new clean
+installation or a package built from this new test commit.
+
+First automation stopped BEFORE install because verifier omitted required
+network_id and received HTTP400. Fixed verifier to use native profile.networkId
+for every supervisor query and require daemon profile.network_id to match it.
+No product change or swallowed HTTP error. Corrected positive exited0:
+ - UI creates local workspace and native session; wrong token gets401.
+ - new-node navigation and scan leave daemon profile/private credentials absent
+   and network-scoped Hub supervisor list empty.
+ - real install click creates profile with node_daemon_fab9e3da76e2, matching
+   authenticated Hub supervisor online=true/can_create_nodes=true.
+ - manually reviewed registered.png: green local-daemon,1/1online, next enabled,
+   no installer spinner; runtime badges correctly unavailable in this image.
+Screenshot SHA256 c04fe8e340d10bd0e320f0ab39fd2ba110b1364126881c444c6dfe246c712d57
+Sanitized registration JSON SHA256
+e5f11907fa44135cac9814de79b9a84255e8dbee953ef87938f6dd51023b8181
+Positive ran image manifest
+6346b391be6904bd75dc27ff278b73b666aa8ba73ff8a3af97f27cdd6c49198c;
+later fixture adds failure screenshot capture and strengthens missed-click
+absence assertions without changing positive acceptance or product source.
+
+Build command:
+sg docker -c 'docker build --build-arg NATIVE_IMAGE=anet-native-daemon:507 --build-arg SOURCE_COMMIT=433823aed20a09b6159b3f30e137daf6265bd685 --build-arg DEB_SHA256=f39631f06fbd99527de10a39e38e98423ee9aedc3686ed27aa95968814cb8dd1 -t anet-native-daemon-ui:507 -f tests/linux-native-daemon-ui/Dockerfile .'
+Run command: sg docker -c 'docker run --name anet894-native-ui-positive --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m anet-native-daemon-ui:507'
+Screens/evidence copied before removing stopped container, retained in diagnostic
+/tmp/anet894-ui-evidence.pRdKDx/positive, not required rebuild inputs.
+Suite scripts and CI artifact preservation are authoritative in Git; CI stores
+only /evidence, not credential files/databases. No production state mounted.
+
+Prior exact96e603836a288f9308d2822982f7e1a956564ca5 linux-deb
+run37968531279/job113948915916 nowSUCCESS, including all three native installer
+steps. Current7479a9029ebbf2d162aab956da8c2e1cd3f300c6 observed17SUCCESS/
+1SKIPPED/9running (linux-deb +8UI shards), no failures, not all-green.
+Complete V1/V2 needs real pinned runtime/provider fixture, creation/launch proof,
+model changes and stop/restart. This UI-to-daemon result does not close it.
+
+Final missed-click run uses image manifest
+625c781ab8c733c7b3a68623baf1876c5057c4b3a28a5ad69b3a7cf0d04543a3,
+same command options plus -e TEST_DAEMON_UI_MISS_CLICK=1, independent container.
+Exit1, exact "AssertionError: UI install click did not register matching online
+daemon" after successful auth/scan preconditions. Explicitly confirmed no daemon
+credentials/profile/Hub roster change. PASS expected negative (not a suite crash).
+Earlier negative had the same expected refusal; strengthened absence assertions
+were then executed rather than assumed. Bash/Python syntax in Docker and YAML
+parse/prerequisite ordering/always-preserve-evidence checks passed. All dedicated
+diagnostic/positive/negative containers removed after saving screenshots; docker
+ps -a --filter name=anet894-native-ui returns empty. App trap is not claimed to
+stop every descendant; container removal remains final cleanup boundary.
+
+2026-10-10 02:30 Asia/Shanghai — actual V2 creation exposes private child PATH gap:
+Original PR795 only; no new implementation ticket, merge or release. Diagnostic
+package remains50723a6 / tested merge433823aed20a09b6159b3f30e137daf6265bd685 /
+deb f39631f06fbd99527de10a39e38e98423ee9aedc3686ed27aa95968814cb8dd1.
+This is not a package built from the new source changes below.
+
+New independent tests/linux-native-opencode Docker suite uses real integrity-
+locked @opencode/cli2.0.22, copied from normal npm ci, plus a loopback model fixture.
+Runtime fixture image manifest77847996ca8e9ce9134bba0eb35c8d825776e5e638f86d31bb056bd7e1983d96.
+In fresh UID10001 containers with --network none --cap-drop ALL and
+--security-opt no-new-privileges:
+  positive exit0: real /api/info; unauthenticated401; real session returned
+  ANSWER_NATIVE_ATOMIC894 (not present in prompt), became idle; provider journal
+  recorded actual model stub-model.
+  TEST_WRONG_MODEL=1 exit1: exact AssertionError: provider model mismatch,
+  after healthy/auth prerequisite. Not a generic runtime crash.
+Both containers removed after evidence copy. Rebuild/run inputs and evidence
+retention are in the suite README and linux-deb-package workflow.
+
+Then used the actual native window, native IPC and actual private installer:
+  UI local workspace → new node → scan → install → matching online supervisor
+  → name v2-native / workdir /home/smoke/v2-native → OpenCode V2
+  → explicit unsafe-tools consent → model stub/stub-model → confirm → create.
+Provider was seeded only in node-scoped opencode.json using prepare.py; no node
+identity or create request was injected. Provider implements no requested tool
+execution; all processes stay in the isolated container. The UI correctly showed
+failure, not online. copresence-bridge.log reported exact trusted agent-node
+2.5.0-preview.128 absent on PATH and automatic npx disabled. Read-only inspection:
+  private package version =2.5.0-preview.128; private dist/cli.js exists=true;
+  initialized daemon config daemonExtraPath=null.
+Backend create-node-daemon.ts uses fixed child PATH + daemonExtraPath, not the
+installer login-shell PATH. Therefore parent install/register success was not
+proof of usable child launch.
+
+Failure screenshot create-result.png SHA256
+6a21533f3b89cc43433de26236dafbfbc427d14b6b4981a75a97577e228fce60;
+bridge log SHA256
+f68610b4d3e783eb2eaa06c90003188e9e7b74238e9c3412b7c630a5c9e7c00e.
+Diagnostic evidence copied to /tmp/anet894-runtime-evidence.uU9ByX, not a required
+rebuild input or durable artifact promise. No credential/config DB was archived.
+The updated native verification was executed on this old package: auth accepted,
+wrong token401, then exact AssertionError: private pair absent from daemon child
+PATH. This is the regression negative, not a post-fix positive. Diagnostic
+container anet894-runtime-ui-diagnostic was stopped/removed; unrelated containers
+were untouched. Container removal is final process/credential cleanup.
+
+Narrow product fix: after successful init and node-id verification, before any
+stop/start, atomically persist only the validated private pair bin into the
+existing daemonExtraPath contract. Preserve other fields/extra paths, deduplicate
+trailing slash, reject malformed JSON/array/path or node-id mismatch. Do not copy
+ambient PATH, change exact versions, loosen trusted package checks or enable npx.
+Added three actual Rust helper tests and native profile/path/0600 acceptance;
+the workflow runs native installer gates before the V2 runtime prerequisite.
+Updated local workspace recovery/verification/rollback documentation in same change.
+
+Docker validation so far:32 client contract assertions; Python syntax; YAML parse
+and prerequisite/negative/always-preserve evidence ordering. Initial attempt used
+node --experimental-strip-types, which cannot resolve the existing extensionless
+TS import; corrected to the established Bun runner. Rust test compilation used
+the cached full build image with current src-tauri source overlaid inside the
+container (not host), Cargo.toml/lock unchanged from image base. Rust result and
+new exact-head packaged acceptance are recorded separately below; no success
+inference from old package/previous CI. Full native create/model/stop/restart,
+V1 compatibility and formal main-SHA release remain open.
+
+Post-change Docker Rust result: cargo test --locked local_daemon -- --nocapture
+compiled actual product code and passed22/22 (including3 new private child-path
+tests and6 unchanged exact-pair policy tests);38 unrelated tests filtered out.
+No package was rebuilt by this unit run. Reproduce against the full Linux build
+image from tests/linux-deb-package/Dockerfile (current workflow source is authority),
+overlay current src-tauri/src/*.rs and src/local-daemon.test.ts inside /app,
+run bun src/local-daemon.test.ts then the cargo command above. Local execution
+used anet-linux-deb:8fb42f1 with read-only /source mount and --network none;
+source Cargo.toml/lock had no diff from that image's source. Container removed
+after completion. Do not attribute these source tests to the older507 deb.
+
+2026-10-10 02:45 Asia/Shanghai — native create driver prepared, not yet accepted:
+Fresh product head85040c75b1dae2dc2e021fa3addece234e7673e2 linux-deb
+run37973976646/job113967433333 remains in full source build; no downloadable
+artifact yet at02:42. Ubuntu/Windows unit tests, Rust and private package pair
+checks have succeeded. No failure was observed, but a running build is not a
+passed package gate. No unchanged prior sample was rerun as new progress.
+
+Added tests/linux-native-opencode/create-ui.sh and verify-create.py for the next
+dependent layer. Native UI actions reproduce the reviewed1200x800 wizard route;
+the only preseed is node-scoped loopback provider configuration. Read-only SQLite
+and authenticated API observations require one request, exact node/network,
+V2/copresence/consent/model, positive launch_verified_at, active token and live
+bridge/serve/attach generations. A subsequent REST test task must return a
+provider-only marker with exact actual model. This does NOT claim native UI task
+dispatch, model-switch, stop/restart or V1. Separate missed-submit negative must
+leave zero request and no node identity, failing with the exact launch assertion.
+
+Docker bash -n and Python AST parsing passed. Actual packaged positive/negative
+and screenshot review are PENDING the85040c7 package prerequisite; do not run
+past a failing prerequisite or report these prepared drivers as E2E passes.
+They are explicit opt-in fixtures, not newly enabled full-lifecycle CI gates.
+This is a test-only follow-up: product source unchanged from85040c7. Keep its
+package/tested-merge identity separate from this later test commit when running.
+All execution stays in disposable Docker; no production or global npm changes.
+
+The new optional overlay.Dockerfile was exercised as a packaging-input gate,
+not native acceptance: accepted507 artifact/source/hash produced an overlay image
+(manifest c8e03e9e50dfa3fefda4a0f92a6569ce7ec3d02234c4f05c73b7dcaaa91ea812);
+the same artifact with a40-zero source was refused before dpkg with the exact
+"FAIL: candidate source does not match requested SHA". Bash/Python syntax also
+passed inside that build. No old507 runtime/UI positives are recounted here.
+
+02:52–02:54 fresh package evidence:
+PR795 product85040c75b1dae2dc2e021fa3addece234e7673e2 rollup26SUCCESS/1SKIPPED.
+linux-deb run37973976646/job113967433333 SUCCESS, tested merge
+b12bc1995d2d95f7b9c5a91876f61f8c3348d7db.
+Artifact11638677040, TEST-ONLY-linux-deb-b12bc1995d2d95f7b9c5a91876f61f8c3348d7db,
+GitHub-reported artifact digest
+7f5cd14091043c6f4366bcf52a2322c998d281e9f7ccf329d0f0fce6c80cb617.
+Downloaded to /dev/shm/anet-ci795-850-evidence.hykrvn; local deb SHA verified
+against SHA256SUMS:
+c9e3ccbc24e298724468561cfd61c6512ca4e271de207c16d139c5e4e1c573d6.
+TEST-ONLY.txt source matches the actual tested merge (not PR head).
+
+All native startup/auth, UI, migration/rollback and7 installer cases passed;
+real UI installer now checks persisted private_pair_child_path and0600 mode.
+CI daemon-registration.json confirms matching online/can_create daemon, correct
+tested-source/deb hash and /home/smoke/native-daemon-test/local-daemon/anet/bin.
+Manually inspected registered.png: green local-daemon, Next enabled, unavailable
+runtime badges correctly red in the no-runtime install image; zero user nodes
+at this stage, not an invented child. Screenshot SHA
+4315007c0f3549296e88ea719b417e9600689726cb0a8224a88c4ec7dd487720.
+Pinned V2 runtime prerequisite positive and wrong-model negative also passed CI.
+
+New-package diagnostic overlay built with overlay.Dockerfile against downloaded
+candidate context; SOURCE_COMMIT=b12bc1995d2d95f7b9c5a91876f61f8c3348d7db,
+DEB_SHA256=c9e3ccbc24e298724468561cfd61c6512ca4e271de207c16d139c5e4e1c573d6,
+DEB_FILE=ANet_0.2.227_amd64.deb, FIXTURE_IMAGE=anet-native-opencode:507.
+Initial image anet-native-opencode:850-create manifest
+4a2b99c4365e8bcc5e08d5bb786c3c0cf3a1a3d3473a0f459b2e36e975046c7f.
+This reuses only fixture/runtime/npm cache, replaces the candidate app/Hub,
+verifies metadata/hash/linkage and supplies current native verifier/driver.
+Not a second clean-install claim; clean installation is the CI result above.
+
+First native create driver got confirmed launch, but observer then raised
+KeyError: network_id. Inspection of the real child config's keys and the backend
+REST contract confirmed child config has no network_id: its token is network-
+bound. Corrected observer requires the authoritative REST request network_id,
+read-only DB request network_id and native profile network to agree, plus exact
+runtime/model/child_name. No network check removed or product behavior changed.
+Initial screenshot was still the confirming-start UI at the moment of observer
+failure; not counted as completed UI acceptance. Saved only /evidence and
+removed the initial container before a fresh corrected run. Corrected driver
+image manifest fea7e1fb0669daa7c067f997df42798b6289ef2ae66cf94f3293086ac6ce4df9.
+
+2026-10-10 02:57–03:01 CST: native creation follow-up execution accepted
+Fresh corrected positive, container anet894-v2-create-positive-850, exit0:
+PASS: native UI created exact V2 config with daemon launch proof/live process identities
+PASS: native-created V2 node returned provider-only response via real runtime
+PASS: real native V2 creation and actual runtime task; screenshots require review
+The exact85040c7 product package/tested merge/deb hash above are unchanged.
+Node node_202a889f-5d49-4e54-bd30-9cabc80c931b; request
+cr_202a889f-5d49-4e54-bd30-9cabc80c931b; network net_16d475f5769d;
+generation ses_eddf8efc7ffexqRmU7ABfgbiwp. Persisted stub/stub-model matches
+the actual provider journal model stub-model. Terminal task response was
+[v2-native] ANSWER_NATIVE_CREATED894. Creation was native UI/IPC; the subsequent
+test task was deliberately REST, not a native task-dispatch claim.
+Manually reviewed final native screenshot: green "v2-native 已上线" and enabled
+"完成", no remaining creation spinner. Screenshot SHA256:
+d9814e369757464674b54688eb4c979e47d053b6dca358590fb23be61deae930.
+create-proof.json SHA256:
+b88a5d45959d4d8f74b3b41058c3816846f4d576e1aefeb3a3c8e015b3f8f6b6.
+
+Fresh TEST_CREATE_MISS_CLICK=1, container anet894-v2-create-missed-850, exit1
+as required, after the same native authentication/installer prerequisites:
+PASS: missed submit left no request or node identity
+AssertionError: native V2 create did not produce confirmed launch
+Manually reviewed negative create-final.png: confirmation form remains visible,
+with the Create button still enabled; no success screen. Screenshot SHA256:
+dd38db8d04239150ba8cc8192617b7cb71673267c1e5f024d3482f4a26a92376.
+Saved only /evidence under /tmp/anet894-create850.5kiHe0/{positive,negative};
+both exact test containers removed, providing the final descendant cleanup.
+These temporary paths are diagnostic copies, not durable recovery inputs;
+the committed fixture/workflow reproduces the tests and preserves CI artifacts.
+
+CI now orders native-create positive, missed-submit exact negative, and always
+evidence/cleanup after the atomic runtime prerequisites. Docker Python YAML
+parse and ordering/default-success/always-evidence assertions passed. The first
+parser invocation could not find a previously cached image; no test ran there.
+Retried in the available runtime image with python3-yaml installed only in the
+disposable container; exit0. Bash/Python syntax passed in the overlay build.
+Product source unchanged; this test-only follow-up still needs its own CI.
+No full V1/V2 lifecycle/model-switch/stop/restart, public release, or global chat
+loading fix is claimed. #894 remains doing1/3, parent#829 doing2/3.
+
+2026-10-10 03:03–03:09 CST: native V2 lifecycle follow-up, exploratory evidence
+No product source changed; exact85040c7 product, tested merge and deb SHA remain
+as above. PR795 test head86897fbf384a1147ba5f5c3964ec746742b9c337 at03:06:
+17SUCCESS/1SKIPPED/9IN_PROGRESS (linux-deb and8stub); not all green yet.
+CommHub changes since19:02:11Z contained only our#894/#829 comments; no new
+ANet task to migrate or duplicate. Preserve original owners and checklists.
+
+Fresh network-none non-root exploratory container anet894-v2-lifecycle-explore
+reused the exact accepted creation prerequisite, then real X11 clicks entered
+node details and changed model to stub/stub-model-next. Authenticated API and
+read-only database showed applied revision1, persisted new model, new runtime
+generation, previous bridge/serve/attach identities gone; subsequent REST proof
+task returned ANSWER_NATIVE_MODEL894 using actual provider model stub-model-next.
+Manually reviewed green model-applied screenshot and updated header/model values.
+First observer incorrectly expected the pre-normalization patch without flags;
+the Hub stores {model:...,flags:{}}. Corrected to that exact shape, not a relaxed
+substring or skipped assertion. This exploratory retry is not a fresh-suite pass.
+
+Native Overview Stop + actual confirmation changed lifecycle_state to stopped,
+all exact old runtime processes no longer live, child identity/token and model
+retained. Screenshot eventually offline with Stop/Restart disabled. Native
+Danger-section Start + confirmation brought the same node back on a new live
+generation, retained the new model and returned ANSWER_NATIVE_START894; final
+screenshot showed green idle and "节点已上线". Native Restart then replaced the
+generation again and returned ANSWER_NATIVE_RESTART894 on the same model.
+Initial restart observer hit a transient missing opencode-launch-health.json
+after Hub acknowledgment. Bounded waiting now requires actual health/attach
+files, matching generation and live PID/start-ticks, never acknowledgment alone.
+Final exploratory restart screenshot reviewed (green idle, request submitted).
+The confirmation button text is visually blue-on-blue in the tested package;
+recorded as a remaining UI readability issue, not silently accepted as polished.
+
+Exploratory evidence copied only from /evidence to
+/tmp/anet894-lifecycle850.FVljfy/exploratory; exact container stopped/removed.
+No host/global package or production state modified. New reusable
+lifecycle-ui.sh/verify-lifecycle.py are now under fresh positive/negative test.
+Diagnostic overlay built with same source/hash and base850-create, manifest
+c60748d08857e3f6f42643fd0a4aef9a8a85ae856ae842ee897849e9093b76ea.
+Docker bash/Python syntax checks passed. Full fresh-suite outcome remains pending
+until recorded below; no V1 or formal-release claim.
+
+03:11 fresh automated lifecycle acceptance (not the exploratory replay):
+Image anet-native-opencode:850-lifecycle, manifest c60748d... as above;
+anet894-v2-lifecycle-positive exited0 after all atomic native creation checks,
+model change, stop, start and restart. All mutations were real native mouse
+actions, no synthetic lifecycle/config API call. Subsequent proof tasks were
+REST and returned ANSWER_NATIVE_MODEL894, ANSWER_NATIVE_START894 and
+ANSWER_NATIVE_RESTART894, all on actual provider stub-model-next.
+Node identity remained node_b09e9e0c-f42e-48cf-a9b9-659542e2df72,
+network net_ebf8ffab2e2e. Model/revision/generation sequence:
+baseline stub/stub-model revision0 ses_edded8941ffev0g5hoT6x4nvTl;
+model stub/stub-model-next revision1 ses_edded4080ffeP9wUdbzB51dU29;
+stop: old process identities gone, same config/model and active child token;
+start stub/stub-model-next revision1 ses_eddec9252ffeKLKxnFLuoj39J6;
+restart stub/stub-model-next revision2 ses_eddec3c63ffehNhCrSx7HZn1eD.
+Each new generation required live bridge/serve/attach PID+start-ticks and the
+previous processes no longer live. No acceptance from Hub acknowledgment alone.
+Manually reviewed model-applied/stopped/started/restarted native screenshots:
+new model green confirmation; stopped offline/disabled controls; started green
+idle with "节点已上线"; restarted green idle with retained model.
+SHA256s in that order:
+6f35f2d29c9eddf500749dbeefbb2de1dd418ba7aa71ee7f1d47e7b8b0c65a94
+07fdb7f357bbae9765958619604dade209a1d30dcecfb74907062e4d1aa85808
+dcbe6b413fef0a6f524b898be450de83cb3e2af66831fc871488b1c28e628966
+d6002101511b65038afb6a94a9ad590f6b6ad8a1e95973ea9fb44cedb063fb8c
+
+Separate fresh negative anet894-v2-lifecycle-missed exited1 as required:
+PASS: missed model submit left revision/model/generation unchanged
+AssertionError: native model switch did not apply
+No config-update row was created, exact before/after snapshot unchanged. Native
+screenshot reviewed: original model remains current, no success message.
+Negative screenshot SHA f0a4f039f49a47d847997249417ff0461d6f5abf611ae85bdd6cb3c283ec5602.
+Positive and negative /evidence saved under /tmp/anet894-lifecycle850.FVljfy,
+then both exact stopped containers removed. Exploratory container also removed.
+Disposable Docker Python YAML parse and CI positive/negative/default-success/
+always-evidence ordering assertions passed. New CI gates preserve logs/images
+without publishing anything; this later test commit must earn its own CI result.
+
+New narrow UI defect tracked as Hub#895 under parent#829, ANet project and
+ANet/知识库 tags, pool1/3: primary retryBtn background paired with explicit
+colors.accent confirm text in NodeDetailScreen.tsx instead of primary text.
+Product styles unchanged this iteration. Full ANet tag and project inventories
+both388, no mismatches:253done/81doing/49pool/5abandoned. V1 regression and final
+review remain open; do not mark#894 or#829 complete or declare a public release.

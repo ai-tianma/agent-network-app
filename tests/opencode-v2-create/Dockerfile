@@ -8,6 +8,6 @@ COPY . .
 RUN cmp package-lock.json /tmp/dependency-lock.json
 ARG SOURCE_COMMIT
 ENV SOURCE_COMMIT=$SOURCE_COMMIT
-RUN npm run typecheck && npx expo export --platform web --output-dir /web-v2
+RUN bun src/opencode-create-options.test.ts && npm run typecheck && npx --no-install expo export --platform web --output-dir /web-v2
 ENV WEB_DIR=/web-v2 OUT=/artifacts
 ENTRYPOINT ["node", "tests/opencode-v2-create/drive.mjs"]

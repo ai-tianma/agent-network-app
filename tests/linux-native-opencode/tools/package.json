@@ -1,0 +1,7 @@
+{
+  "name": "anet-native-opencode-fixture",
+  "private": true,
+  "dependencies": {
+    "@opencode/cli": "2.0.22"
+  }
+}

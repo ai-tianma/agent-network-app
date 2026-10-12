@@ -1,0 +1,124 @@
+TEST ONLY — #894 native V1 explicit fixture transport
+Observed 2026-10-10 09:20 onward, Asia/Shanghai.
+
+Exact installed package (unchanged product)
+App PR795 head 7ec7a31004b4088887bc32cd6468dcb0962c0ad1.
+Tested merge 3f0dded2175e50afddcb65897019bc863c4e2491.
+Deb SHA256 c1f442deb4d3187193a5964eb15ac3bbbbf934fbfa7c27b6dc33b06291cab064.
+Backend inspected c10c83a0a5dde3038f42e93576fb18ba68d2c547.
+No host/global package, product source, production service or credential changed.
+
+Change
+Previous native model failures had no proxy or CA settings in the actual ACP
+child. create-node-daemon minimalEnv intentionally prevents arbitrary inherited
+environment. The fixture now uses the already-supported per-node secrets.env
+file (owner UID10001, mode0600), containing only HTTPS_PROXY, HTTP_PROXY,
+NO_PROXY and SSL_CERT_FILE pointing to the closed container-loopback fixture.
+It does not seed node identity, config/model settings, or reserved NODE_* keys.
+Auth remains synthetic test-only, in its private OpenCode auth file.
+No guard/permission policy was changed; no TLS verification bypass.
+
+Build / preliminary failures (not product failures)
+First FROM input used bare sha256:<image-id>; BuildKit treated it as a registry
+repository and refused it. Corrected by inspecting the existing local image
+anet-v1-current-registration:894 and building from that confirmed tag. Build
+resolved FROM to a99ffb216aa7854da1d0435a04f9a6f0e735d2f5149524219647ce1c7e6f04e0,
+with exact source/deb ENV assertions. No alternate package input substituted.
+First execution exited1 at01:21:50Z before UI: pathlib.Path.open does not accept
+opener. Fixed to builtin open(..., 'x', opener=...) with creation mode0600;
+this was fixture code only. Failed container was removed; no model gate ran.
+Container apt installed openssl/libssl3t64 3.0.13-0ubuntu3.16; apt inputs remain
+not fully content-locked, a reproducibility limitation already recorded.
+
+Positive
+Image manifest-list f6464ebc8049190eadda04b555ae59ed3d0cc97357b92a4dcb31fd4c5db65d5d.
+Container anet894-v1-model-explicit-transport-fixed exited0 at
+2026-10-10T01:23:56.011341966Z (09:23:56 CST).
+Run uses sg docker, network none, cap-drop ALL, no-new-privileges, shm256m,
+ordinary UID10001, no host source/credential/socket mounts.
+Layered passes: Secret Service/native local profile; wrong-token401; scan has
+no registration side effect; native private daemon installation/online identity;
+actual runtime measurement; native V1 headless safe creation; native model UI
+change to openai/gpt-4.1 and Hub/node revision1; actual ACP session and exact
+fixture-only model response; authenticated /v1/responses with model gpt-4.1.
+Only external availability/catalog/model responses are loopback fixtures. The
+proof task is sent by REST, not by native UI; do not claim UI task submission.
+
+Actual ACP child observed PID878, OPENCODE_PURE=1, wildcard permission deny.
+HTTPS_PROXY and SSL_CERT_FILE match fixture; NODE_EXTRA_CA_CERTS absent as
+expected (reserved key, not needed for this passing transport).
+Generated runtime config model remains null. One-model fixture can match the
+node's chosen model by default: this proves a packaged native ACP reply, NOT
+arbitrary model selection or multi-provider/default alignment. The separate
+CLI MODEL -> V1 ACP selection gap remains open; #901 TUI catalogue work is
+not accepted by this result. Do not seed a model to conceal the gap.
+
+Personally reviewed v1-model-replied.png: actual v0.2.227 native app shows
+v1-native idle, openai/gpt-4.1 and green model-change acknowledgement.
+That screenshot is not a chat-result view; the exact response is API/provider
+evidence. No full V1 stop/start/restart or tool-execution acceptance claimed.
+
+Rebuild/run
+Use tests/linux-native-v1-model/Dockerfile and README, passing the exact local
+registration image and source/deb hashes above. The provider is SHA256-locked
+to backend c10c83a0, not a floating download. See prior reports for rebuilding
+registration/base images. The fixture currently remains a local test addition,
+not yet in required CI. No source push, merge, release, or updated artifact.
+prepare.py SHA256 a328ebe1ff9cb137d3de89c9a69e048febe74bd2649ff92ad7eb9920e946eedb.
+verify.py SHA256 01a76b2a9aa70347be126a1aa06e5a2a6d58c25ac03a84c90d31d6b5b2cbb9a5.
+Convenience evidence /tmp/anet894-v1-explicit.jPtqS2/positive (not authority).
+
+Independent oracle negative
+Same f6464ebc image, anet894-v1-model-explicit-wrong, TEST_WRONG_MODEL=1.
+Native prerequisites/configuration and exact ACP reply passed, then exit1 at
+2026-10-10T01:25:43.962512325Z, specifically "native V1 provider model mismatch".
+This changes only the expected provider model, not transport/UI/model output.
+It demonstrates the evidence assertion rejects a mismatch; it is not the
+product's own invalid-model rejection behavior.
+Positive and negative evidence copied to positive/ and wrong/ beneath the
+convenience directory, then both exact stopped containers were removed.
+Positive proof JSON SHA256:
+8874da354bf75480b41f4a78c9b9683082dbf916cfa8520e0e79f76a94ebc036.
+Reviewed positive v1-model-replied.png SHA256:
+7397eb50b0958640280c340c4c5bfd9e9345e48427e8a8bbc9c6060f2a73475a.
+
+Additional selected-model diagnostic — product mismatch reproduced
+To distinguish matching a one-model default from honoring the UI selection,
+the driver now accepts TEST_SELECTED_MODEL for both real native text input
+and exact configuration/provider assertions. No model configuration is seeded.
+Image 1cf78d8fbe146f2044f7ccbe1e0067eff4ecdffe0eed4cf8a6c519c0fc1c5966,
+container anet894-v1-model-absent-selection, selected openai/not-in-fixture.
+Exited1 at2026-10-10T01:27:00.37080617Z, precisely "native V1 provider model
+mismatch", AFTER exact native configuration and successful ACP task response.
+The real UI, on-disk node config and authenticated Hub config all selected
+openai/not-in-fixture. Actual ACP observation agreed on that node selection,
+but its generated runtime config model was null. Provider journal had two
+authenticated gpt-4.1 calls: title generation AND the main system/user task.
+Thus this is not merely a title-model difference: the main task also used a
+model different from the user-selected model and returned a successful reply.
+The diagnostic has TEST_WRONG_MODEL unset; expected model follows actual UI
+selection. It is a reproduced product fallback/selection gap, not an injected
+oracle failure and not a transport/TLS/auth failure.
+Native final screenshot personally reviewed: current model and successful
+configuration acknowledgement show openai/not-in-fixture; status is working
+at assertion exit, so it is not a terminal-state UI acceptance screenshot.
+
+Source explanation (read-only, no product patch this iteration)
+agent-node/src/cli.ts headless dispatch passes no MODEL to openOpencodeRuntime
+or opencodeThink. runtime/opencode-acp/runtime.ts establishes a session without
+setting a selected model; child-env.ts only copies a persistent config model.
+The native node model change reaches config.json but does not reach this ACP
+selection path. Next minimal implementation belongs to the original #894
+line: explicitly bind selected model and reject unsupported selection, preserving
+safe policy and upstream identity, with Docker unit/protocol/native regression.
+Do not weaken the assertion, alter the provider catalogue to conceal selection,
+or mislabel V2 copresence Provider alignment (#901) as done by this V1 finding.
+
+Cleanup: all three native model containers and the preliminary fixture-error
+container removed only after their terminal states/evidence were recorded.
+docker ps -a --filter name=anet894-v1-model returned none. Evidence/images kept.
+Absent-selection ACP observation SHA256:
+0c0107992af45fa2d3b0f16ac48f1f488c8acc4c1c2dc8474f4e12e9d8f6009e.
+Absent-selection provider journal SHA256:
+5c83aef2ea92b3a21de0d7e300f92833a85ad4a44f9deec37650eabea84785a2.
+No downstream lifecycle run after the model-selection failure. No release.

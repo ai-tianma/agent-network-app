@@ -1,0 +1,16 @@
+# Diagnostic import of an already CI-accepted TEST ONLY deb. This is NOT a
+# clean-install gate: the authoritative clean-install result stays in its CI job.
+# Context must be the downloaded exact CI artifact directory, not the repo.
+ARG FIXTURE_IMAGE
+FROM ${FIXTURE_IMAGE}
+USER root
+ARG SOURCE_COMMIT
+ARG DEB_SHA256
+COPY *.deb /tmp/native-daemon-candidate.deb
+COPY TEST-ONLY.txt /tmp/candidate-source.txt
+RUN test "${#SOURCE_COMMIT}" = 40 && test "${#DEB_SHA256}" = 64 && \
+    grep -Fx "Source: $SOURCE_COMMIT" /tmp/candidate-source.txt && \
+    printf '%s  /tmp/native-daemon-candidate.deb\n' "$DEB_SHA256" | sha256sum -c - && \
+    dpkg -i /tmp/native-daemon-candidate.deb
+ENV TEST_DEB_SOURCE_COMMIT=$SOURCE_COMMIT TEST_DEB_SHA256=$DEB_SHA256
+USER smoke

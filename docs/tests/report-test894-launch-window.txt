@@ -1,0 +1,32 @@
+#894 deterministic pre-exec window — TEST ONLY
+Observed 2026-10-10 04:00 Asia/Shanghai.
+Backend unmodified source edc68a4ca87bbb7ca4944093e8ff113a17078624.
+launcher-health.ts SHA256 1e2647ebd08cec5173ab78e89e8c494b633b6fd5172e7b6bf5b414e733a344e4
+Image1663199774f20e8d7a989484559a63c4562814d97cae58225411b7c525ef3358
+
+Build/run: tests/opencode-launch-window/README.md commands.
+Non-root Docker, --network none, cap-drop ALL, no-new-privileges; --rm cleanup.
+No mounted state or vendor credentials. Real process identities and /proc argv;
+synthetic serve/TUI process workloads, NOT native client/OpenCode acceptance.
+
+Exit0:
+PASS: real launcher exit0 + live same-generation records BEFORE exec precisely rejects TUI session mismatch
+PASS: AFTER exec same PID/start ticks/generation passes original health guard
+PASS: repeated probes never accept a foreign generation
+PASS: reused PID/start ticks rejected
+PASS: foreign config and nonzero launcher remain rejected; restored exact identity healthy
+
+Actual product renderAttachRecordShell creates the record. A test barrier holds
+the shell between record publication and exec. Its launcher has exited0; bridge,
+serve and attach identity records agree. The unmodified guard rejects argv before
+exec and accepts after exec without changing PID/start ticks/session generation.
+This proves the temporal window exists. It does NOT retroactively recover argv
+from the earlier failed native run, so that particular cause remains inferred.
+
+App Docker typecheck passed with the scoped Bun-probe exclusion; workflow YAML
+parsed in Docker. Separate launch-window CI gate added. No app product changes.
+Backend bounded-wait source candidate is tracked along original #894; no new
+Hub implementation ticket, no npm preview, no installed daemon replacement.
+#895 remains2/3 until normal cancellation passes on its exact accepted package;
+#894 remains1/3 pending integration/V1/final review. Do not equate this atomic
+proof or a source candidate with a delivered runtime/installer.

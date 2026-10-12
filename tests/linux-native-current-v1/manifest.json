@@ -1,0 +1,12 @@
+{
+  "source": "f86012a30c75f59abeeed3221647f5d2847bd969",
+  "cli_version": "2.3.0-preview.170",
+  "cli_sha256": "e1cef7f5b295ac27968782f07fda5b0e22b176b9b650d4fe9177b976f1121d60",
+  "runtime_version": "2.5.0-preview.136",
+  "runtime_sha256": "038bf75e2ade28d4b79efb5ee4d278862b0b1f2a4d34fd677f4475672aee2524",
+  "hub_source": "31b0dbdae3192f471c8812574c118795658120f0",
+  "hub_version": "0.9.0-preview.127",
+  "test_only": true,
+  "source_candidate": false,
+  "scope": "public packages reused in disposable native TEST-ONLY desktop; not clean installation"
+}

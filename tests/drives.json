@@ -1,6 +1,10 @@
 {
   "//": "Every tests/*/drive.mjs and tests/*/run.mjs, and how CI runs it. stub = needs only the web export + Chromium (run by .github/workflows/drives.yml in shards; secs = measured runtime, used to balance shards); docker = builds its own bundle with its Dockerfile (nightly job); hub / manual = not in CI, with the reason. src/drive-registry.test.ts fails when a drive is missing here.",
   "drives": {
+    "node-confirm-contrast/drive.mjs": {
+      "kind": "stub",
+      "secs": 35
+    },
     "scoped-secrets/drive.mjs": {
       "kind": "manual",
       "why": "Dedicated scoped-secrets.yml builds the independent Dockerfile, validates core protocol/types first, then node and Daemon exported UI with a synthetic scoped Hub in Docker. Not a live secret, native install or inference test."

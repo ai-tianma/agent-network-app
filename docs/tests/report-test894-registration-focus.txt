@@ -1,0 +1,65 @@
+#894 / original PR795: bounded registration refusal diagnostic
+OBSERVED_AT=2026-10-12 12:05+08
+SOURCE PREPARATION; no new test execution or publication claimed.
+
+- Previous exact head2a2adc3d23ef3843b0bd85b5f4e3a56c3a9ffeaa:
+ 28SUCCESS/1SKIPPED/1FAILURE, original job114108417992/run38016437613.
+  Actual TEST-ONLY product mergecda41447341b744b88de96709a46fc21391bf4ca,
+  debac982478f374dfa2476e211c9fdb383bc94859fc5bea4f8713deb535fcae6744,
+  backendded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a (candidate runtime128).
+- Existing artifact11657636489 inspected, not executed. Native V1 registration
+  rejected before the model layer. Observer discarded the error field; screenshot
+  remains starting. Root cause UNKNOWN, not a claimed network/model assertion.
+- This change records only opaque lowercase error codes plus request/status and
+  exact input metadata before the unchanged rejection exception. No raw error
+  text, credentials, profiles, process argv or DB export. No local tests run.
+- Existing manual workflow gains focus=v1-registration; default stays full.
+  Rebuild source-bound disposable package and required auth/private-prefix
+  prerequisites, then one actual native registration. Model/lifecycle/V2/
+  migration and historical negative matrices are not executed in this mode.
+  Their full-mode assertions/default gates remain intact. Cleanup runs always.
+- Frozen historical inputs are deliberate for refusal diagnosis, not current
+  249/Hub127/170-136 acceptance. PR795 has substantive conflicts with current
+  main installer/Provider code. Attempted merge was aborted without source
+  changes; do not silently replace current published upgrade semantics with
+  the old branch's strict private-prefix implementation. Integration stays open.
+- No package version/binary/updater/release or production setting changed.
+  Test artifacts remain TEST-ONLY; new audit result must be read before fixing
+  a product difference or claiming registered/model/lifecycle acceptance.
+
+CI increment — 2026-10-12 12:16+08
+- Dispatched only existing linux-deb-package.yml, focus=v1-registration,
+  run38202449262, exact code head0f6ee8b663457473db174bf7ea4e9bf5611c7728.
+- v1-ci-contract job114658575916 SUCCESS04:07:01Z:1 wiring contract and
+  original8 exact mutation controls passed, including manual-only selection,
+  source binding, prerequisite failure, negative exit and unconditional cleanup.
+- linux-deb job114658659903 still full source-bound Ubuntu build at12:15.
+  Authentication/native registration has NOT started; no error code or model/
+  lifecycle result yet. This is not a new bundle or source-integration PASS.
+- The later receipt-only commit does not change this run's source or tests.
+  Default full guards remain;33 unrelated cases are conditional on the explicit
+  manual focus, not counted as succeeded. No local execution or production work
+  belongs to this test line. ETA12:20–12:35 assumes normal runner/build progress.
+
+Terminal increment — 2026-10-12 12:29+08
+- Same run38202449262:1 SUCCESS (wiring) /1 FAILURE (native diagnostic).
+  Native job114658659903 completed04:21:24Z; registration failed04:21:11Z,
+  statusruntime_capability_check_failed/error_codeunclassified. Existing failure
+  assertion propagated unchanged; no product root cause established.
+- Source-bound build/offline inspect/clean install/native startup/authentication,
+  private162/128 package prerequisite and real native Daemon registration passed.
+  V1 environment/auth/session prerequisite passed. Model/lifecycle/V2/upgrade
+  cases were skipped deliberately, not passed; no vendor inference executed.
+- Cleanup and evidence upload SUCCESS. Artifact11725099697 remains TEST-ONLY,
+ 151073633B, archive digest6687f709f535d27ea4d75f5aeb2249db6d83d13d9d5499e23522ea971dee73f7;
+  inner deb SHA256f289e6d7164903e30573ef02481339c58a21f9e3f4dd9ac3240c79b4adbe249a.
+  Archive digest is NOT deb digest. No branch artifact publicly released.
+- Diagnosis limitation: historical daemon reports prose, not an opaque error
+  code; the privacy-limited observer preserves status but classifies it as
+  unclassified. Post-spawn capability failure narrows the failing layer, not
+  whether startup binary/auth/model setup caused it. Model response steps were
+  not reached; this does not exclude model configuration during startup.
+- Do not repeat this build unchanged or guess an environmental failure. Next
+  minimal difference is bounded bootstrap diagnostic evidence, then only that
+  atomic gate. Current-main installer/Provider integration remains separate;
+  shipping249/170-136 does not inherit this historical candidate result.

@@ -1,24 +1,71 @@
 name: Linux deb package (TEST ONLY)
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'src-tauri/**'
+      - 'src/NodeDetailScreen.tsx'
+      - 'src/CreateNodeWizardScreen.tsx'
+      - 'src/opencode-create-options.ts'
+      - 'tests/opencode-v2-create/**'
+      - 'tests/node-confirm-contrast/**'
       - 'local-hub-sidecar/**'
       - 'scripts/build-local-hub-sidecar.mjs'
       - 'tests/linux-deb-package/**'
       - 'tests/linux-deb-install/**'
       - 'tests/linux-native-workspace/**'
+      - 'tests/linux-hub-migration/**'
+      - 'tests/linux-native-daemon/**'
+      - 'tests/linux-native-daemon-ui/**'
+      - 'tests/linux-native-opencode/**'
+      - 'tests/linux-native-opencode-v1/**'
+      - 'tests/linux-native-v1-registration/**'
+      - 'tests/linux-native-v1-model/**'
+      - 'tests/linux-native-v1-candidate-runtime/**'
+      - 'tests/linux-native-v1-lifecycle/**'
+      - 'tests/linux-native-v1-ci/**'
+      - 'tests/linux-native-current-v1/**'
+      - 'tests/linux-native-current-v2/**'
+      - 'tests/local-daemon-packages/**'
+      - 'scripts/seed-previous-local-hub.mjs'
       - 'scripts/with-linux-test-keyring.sh'
       - '.github/workflows/linux-deb-package.yml'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
+    inputs:
+      focus:
+        description: 'Historical suite or current public-pair V1/V2 core only'
+        type: choice
+        options: [full, v1-registration, current-v1-registration, current-v2-create]
+        default: full
+      reuse_current_deb:
+        description: 'Core fixture-only replay of the exact945 TEST-ONLY deb; never a release'
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
-  linux-deb:
+  v1-ci-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: docker build -t anet-v1-ci-contract:test -f tests/linux-native-v1-ci/Dockerfile .
+      - run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-v1-ci-contract:test
+  linux-deb:
+    # Draft integration is exercised explicitly by the bounded current-pair job.
+    # Preserve main's package/native-auth baseline on ready PRs. The added
+    # old120/162/128 lifecycle extension is explicit manual historical replay.
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && (github.event_name != 'workflow_dispatch' || (inputs.focus != 'current-v1-registration' && inputs.focus != 'current-v2-create'))
+    needs: v1-ci-contract
+    env:
+      V1_REGISTRATION_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'v1-registration' }}
+      HISTORICAL_EXTENDED: ${{ github.event_name == 'workflow_dispatch' && (inputs.focus == 'full' || inputs.focus == 'v1-registration') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,6 +77,7 @@ jobs:
       - name: Inspect complete package offline
         run: docker run --rm --network none anet-linux-deb:test
       - name: Wrong-architecture negative control
+        if: success() && env.V1_REGISTRATION_ONLY != 'true'
         shell: bash
         run: |
           set +e
@@ -54,6 +102,7 @@ jobs:
       - name: Ordinary-user native window probe offline (screenshot requires review)
         run: docker run --name linux-install-proof --network none anet-linux-install:test
       - name: Wrong-source binding negative control
+        if: success() && env.V1_REGISTRATION_ONLY != 'true'
         shell: bash
         run: |
           deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
@@ -72,6 +121,7 @@ jobs:
             docker rm linux-install-proof
           fi
       - name: Early process-exit negative control
+        if: success() && env.V1_REGISTRATION_ONLY != 'true'
         shell: bash
         run: |
           set +e
@@ -86,9 +136,22 @@ jobs:
           docker build --build-arg INSTALL_IMAGE=anet-linux-install:test --build-arg SOURCE_COMMIT="$(git rev-parse HEAD)" --build-arg DEB_SHA256="$deb_sha" -t anet-native-workspace:test -f tests/linux-native-workspace/Dockerfile .
       - name: Native startup and authentication atomic gate (before UI)
         run: docker run --rm --network none anet-native-workspace:test
+      - name: Unavailable Secret Service fails before application workload
+        if: success() && env.V1_REGISTRATION_ONLY != 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none anet-native-workspace:test sh -c 'mkdir /tmp/disabled-keyring; ln -s /bin/false /tmp/disabled-keyring/gnome-keyring-daemon; PATH=/tmp/disabled-keyring:$PATH sh /fixture/keyring.sh echo UNEXPECTED_WORKLOAD' >out/keyring-negative.log 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0
+          grep -F 'FAIL: isolated Secret Service did not acquire D-Bus name' out/keyring-negative.log
+          ! grep -F 'UNEXPECTED_WORKLOAD' out/keyring-negative.log
       - name: Real UI local workspace and native credential authentication
+        if: success() && env.V1_REGISTRATION_ONLY != 'true'
         run: docker run --name native-workspace-proof --network none anet-native-workspace:test sh /fixture/keyring.sh xvfb-run -a -s '-screen 0 1280x900x24 -nolisten tcp' bash /fixture/ui.sh
       - name: Missed-click negative control
+        if: success() && env.V1_REGISTRATION_ONLY != 'true'
         shell: bash
         run: |
           set +e
@@ -105,10 +168,393 @@ jobs:
             docker cp native-workspace-proof:/evidence/. out/native-workspace-evidence/
             docker rm native-workspace-proof
           fi
+      - name: Build pinned previous-Hub migration fixture
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg NATIVE_IMAGE=anet-native-workspace:test --build-arg SOURCE_COMMIT="$(git rev-parse HEAD)" --build-arg DEB_SHA256="$deb_sha" -t anet-hub-migration:test -f tests/linux-hub-migration/Dockerfile .
+      - name: Previous .66 database upgrade to bundled .120
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none anet-hub-migration:test 2>&1 | tee out/migration-upgrade.log
+      - name: Failed upgrade restores exact old database and metadata
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none anet-hub-migration:test sh /fixture/keyring.sh bash /fixture/migration.sh rollback 2>&1 | tee out/migration-rollback.log
+      - name: Validate daemon package policy before native installer
+        if: success() && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          docker build --target policy -t anet-daemon-policy:test -f tests/local-daemon-packages/Dockerfile .
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-daemon-policy:test
+          docker build --target private-prefix -t anet-daemon-prefix:test -f tests/local-daemon-packages/Dockerfile .
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-daemon-prefix:test
+      - name: Build packaged native daemon fixture
+        if: success() && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg NATIVE_IMAGE=anet-native-workspace:test --build-arg PAIR_IMAGE=anet-daemon-prefix:test --build-arg SOURCE_COMMIT="$(git rev-parse HEAD)" --build-arg DEB_SHA256="$deb_sha" -t anet-native-daemon:test -f tests/linux-native-daemon/Dockerfile .
+      - name: Native daemon empty-prefix installation and registration
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:test 2>&1 | tee out/native-daemon-empty.log
+      - name: Native daemon existing exact pair preserves package contents
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:test sh /fixture/keyring.sh bash /fixture/native-daemon.sh exact 2>&1 | tee out/native-daemon-exact.log
+      - name: Native daemon partial package refuses before credentials and start
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:test sh /fixture/keyring.sh bash /fixture/native-daemon.sh partial 2>&1 | tee out/native-daemon-partial.log
+      - name: Build real historical daemon package fixtures
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker build --build-arg NATIVE_IMAGE=anet-native-daemon:test -t anet-native-daemon:legacy -f tests/linux-native-daemon/Dockerfile.legacy .
+      - name: Native daemon old CLI refuses without replacement
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:legacy 2>&1 | tee out/native-daemon-old-cli.log
+      - name: Native daemon old agent-node refuses without replacement
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:legacy sh /fixture/keyring.sh bash /fixture/native-daemon.sh old-node 2>&1 | tee out/native-daemon-old-node.log
+      - name: Native daemon correct CLI banner cannot mask nonzero exit
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:test sh /fixture/keyring.sh bash /fixture/native-daemon.sh failed-cli 2>&1 | tee out/native-daemon-failed-cli.log
+      - name: Native daemon correct CLI banner cannot mask probe timeout
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-native-daemon:test sh /fixture/keyring.sh bash /fixture/native-daemon.sh timeout-cli 2>&1 | tee out/native-daemon-timeout-cli.log
+      - name: Build real native daemon UI fixture
+        if: success() && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg NATIVE_IMAGE=anet-native-daemon:test --build-arg SOURCE_COMMIT="$(git rev-parse HEAD)" --build-arg DEB_SHA256="$deb_sha" -t anet-native-daemon-ui:test -f tests/linux-native-daemon-ui/Dockerfile .
+      - name: Real UI scan and install registers online daemon
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-daemon-ui-proof --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m anet-native-daemon-ui:test
+      - name: Missed daemon install click cannot pass registration
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_DAEMON_UI_MISS_CLICK=1 anet-native-daemon-ui:test >out/native-daemon-ui-negative.log 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0
+          grep -F 'AssertionError: UI install click did not register matching online daemon' out/native-daemon-ui-negative.log
+      - name: Preserve native daemon UI evidence
+        if: always() && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          if docker container inspect native-daemon-ui-proof >/dev/null 2>&1; then
+            mkdir -p out/native-daemon-ui-evidence
+            docker cp native-daemon-ui-proof:/evidence/. out/native-daemon-ui-evidence/
+            docker rm native-daemon-ui-proof
+          fi
+      - name: Build pinned V2 runtime prerequisite
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg NATIVE_IMAGE=anet-native-daemon-ui:test --build-arg SOURCE_COMMIT="$(git rev-parse HEAD)" --build-arg DEB_SHA256="$deb_sha" -t anet-native-opencode:test -f tests/linux-native-opencode/Dockerfile .
+      - name: Real V2 authentication and model transport prerequisite
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-opencode-atomic --network none --cap-drop ALL --security-opt no-new-privileges anet-native-opencode:test
+      - name: Wrong model must fail exact runtime oracle
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges -e TEST_WRONG_MODEL=1 anet-native-opencode:test >out/native-opencode-wrong-model.log 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0
+          grep -F 'AssertionError: provider model mismatch' out/native-opencode-wrong-model.log
+      - name: Preserve V2 prerequisite evidence
+        if: always() && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          if docker container inspect native-opencode-atomic >/dev/null 2>&1; then
+            mkdir -p out/native-opencode-atomic
+            docker cp native-opencode-atomic:/evidence/. out/native-opencode-atomic/
+            docker rm native-opencode-atomic
+          fi
+      - name: Native UI creates real V2 node and receives actual model response
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-opencode-create --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m anet-native-opencode:test sh /fixture/keyring.sh xvfb-run -a -s "-screen 0 1280x900x24 -nolisten tcp" bash /fixture/opencode-create-ui.sh
+      - name: Missed native V2 submit cannot create a node
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --name native-opencode-missed-create --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_CREATE_MISS_CLICK=1 anet-native-opencode:test sh /fixture/keyring.sh xvfb-run -a -s "-screen 0 1280x900x24 -nolisten tcp" bash /fixture/opencode-create-ui.sh >out/native-opencode-missed-create.log 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0
+          grep -F 'PASS: missed submit left no request or node identity' out/native-opencode-missed-create.log
+          grep -F 'AssertionError: native V2 create did not produce confirmed launch' out/native-opencode-missed-create.log
+      - name: Preserve native V2 creation evidence
+        if: always() && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          for name in native-opencode-create native-opencode-missed-create; do
+            if docker container inspect "$name" >/dev/null 2>&1; then
+              mkdir -p "out/$name"
+              docker cp "$name:/evidence/." "out/$name/"
+              docker rm "$name"
+            fi
+          done
+      - name: Native V2 model switch and stop/start/restart
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-opencode-lifecycle --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m anet-native-opencode:test sh /fixture/keyring.sh xvfb-run -a -s "-screen 0 1280x900x24 -nolisten tcp" bash /fixture/opencode-lifecycle-ui.sh
+      - name: Missed native model submit cannot change runtime
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --name native-opencode-missed-model --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_MODEL_MISS_CLICK=1 anet-native-opencode:test sh /fixture/keyring.sh xvfb-run -a -s "-screen 0 1280x900x24 -nolisten tcp" bash /fixture/opencode-lifecycle-ui.sh >out/native-opencode-missed-model.log 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0
+          grep -F 'PASS: missed model submit left revision/model/generation unchanged' out/native-opencode-missed-model.log
+          grep -F 'AssertionError: native model switch did not apply' out/native-opencode-missed-model.log
+      - name: Native cancel oracle rejects an actual confirmation
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --name native-opencode-cancel-submitted --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_CANCEL_SUBMIT=1 anet-native-opencode:test sh /fixture/keyring.sh xvfb-run -a -s "-screen 0 1280x900x24 -nolisten tcp" bash /fixture/opencode-lifecycle-ui.sh >out/native-opencode-cancel-submitted.log 2>&1
+          result=$?
+          set -e
+          test "$result" -eq 1
+          grep -F 'PASS: native model change applied new revision/generation and actual provider model' out/native-opencode-cancel-submitted.log
+          grep -F 'AssertionError: native cancellation mutated lifecycle state' out/native-opencode-cancel-submitted.log
+      - name: Preserve native V2 lifecycle evidence
+        if: always() && env.HISTORICAL_EXTENDED == 'true'
+        run: |
+          for name in native-opencode-lifecycle native-opencode-missed-model native-opencode-cancel-submitted; do
+            if docker container inspect "$name" >/dev/null 2>&1; then
+              mkdir -p "out/$name"
+              docker cp "$name:/evidence/." "out/$name/"
+              docker rm "$name"
+            fi
+          done
+      - name: Checkout exact V1 backend candidate (TEST ONLY)
+        if: success() && env.HISTORICAL_EXTENDED == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: sleep2agi/agent-network
+          ref: ded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a
+          path: v1-backend-source
+          persist-credentials: false
+      - name: Build source-bound V1 model and lifecycle fixtures (not registry acceptance)
+        if: success() && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          backend_sha=ded59ce7417ed8b0d22290d9c6fcb6e5c3fb324a
+          test "$(git -C v1-backend-source rev-parse HEAD)" = "$backend_sha"
+          source_sha=$(git rev-parse HEAD)
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg SOURCE_COMMIT="$backend_sha" -t anet-v1-runtime-build:test -f v1-backend-source/tests/test894-v1-runtime/Dockerfile v1-backend-source
+          docker build --build-arg V1_IMAGE=anet-v1-runtime-build:test --build-arg NATIVE_IMAGE=anet-native-daemon-ui:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-native-v1:test -f tests/linux-native-opencode-v1/Dockerfile .
+          docker build --network none --build-arg V1_NATIVE_IMAGE=anet-native-v1:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-v1-registration:test -f tests/linux-native-v1-registration/Dockerfile .
+          docker build --build-arg V1_NATIVE_IMAGE=anet-v1-registration:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-v1-model:test -f tests/linux-native-v1-model/Dockerfile .
+          docker build --build-arg RUNTIME_BUILD_IMAGE=anet-v1-runtime-build:test --build-arg NATIVE_MODEL_IMAGE=anet-v1-model:test -t anet-v1-candidate:test -f tests/linux-native-v1-candidate-runtime/Dockerfile .
+          if [ "$V1_REGISTRATION_ONLY" != true ]; then
+            docker build --network none --build-arg V1_CANDIDATE_IMAGE=anet-v1-candidate:test -t anet-v1-lifecycle:test -f tests/linux-native-v1-lifecycle/Dockerfile .
+          fi
+          printf 'TEST ONLY source candidate; reused private prefix, NOT registry clean install or release.\nApp tested merge: %s\nDeb SHA256: %s\nBackend source: %s\n' "$source_sha" "$deb_sha" "$backend_sha" >out/v1-candidate-inputs.txt
+          docker image inspect --format '{{.Id}}' anet-v1-runtime-build:test anet-v1-candidate:test >>out/v1-candidate-inputs.txt
+          if [ "$V1_REGISTRATION_ONLY" != true ]; then
+            docker image inspect --format '{{.Id}}' anet-v1-lifecycle:test >>out/v1-candidate-inputs.txt
+          fi
+          printf 'Manual registration-only: %s\n' "$V1_REGISTRATION_ONLY" >>out/v1-candidate-inputs.txt
+      - name: V1 environment authentication and session prerequisite
+        if: success() && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-v1-atomic --network none --cap-drop ALL --security-opt no-new-privileges anet-v1-candidate:test python3 /fixture/v1-atomic.py
+      - name: Native V1 registration only (manual diagnostic)
+        if: success() && env.V1_REGISTRATION_ONLY == 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-v1-registration --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_V1_REGISTRATION_ONLY=1 anet-v1-candidate:test
+      - name: Native V1 actual selected-model response (TEST ONLY candidate)
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-v1-model --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m anet-v1-candidate:test
+      - name: Native V1 unavailable model refuses fallback and leaves no ACP child
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-v1-unavailable --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_SELECTED_MODEL=openai/not-in-fixture -e TEST_EXPECT_MODEL_REJECTION=1 anet-v1-candidate:test
+      - name: Native V1 wrong model oracle must reject an actual response
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --name native-v1-wrong-model --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_WRONG_MODEL=1 anet-v1-candidate:test >out/native-v1-wrong-model.log 2>&1
+          result=$?
+          set -e
+          test "$result" -eq 1
+          grep -F 'PASS: native-created V1 consumes fixture-only model response with safe ACP child' out/native-v1-wrong-model.log
+          grep -F 'AssertionError: native V1 provider model mismatch' out/native-v1-wrong-model.log
+      - name: Native V1 lifecycle and cancellation with fresh ACP replies
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        run: docker run --name native-v1-lifecycle --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m anet-v1-lifecycle:test
+      - name: Native V1 cancel oracle rejects actual stop confirmation
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --name native-v1-cancel-wrong --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_V1_CANCEL_SUBMIT=1 anet-v1-lifecycle:test >out/native-v1-cancel-wrong.log 2>&1
+          result=$?
+          set -e
+          test "$result" -eq 1
+          grep -F 'PASS: V1 lifecycle baseline bound to actual candidate worker/model reply' out/native-v1-cancel-wrong.log
+          grep -F 'AssertionError: native V1 cancellation mutated lifecycle state' out/native-v1-cancel-wrong.log
+      - name: Native V1 missed start remains stopped
+        if: success() && env.V1_REGISTRATION_ONLY != 'true' && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set +e
+          docker run --name native-v1-start-missed --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_V1_START_MISS_CLICK=1 anet-v1-lifecycle:test >out/native-v1-start-missed.log 2>&1
+          result=$?
+          set -e
+          test "$result" -eq 1
+          grep -F 'PASS: missed native V1 start preserved stopped identity/config/requests and absent worker' out/native-v1-start-missed.log
+          grep -F 'AssertionError: native V1 start confirmation did not apply' out/native-v1-start-missed.log
+      - name: Preserve V1 candidate evidence and remove only owned test containers
+        if: always() && env.HISTORICAL_EXTENDED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup_failed=0
+          for name in native-v1-registration native-v1-atomic native-v1-model native-v1-unavailable native-v1-wrong-model native-v1-lifecycle native-v1-cancel-wrong native-v1-start-missed; do
+            if docker container inspect "$name" >/dev/null 2>&1; then
+              mkdir -p "out/$name"
+              docker inspect --format '{{.State.Status}} exit={{.State.ExitCode}} image={{.Image}} started={{.State.StartedAt}} finished={{.State.FinishedAt}}' "$name" >"out/$name/container-state.txt" || cleanup_failed=1
+              docker logs "$name" >"out/$name/container.log" 2>&1 || cleanup_failed=1
+              docker cp "$name:/evidence/." "out/$name/" || cleanup_failed=1
+              docker rm -f "$name" || cleanup_failed=1
+            fi
+          done
+          test "$cleanup_failed" -eq 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: TEST-ONLY-linux-deb-${{ github.sha }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: error
+  current-v1-registration:
+    if: github.event_name == 'workflow_dispatch' && (inputs.focus == 'current-v1-registration' || inputs.focus == 'current-v2-create')
+    needs: v1-ci-contract
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download exact previous TEST ONLY deb for fixture-only replay
+        if: inputs.reuse_current_deb == true
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 38208152886
+          name: TEST-ONLY-current-v1-registration-945cecf3722b9daadeb8e32bd7a0bd7b9f1e7aae
+          path: reused-input/
+      - name: Bind reused deb to its actual app source and unchanged product
+        if: inputs.reuse_current_deb == true
+        run: |
+          app_source=945cecf3722b9daadeb8e32bd7a0bd7b9f1e7aae
+          deb_sha=5e4e15b31aac772cc295132da4c5384982fe815e0a0532e02862a9c1c57f8256
+          mkdir -p out
+          cp reused-input/ANet_0.2.249_amd64.deb reused-input/SHA256SUMS reused-input/TEST-ONLY.txt out/
+          git merge-base --is-ancestor "$app_source" HEAD
+          while IFS= read -r changed; do
+            case "$changed" in
+              tests/linux-native-*/*|tests/local-daemon-packages/*|docs/tests/*|.github/workflows/linux-deb-package.yml) ;;
+              *) echo "FAIL: product/build input changed: $changed"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$app_source" HEAD)
+          grep -Fx 'TEST ONLY. Not a release or updater.' out/TEST-ONLY.txt
+          grep -Fx "App source: $app_source" out/TEST-ONLY.txt
+          printf '%s  out/ANet_0.2.249_amd64.deb\n' "$deb_sha" | sha256sum -c -
+          docker build --network none --build-arg SOURCE_COMMIT="$app_source" --build-arg DEB_SHA256="$deb_sha" -t anet-current-deb:test -f tests/linux-native-current-v1/Dockerfile.deb out/
+          printf 'TEST_APP_SOURCE_COMMIT=%s\n' "$app_source" >> "$GITHUB_ENV"
+          printf 'TEST ONLY reused package. App source: %s\nFixture source: %s\n' "$app_source" "$(git rev-parse HEAD)" >out/FIXTURE-REPLAY.txt
+      - name: Build bound TEST ONLY desktop and validate package
+        if: inputs.reuse_current_deb != true
+        run: |
+          source_sha=$(git rev-parse HEAD)
+          docker build --build-arg SOURCE_COMMIT="$source_sha" -t anet-current-deb:test -f tests/linux-deb-package/Dockerfile .
+          docker run --rm --network none anet-current-deb:test
+          docker create --name current-deb-artifacts anet-current-deb:test
+          mkdir -p out
+          docker cp current-deb-artifacts:/app/src-tauri/target/release/bundle/deb/. out/
+          docker rm current-deb-artifacts
+          sha256sum out/*.deb >out/SHA256SUMS
+          printf 'TEST ONLY. Not a release or updater.\nApp source: %s\n' "$source_sha" >out/TEST-ONLY.txt
+      - name: Native startup and credential authentication prerequisite
+        run: |
+          source_sha=${TEST_APP_SOURCE_COMMIT:-$(git rev-parse HEAD)}
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg DEB_IMAGE=anet-current-deb:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-install:test -f tests/linux-deb-install/Dockerfile .
+          docker run --rm --network none anet-current-install:test
+          docker build --build-arg INSTALL_IMAGE=anet-current-install:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-workspace:test -f tests/linux-native-workspace/Dockerfile .
+          docker run --rm --network none anet-current-workspace:test
+      - name: Verified public CLI170 runtime136 prerequisite
+        run: |
+          docker build --target current-prefix -t anet-current-prefix:test -f tests/local-daemon-packages/Dockerfile .
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-current-prefix:test
+      - name: Build current published-pair registration fixture without source overlay
+        run: |
+          source_sha=${TEST_APP_SOURCE_COMMIT:-$(git rev-parse HEAD)}
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg NATIVE_IMAGE=anet-current-workspace:test --build-arg PAIR_IMAGE=anet-current-prefix:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-daemon:test -f tests/linux-native-daemon/Dockerfile .
+          docker build --build-arg NATIVE_IMAGE=anet-current-daemon:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-daemon-ui:test -f tests/linux-native-daemon-ui/Dockerfile .
+      - name: Build V1 registration fixture only for explicit V1 focus
+        if: inputs.focus == 'current-v1-registration'
+        run: |
+          source_sha=${TEST_APP_SOURCE_COMMIT:-$(git rev-parse HEAD)}
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg V1_IMAGE=anet-current-prefix:test --build-arg NATIVE_IMAGE=anet-current-daemon-ui:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-v1-base:test -f tests/linux-native-opencode-v1/Dockerfile .
+          docker build --network none --build-arg V1_NATIVE_IMAGE=anet-current-v1-base:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-v1-registration:test -f tests/linux-native-v1-registration/Dockerfile .
+          docker build --build-arg V1_NATIVE_IMAGE=anet-current-v1-registration:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-v1-model:test -f tests/linux-native-v1-model/Dockerfile .
+          docker build --network none --build-arg V1_MODEL_IMAGE=anet-current-v1-model:test -t anet-current-v1:test -f tests/linux-native-current-v1/Dockerfile .
+      - name: V1 environment authentication session prerequisite
+        if: inputs.focus == 'current-v1-registration'
+        run: docker run --name current-v1-atomic --network none --cap-drop ALL --security-opt no-new-privileges anet-current-v1:test python3 /fixture/v1-atomic.py
+      - name: Real native creation binds actual Hub request profile identity and worker
+        if: inputs.focus == 'current-v1-registration'
+        run: docker run --name current-v1-registration --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m -e TEST_V1_REGISTRATION_ONLY=1 anet-current-v1:test
+      - name: Build current public-pair V2 core without source overlay
+        if: inputs.focus == 'current-v2-create'
+        run: |
+          source_sha=${TEST_APP_SOURCE_COMMIT:-$(git rev-parse HEAD)}
+          deb_sha=$(sha256sum out/*.deb | awk '{print $1}')
+          docker build --build-arg NATIVE_IMAGE=anet-current-daemon-ui:test --build-arg SOURCE_COMMIT="$source_sha" --build-arg DEB_SHA256="$deb_sha" -t anet-current-v2-base:test -f tests/linux-native-opencode/Dockerfile .
+          docker build --network none --build-arg V2_NATIVE_IMAGE=anet-current-v2-base:test -t anet-current-v2:test -f tests/linux-native-current-v2/Dockerfile .
+      - name: V2 environment authentication and exact model transport prerequisite
+        if: inputs.focus == 'current-v2-create'
+        run: docker run --name current-v2-atomic --network none --cap-drop ALL --security-opt no-new-privileges anet-current-v2:test
+      - name: Real native V2 creation and one actual model reply
+        if: inputs.focus == 'current-v2-create'
+        run: docker run --name current-v2-create --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 256m anet-current-v2:test sh /fixture/keyring.sh xvfb-run -a -s "-screen 0 1280x900x24 -nolisten tcp" bash /fixture/opencode-create-ui.sh
+      - name: Evidence and owned-container cleanup even after failure
+        if: always()
+        run: |
+          cleanup_failed=0
+          for name in current-deb-artifacts current-v1-atomic current-v1-registration current-v2-atomic current-v2-create; do
+            if docker container inspect "$name" >/dev/null 2>&1; then
+              mkdir -p "out/$name"
+              docker inspect --format '{{.State.Status}} exit={{.State.ExitCode}} image={{.Image}}' "$name" >"out/$name/container-state.txt" || cleanup_failed=1
+              if [ "$name" != current-deb-artifacts ]; then
+                docker cp "$name:/evidence/." "out/$name/" || cleanup_failed=1
+              fi
+              docker rm -f "$name" || cleanup_failed=1
+            fi
+          done
+          test "$cleanup_failed" -eq 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TEST-ONLY-${{ inputs.focus }}-${{ github.sha }}
           path: out/
           retention-days: 7
           if-no-files-found: error

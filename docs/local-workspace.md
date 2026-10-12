@@ -61,6 +61,44 @@ Before a bundled Hub version changes, the stopped data directory is copied to
 `~/.anet/app/backups/`. Failed health checks or bootstrap restore the previous
 data and configuration.
 
+## Private local daemon child executables
+
+On macOS/Linux, the local-workspace install action uses the exact package pair
+defined in `src-tauri/src/local_daemon_packages.rs`, under
+`~/.anet/app/local-daemon/anet/`. The authoritative installer/launcher is
+`src-tauri/src/local_daemon.rs`; it initializes the daemon profile, writes the
+private `anet/bin` absolute path into that profile's `daemonExtraPath`, then
+stops the old daemon and starts the validated pair. Child PATH intentionally
+does **not** inherit the user's or installer's ambient PATH. Do not bypass this
+with an unpinned global package or automatic `npx` fallback.
+
+The daemon profile is `local-daemon/.anet/nodes/local-daemon/config.json`
+relative to the app namespace above. Existing extra paths and unrelated profile
+fields are preserved; malformed configuration or an unexpected node identity
+blocks start. This setting adds no listener, tunnel, or reverse proxy and does
+not change the loopback Hub port selection. The installer derives Hub/network
+credentials from the active native local session and writes its private daemon
+configuration with owner-only permissions; never copy those secrets into Git
+or a test report. Other runtimes still require their own explicit executable
+installation and authentication.
+
+After installing a new **main-SHA-built release**, verify the exact CLI/node
+versions, the private path in the daemon profile, Hub supervisor online state,
+and an actual child creation. Online supervisor status alone is insufficient.
+The PR test gate `tests/linux-native-daemon-ui/verify.py` checks profile/path and
+Hub identity; `tests/linux-native-opencode/` separately checks real V2 runtime
+authentication/model transport, not complete native lifecycle acceptance.
+
+Before rollback retain an encrypted backup of the app namespace and native
+credential-store recovery material. Stop the daemon with the installed private
+`anet node stop local-daemon` from `~/.anet/app/local-daemon`, restore a previously
+validated release and compatible profile/data backup, then verify child creation
+again. Reverting only the binary does not repair the known old installer PATH
+omission. Git recreates the installer and pinned software inputs, **not** Hub
+database contents, local task history, runtime sessions or credentials. Those
+need protected backups or re-registration. No full empty-machine recovery or
+post-fix packaged V2 lifecycle success is implied by these instructions.
+
 ## Lost native credentials
 
 The local profile's token and the generated bootstrap password live only in the

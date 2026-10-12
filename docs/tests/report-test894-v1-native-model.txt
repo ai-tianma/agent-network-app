@@ -1,0 +1,75 @@
+TEST ONLY — #894 native V1 model fixture development; NOT ACCEPTED
+Observed 2026-10-10 08:45–09:02 Asia/Shanghai.
+
+Candidate remains App PR795 head7ec7a31004b4088887bc32cd6468dcb0962c0ad1,
+tested merge3f0dded2175e50afddcb65897019bc863c4e2491,
+deb SHA256 c1f442deb4d3187193a5964eb15ac3bbbbf934fbfa7c27b6dc33b06291cab064.
+This is the same TEST ONLY package documented in report-test894-package-7ec7.txt.
+No product source, installed host package, production node or permission changed.
+This report does NOT supersede its accepted V2 package evidence or the preceding
+V1 registration evidence; neither implies that this new model extension passed.
+
+New tests/linux-native-v1-model fixture
+Extends the exact native V1 registration image
+a99ffb216aa7854da1d0435a04f9a6f0e735d2f5149524219647ce1c7e6f04e0.
+Adds only ephemeral node-local synthetic provider auth, an ephemeral CA and a
+closed loopback TLS model/catalog proxy. No node identity/config/model is seeded;
+no ambient vendor key, unsafe-tools flag, host credential or external model call.
+Provider code is fetched from backend c10c83a0a5dde3038f42e93576fb18ba68d2c547
+and SHA256-checked as d6663b4d77b860cf442621be47946017e778d05d357e3daeef50461268c4d4d8.
+Native X11 is intended to create/configure the node; proof task dispatch is REST.
+Verifier checks exact node/network/model/revision/reply and actual safe ACP env,
+not general tool-denial behavior. All runtime tests use Docker via sg docker,
+--network none, --cap-drop ALL, no-new-privileges, UID10001 and 256m shared memory.
+
+Layered observed outcomes
+1. First environment attempt: openssl missing (exit127), stopped before workload.
+   Added openssl only to Dockerfile; actual container dependency version
+   openssl/libssl3t64 3.0.13-0ubuntu3.16. Apt inputs are not content-locked:
+   a remaining reproducibility limitation, not a production dependency change.
+2. Updated image atomic prerequisite exit0: actual pinned V1 health,
+   unauthenticated401 and authenticated session round-trip. NO model test.
+   TLS fixture independently rejected unauthenticated requests with401.
+3. anet894-v1-model-positive: native authentication/private daemon/V1 registration
+   succeeded. Screenshot proves model navigation selected local-daemon instead
+   of v1-native. Exit1: native V1 model configuration did not apply.
+   No model success, no negative or lifecycle run.
+4. anet894-v1-model-positive-r2: native prerequisites/registration succeeded.
+   Reviewed node-list and model screenshots show v1-native selected, but model
+   input/submit coordinates did not account for the model suggestion row.
+   Exit1 with the same configuration assertion. Not a product-model failure.
+5. Corrected only new fixture coordinates against those actual screenshots.
+   anet894-v1-model-positive-r3 stopped earlier in inherited creation navigation.
+   Reviewed screenshots show Runtime page and no submitted V1 node; observer
+   exit1 at2026-10-10T01:01:50.683Z with
+   "native V1 registration did not bind a live headless worker".
+   The Runtime page had a different layout without readiness descriptions.
+   Root cause of that layout/readiness timing remains unverified; do not label
+   it an ACP/provider/product assertion failure. Model observer never started.
+
+Image revisions (manifest-list digests)
+initial model fixture: 4edc669021abc6aa79958a8517dba3781b042d6c842561005848b2c87bcdb60d
+r2: 65b8b6a6d6d65c587f5c4a4d8cda1b286698fb42059ac619c7244770b04378b0
+r3: 73a68c29f38225a2b2436f67f169053ceed136f919e39722026bedb6650069bb
+The atomically tested package/dependency layers stayed unchanged after the
+initial dependency fix; r2/r3 changed only the new GUI driver coordinates.
+
+Saved evidence and cleanup
+Convenience copies /tmp/anet894-v1-model.PVDMxZ/{failed-navigation,
+failed-model-input,registration-final}; no credential store or private CA key
+exported. All three named model containers exited1; evidence copied before
+removal. Atomic prerequisite used --rm. No running test container left by this
+suite. Images and evidence retained; removing disposable containers is recoverable
+by rebuilding the documented inputs, not a removal of user data.
+Screenshots SHA256:
+r1 wrong node e7309d1fe638977f64b5563aacc2b78d29231c4b85675bd8dd4aaa718d511501
+r2 V1 model page 482705b6372d08987c07f93641d88eb3df254c5ce5797bdd88ed97fc22d58887
+r3 final Runtime f9b485adf8d64abd43705e0d0719c56e5748ded2faa41ee9bcd898c977b7d0fd
+
+Next gate / bounds
+Repair and verify readiness-aware native navigation first. Then exact positive
+model reply, then independent precise wrong-model negative, then lifecycle.
+No negative/lifecycle tests were run after these failures. No assertion was
+weakened; new fixture is not wired as accepted CI. No commit/merge/release claimed.
+09:10 CST next evidence checkpoint; 09:10–09:20 is only a conditional first-model
+sample estimate if navigation is fixed, not a full-task or release commitment.
