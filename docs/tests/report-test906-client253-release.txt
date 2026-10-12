@@ -1,0 +1,82 @@
+#906 client0.2.253 formal publication receipt
+OBSERVED_AT=2026-10-12T14:58Z (22:58+08).
+STATUS: PUBLIC MACOS/WINDOWS/ANDROID; UPDATER AND CHINA MIRROR VERIFIED.
+Linux deferred; iOS not dispatched. No whole Provider/OAuth/model acceptance.
+
+Exact package source main9986a21fe897fe8bf52ae7d89f5da7c5fbb4a269 (PR904),
+tree6bbad8d8f75d270a0c41bf549e8cbb3e509357d2 matches candidate6ca59495.
+Corrected version metadata Docker14/14 + bundled notes7/7 passed.
+Original a5159e5e metadata38261395831/job114852513056 FAILURE retained:
+version14/14 passed, notes4/7; repository changelog generator corrected the
+generated offline log. No lowered guard or replacement of the old failure.
+
+Installer pair PR903 main21c927392f9b57178f81a49c6deb38307a2b6d12,
+CLI172/runtime138 backend sourceb61c0e490659e94ad1e487cc8086cb73dfa8f6ad.
+Core38260866021/job114850707473 actual installer20/20 in21.73s;
+tested mergedb4fc613eafb83ee99e5427edf84e46986831b7d. Original19/20 FAILURE
+retained in report-test906-client-daemon172-runtime138.txt. Container--init
+reaped orphan fixtures; product stop-before-replace and assertions unchanged.
+
+Formal desktop38262669295 SUCCESS:
+Windows114856891983, macOS114856892248, verify-draft114866001132 all SUCCESS.
+Both platforms checked the full main SHA. Existing signing/notarization,
+packaged smoke, install/uninstall retention and size gates were the formal
+workflow, not branch/local packages. No extra Windows Authenticode claim.
+Draft source, eight primary uploaded assets and five signed manifest entries
+audited before publication. Published2026-10-12T14:47:55Z, non-draft/non-prerelease.
+Tag desktop-v0.2.253 is commit9986a21fe897fe8bf52ae7d89f5da7c5fbb4a269;
+fresh main ancestry checked before publication. No moved tag or overwritten asset.
+https://github.com/sleep2agi/agent-network-app/releases/tag/desktop-v0.2.253
+
+GitHub asset digests (not independently full-downloaded here):
+ANet_0.2.253_aarch64.dmg 38946878B
+f57bc93eaf69b64fa8008c6d8085dcd0b4f5b404539cdb0b8305f2e8315d3dbb
+ANet_0.2.253_aarch64.app.tar.gz 38295549B
+8c06cd247f4928b56fd3ad7feb90d40b1253ebab1872d686b34e9dbba655085e
+ANet_0.2.253_x64-setup.exe 37336250B
+1445221e394f38ee18cd40090c8a1f872da99bf74ccfccba3735ac75b15ed0da
+ANet_0.2.253_x64_en-US.msi 51171328B
+c4756adcbf8d5eb139bd540a6de06ec9d16f5dbe9e135a9e3aaa5aeaf1538543
+Updater signatures and latest.json complete the eight primary items.
+Anonymous GitHub DMG/EXE range reads returned206,1B,application/octet-stream;
+not full large-bundle rehashes. Anonymous anet.sh updater returned253 with the
+five correct browser asset URLs/signatures, no Linux. Drift38265543324 SUCCESS.
+
+Android38262673114/job114856904884 SUCCESS (same main source).
+Actual versionName253/versionCode2253, install permission/orientation/keepalive
+and existing signing-certificate continuity gates passed. APK remains debug
+signed with the established certificate, not a store release.
+Publisher38263981688/job114861365118 SUCCESS:14:36:04Z full anonymous APK SHA
+matched and VERSION/sha/notes verified byte-for-byte. Independent subsequent
+anonymous VERSION253, sha and three current note items confirmed.
+APK83819429B/SHA25665eddaa476878f82914c56e27d69f1010b5f2757d663faa28fb29ad605df8d25.
+https://modelscope.cn/datasets/SmartFlowAI/agent-network-releases/resolve/master/android/agent-network-0.2.253.apk
+
+release:published triggered mirror38265536193 this time, unlike the older SOP
+observation. It verified immutable source/main, then waited for the GitHub APK.
+Redundant manual38265538723 cancelled while pending after exact verification;
+cancelled is not PASS. Same successful main Android artifact downloaded (never
+executed), inner bytes/SHA compared with public APK, then added as a NEW asset,
+without--clobber: ANet_0.2.253_android-universal.apk /634077968/same83819429B+SHA.
+Nine published assets; no existing binary, signature or manifest changed.
+Mirror38265536193 SUCCESS:17 expected paths listed with matching SHA, all small
+manifest/signature/SHA256SUMS/VERSION files anonymously verified, finished through
+14:54:28Z. Large native mirror files accepted by listing+staged GitHub hashes,
+not an independent anonymous full ModelScope rehash. Subsequent anonymous
+desktop/latest/VERSION and manifest both253; Android channel independently253.
+
+Recovery authority: docs/desktop-release-sop.md, exact main source/lockfiles,
+formal workflows, local_daemon.rs and immutable CLI/runtime/package URLs.
+No resident-service layout, port/proxy or secret source changed by this cut.
+User config/account/session/data require their existing protected backup; clone
+does not restore them. Existing SOP rollback/retention unchanged, no fresh-machine
+recovery claim. No running daemon/node changed by publishing the client. Public
+APK cache retained; no local process/model/test container/global npm install.
+
+Independent later-source fix: PR905 maind460d7354ae7018f7ad7f25536000f20d4526c30,
+NOT client253 input. Secret-error SSE framing keeps existing upgrade/permission
+copy; Docker38265230415/job114865594973 SUCCESS:18/18 protocol (five incremental),
+typecheck, exported UI11/11 and independent UI14/14. Tested merge
+c050a5c0055ef7834bf9444a9fb8a8d523426ad6. Old runtime126 still below137+.
+Live screenshot HTTP not captured; no assertion it was actually SSE, no user-key
+save or business-node upgrade. Source merged, not in public253.
