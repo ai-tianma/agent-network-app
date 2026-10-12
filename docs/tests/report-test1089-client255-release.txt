@@ -1,0 +1,18 @@
+Client0.2.255 / Hub#1089 / app Issue909 release receipt.
+Frozen release source:34ceea117aa8f5c26d42c2af2ce4436aa3479e2f (normal PR910 squash main).
+Build inputs: exact40 source checked out and verified main ancestor, Linux=false; no branch artifact published.
+Desktop formal run38275133004: Windows114898617453 SUCCESS, macOS114898617526 SUCCESS, verify-draft114906037072 SUCCESS. Selected native startup/credential persistence/reinstall checks succeeded in their official build jobs. No user-device task-list profiling or production model inference claimed.
+Android formal run38275136924 SUCCESS; official publisher38276754619 SUCCESS, versionName0.2.255/versionCode2255, notes from same frozen source, anonymous VERSION/notes/full APK hash verified. Existing Android certificate channel unchanged, not a new store-signing claim.
+Published desktop-v0.2.255 at2026-10-12T16:26:59Z=2026-10-13 00:26:59+08, Latest=true, draft=false. Tag object type=commit/source exact34ceea11. Publication audit: eight primary assets, no Linux, all five updater entries map exact asset API IDs; each signature matches its attached sig bytes.
+Assets (bytes / SHA256 from GitHub asset metadata):
+ANet_0.2.255_aarch64.dmg 38941248 d3efc81002e832515e96f3cb9342947cf3c8eab2b7aa0f3ff5099a8a6b8ffcd5
+ANet_0.2.255_aarch64.app.tar.gz 38296025 3748a355b9820ba5b1c92322be7a5b72809e8d7dcbdfaeb38c8d0dda48a2cd72
+ANet_0.2.255_aarch64.app.tar.gz.sig 400 0a43be63791edb76cdfb5e36f825c6f3031380eb9f5ebd3004aefae0621b5dd0
+ANet_0.2.255_x64_en-US.msi 51175424 0d394530281e249a9ecaf1b1036d5a2b8a1e1c7b7fc2aafe4aecb9ff37e3b7b4
+ANet_0.2.255_x64_en-US.msi.sig 416 1acfe6b83dcbee6ef54e77ba59c22abeb5706e7bb6e4572e12b026db32ed6ebc
+ANet_0.2.255_x64-setup.exe 37356666 97434f46d697ae22f770741628c9eb94c3178636fb12e751dcb1429f1eb5ddd3
+ANet_0.2.255_x64-setup.exe.sig 416 ef16f4a36a2948f958d75fa8af05b0e019c15e1f2ed86f683d93266a813b042f
+latest.json 93518 b106c8b75f15e385c55e5365384d48634278e9df08ba4e570269609ef78ae33e
+Android inner APK (local same-source artifact and official anonymous publisher agree):83825701 / 8670caf230861e12cdd5b47e784b4ca268140e6362a711f21b3f5c2573f9d3dc. Zip artifact digest is not this checksum.
+Desktop ModelScope release-event mirror38277471253 SUCCESS, verified2026-10-12T16:30:22Z:17 paths present with expected listing hashes; small files anonymous full download/hash, large binaries anonymous range GET plus listing hash (not full native anonymous rehash). Both Android/desktop VERSION and desktop five-entry manifest read255; separate GitHub/ModelScope Windows exe/macOS dmg anonymous range GET206/16B succeeded. No duplicate mirror dispatch. Same-main missing APK attachment single upload finished:asset634322366 uploaded,83825701B/digest equals inner APK8670caf2 above; no overwrite. Desktop-update-manifest-drift first dispatch HTTP500/no run after fresh check; one subsequent dispatch38277666961 SUCCESS. Original255 source and artifacts unchanged as test/report main commits advance.
+Recovery: no production startup/service/port/environment/schema/secret/identity change. Existing docs/desktop-release-sop.md is authoritative build/publish/update/rollback procedure. Previous254 assets/source are immutable. Native user data remains outside Git; account tokens remain in existing credential store and workspace history/data rely on user's existing backups, not clone. No new empty-machine recovery drill claimed. No global npm, local product tests, daemon/business-node restarts or credential changes.
