@@ -21,8 +21,8 @@ CMD ["node", "/fixture/probe.mjs"]
 # available, but are not used as current installer/registration acceptance.
 FROM node:22-bookworm@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS current-prefix
 USER root
-ADD --checksum=sha256:e1cef7f5b295ac27968782f07fda5b0e22b176b9b650d4fe9177b976f1121d60 https://github.com/sleep2agi/agent-network/releases/download/cli-v2.3.0-preview.170/sleep2agi-agent-network-2.3.0-preview.170.tgz /tmp/cli.tgz
-ADD --checksum=sha256:038bf75e2ade28d4b79efb5ee4d278862b0b1f2a4d34fd677f4475672aee2524 https://registry.npmjs.org/@sleep2agi/agent-node/-/agent-node-2.5.0-preview.136.tgz /tmp/runtime.tgz
+ADD --checksum=sha256:4a3572b5caa60bee7ff3e5c178783f88bdff32703e3b2c3c648b8ab3e3e54be6 https://github.com/sleep2agi/agent-network/releases/download/cli-v2.3.0-preview.171/sleep2agi-agent-network-2.3.0-preview.171.tgz /tmp/cli.tgz
+ADD --checksum=sha256:20bf0919c5adf8de2cf9e271ec1ad445e32fc5ecbf3271632e5d789ec3c385a9 https://registry.npmjs.org/@sleep2agi/agent-node/-/agent-node-2.5.0-preview.137.tgz /tmp/runtime.tgz
 RUN chmod 0644 /tmp/cli.tgz /tmp/runtime.tgz && \
     npm install -g --no-audit --no-fund opencode-ai@1.18.34 && test "$(opencode --version)" = 1.18.34
 COPY tests/linux-native-current-v1/manifest.json /fixture/public-pair.json

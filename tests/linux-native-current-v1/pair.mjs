@@ -20,4 +20,4 @@ assert.ok(execFileSync(prefix + '/bin/anet', ['--version'], { encoding: 'utf8' }
 assert.ok(execFileSync(process.execPath, [prefix + '/lib/node_modules/@sleep2agi/agent-node/dist/cli.js', '--help'], { encoding: 'utf8' }).includes('opencode-cli'));
 assert.equal(existsSync('/home/node/.anet/config.json'), false);
 assert.equal(existsSync('/home/node/.anet/app/local-daemon/.anet/nodes'), false);
-console.log('PASS: exact public CLI170/runtime136, real version/help, no Hub identity or daemon started');
+console.log('PASS: exact public CLI171/runtime137, real version/help, no Hub identity or daemon started');

@@ -71,7 +71,7 @@ check(wf.includes('--smoke-local-daemon-install') && wf.includes('if [ "$RUNNER_
   const oldOnPath = daemonChecklist({ ...base, node: { path: '/n', version: '22.14.0' }, npm: { path: '/m' }, agentNodeOnPath: '/Users/v/.nvm/versions/node/v20.12.2/bin/agent-node' });
   check(oldOnPath[3].state === 'missing' && oldOnPath[3].detail.includes('v20.12.2') && oldOnPath[3].detail.includes('旧版'), 'agent-node row warns about the PATH copy');
   const rust = readFileSync(new URL('../src-tauri/src/local_daemon.rs', import.meta.url), 'utf8');
-  check(rust.includes('@sleep2agi/agent-node@2.5.0-preview.136') && rust.includes('probe_private_agent_node()') && rust.includes('stop_existing_daemon') , 'installer installs a compatible private agent-node beside anet and verifies the old daemon stopped');
+  check(rust.includes('@sleep2agi/agent-node@2.5.0-preview.137') && rust.includes('probe_private_agent_node()') && rust.includes('stop_existing_daemon') , 'installer installs a compatible private agent-node beside anet and verifies the old daemon stopped');
   const v4 = hubDaemonView({ ...base, sessions: [{ alias: 'local-daemon', status: 'idle' }], nodes: [{ node_id: 'node_daemon_6f85', config_snapshot: { role: 'host_supervisor' } }], supervisors: [] });
   check(!v4.ok && v4.verdict.includes('token'), 'role ok but unlisted → token verdict');
   const v5 = hubDaemonView({ ...base, sessions: [{ alias: 'local-daemon', status: 'idle' }], nodes: [{ node_id: 'node_daemon_6f85', config_snapshot: { role: 'host_supervisor' } }], supervisors: [{ daemon_node_id: 'node_daemon_6f85', online: true, can_create_nodes: true }] });

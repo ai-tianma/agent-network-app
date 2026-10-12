@@ -1,0 +1,47 @@
+#1075 / client 0.2.251 release preparation
+Observed: 2026-10-12, Asia/Shanghai.
+
+Feature source is already main: backend PR2647/fb4a9b57b9efa900d287182546c5b5088700b1e2;
+client PR897/42a3eb1f1f5cbabcebf325689539f50e1a30b79e.
+Previous core evidence is reused, not repeated local testing:
+backend Actions Docker 38222589575; client Actions Docker 38222194270.
+Client protocol 13/13; exported UI core including unbound node 14/14.
+These are source/core results, not a new native package or live vendor model result.
+
+Release preparation changes only version authorities, release notes, exact
+published package pins and explicit minimum-version guidance. Android code 2251.
+The new Hub 128 / runtime 137 / CLI 171 pins must not be finalized with invented
+hashes or candidate registry bytes. Release merge waits for their formal readback.
+No local product suite, global npm mutation, credentials or production restart.
+
+Recovery uses the existing desktop-release-sop.md and backend scoped-secrets.md.
+Node-private encrypted backup data is not included in Git or the installer.
+Current sessions and identity tokens are not automatically changed by this update.
+Formal macOS/Windows/Android release will use one complete merged main SHA;
+Linux public release remains deferred. No claim of client publication at preparation.
+
+## Formal dependency readback — 2026-10-12 16:53+08
+
+Backend version PR2648 normally merged main e83cfc7d3b949a8751c43ee2f1c0614a2315dcf4.
+The formal release.yml runs are Hub38225130040/runtime38225132543/CLI38225193015;
+each actual package build plus all four gates succeeded. No branch artifact reuse.
+Hub128 and runtime137 npm publish was accepted; anonymous registry metadata now
+returns their exact versions and SRI. CLI official download38226005902 succeeded,
+non-draft prerelease tag cli-v2.3.0-preview.171 published16:51:33+08, source e83cfc7d.
+CLI npm readback remains independent of the available official tarball.
+
+Actual inner gated tarball digests, NOT artifact ZIP digests:
+Hub128 1233005B SHA256 b75ebaa668249148dfa26c4fc8c93d87bc8bfb34ee2fd163fe497b1dd8a096c1;
+runtime137 592164B SHA25620bf0919c5adf8de2cf9e271ec1ad445e32fc5ecbf3271632e5d789ec3c385a9;
+CLI171 2125836B SHA2564a3572b5caa60bee7ff3e5c178783f88bdff32703e3b2c3c648b8ab3e3e54be6.
+Anonymous complete downloads matched the gated tarballs. Hub dependency set
+is unchanged; only version/URL/SRI changed in the sidecar lock, no transitive churn.
+Current-package test fixtures follow the same published pair; historical162/128
+policy fixture is retained and is not used as current installer acceptance.
+Exact source archive e83cfc7d SHA2565f7c17f1fb76001c9e01e1c6bdb948e780c92dbe5fd9ca3de546969631ce3e96.
+Four contract source hashes were read from the gated Hub package; only tools.ts
+changed. Package file-count guard stays342, negative assertions unchanged.
+
+Node-specific loading/confirmation copy and explicit Hub128/runtime137 guidance
+were added. No local product tests; subsequent Actions Docker core/pin checks
+are pending until this prepared source is pushed. No production activation yet.

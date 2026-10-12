@@ -27,7 +27,7 @@ function verify(candidate, sourceRoot) {
   return shipped.length;
 }
 const count = verify('/candidate', '/source/server');
-console.log(`PASS: all ${count} published package files match exact main-ancestor server tree31b0dbdae3192f471c8812574c118795658120f0`);
+console.log(`PASS: all ${count} published package files match exact main-ancestor server treee83cfc7d3b949a8751c43ee2f1c0614a2315dcf4`);
 const fixtures = [
   ['modified byte', path => writeFileSync(join(path, 'package.json'), 'modified'), /byte mismatch/],
   ['missing file', path => rmSync(join(path, 'package.json')), /must contain 342 files/],

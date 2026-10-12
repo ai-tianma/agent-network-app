@@ -1,6 +1,6 @@
 {
   "name": "agent-network-app",
-  "version": "0.2.250",
+  "version": "0.2.251",
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

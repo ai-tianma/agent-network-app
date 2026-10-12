@@ -111,7 +111,7 @@ mod regression {
 
     #[test]
     fn initialization_upgrades_old_packages_and_stops_before_overwriting_config() {
-        let f = Fixture::new("0.9.0-preview.127");
+        let f = Fixture::new("0.9.0-preview.128");
         f.seed();
         let old_pid = f.old_process();
         let scan = local_daemon::scan(Some(&f.session)).unwrap();
@@ -125,7 +125,7 @@ mod regression {
         assert!(cfg["daemonExtraPath"].as_array().unwrap().iter().any(|v| v.as_str().unwrap().ends_with("/tools")));
         let events = fs::read_to_string(f.root.path().join("events")).unwrap();
         assert!(events.starts_with("stop old-daemon\n"), "{events}");
-        assert!(events.contains("agent-network@2.3.0-preview.170") && events.contains("agent-node@2.5.0-preview.136"), "{events}");
+        assert!(events.contains("agent-network@2.3.0-preview.171") && events.contains("agent-node@2.5.0-preview.137"), "{events}");
         assert!(!events.contains("@latest"));
         let start_env = fs::read_to_string(f.root.path().join("start-env")).unwrap();
         assert!(start_env.ends_with("agent-node/dist/cli.js"), "{start_env}");
@@ -143,7 +143,7 @@ mod regression {
     #[test]
     fn stop_failure_or_a_still_live_process_keeps_original_configuration() {
         for mode in ["fail", "lie"] {
-            let f = Fixture::new("0.9.0-preview.127");
+            let f = Fixture::new("0.9.0-preview.128");
             f.seed();
             f.old_process();
             fs::write(f.root.path().join("stop-mode"), mode).unwrap();
@@ -171,7 +171,7 @@ mod regression {
 
     #[test]
     fn successful_npm_exit_with_old_package_is_rejected() {
-        let f = Fixture::new("0.9.0-preview.127");
+        let f = Fixture::new("0.9.0-preview.128");
         f.seed();
         fs::write(f.root.path().join("npm-mode"), "old-version").unwrap();
         let before = fs::read(f.profile()).unwrap();
@@ -184,23 +184,23 @@ mod regression {
 
     #[test]
     fn registry_etarget_uses_the_verified_main_archive_and_keeps_pairing() {
-        let f = Fixture::new("0.9.0-preview.127");
+        let f = Fixture::new("0.9.0-preview.128");
         f.seed();
         fs::write(f.root.path().join("npm-mode"), "unavailable").unwrap();
         let report = local_daemon::install(&f.session).unwrap();
         assert!(report.ok, "{:?}", report.error);
         let events = fs::read_to_string(f.root.path().join("events")).unwrap();
-        assert!(events.contains("anet-cli-2.3.0-preview.170.tgz"), "{events}");
-        assert!(events.contains("agent-node@2.5.0-preview.136"), "{events}");
-        assert_eq!(events.matches("agent-network@2.3.0-preview.170").count(), 1);
-        assert!(!f.root.path().join("local-daemon/anet-cli-2.3.0-preview.170.tgz").exists());
+        assert!(events.contains("anet-cli-2.3.0-preview.171.tgz"), "{events}");
+        assert!(events.contains("agent-node@2.5.0-preview.137"), "{events}");
+        assert_eq!(events.matches("agent-network@2.3.0-preview.171").count(), 1);
+        assert!(!f.root.path().join("local-daemon/anet-cli-2.3.0-preview.171.tgz").exists());
         assert!(report.steps.iter().any(|s| s.output.contains("CLI SHA256 已校验")));
         println!("PASS: actual public main tarball download/hash -> npm archive path -> paired runtime -> init/start; npm/Hub are fixture adapters");
     }
 
     #[test]
     fn wrong_archive_hash_is_never_installed_or_used_to_initialize() {
-        let f = Fixture::new("0.9.0-preview.127");
+        let f = Fixture::new("0.9.0-preview.128");
         f.seed();
         fs::write(f.root.path().join("npm-mode"), "unavailable").unwrap();
         let before = fs::read(f.profile()).unwrap();

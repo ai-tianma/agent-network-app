@@ -42,7 +42,9 @@ function Page({cfg,daemonId,nodeId}:Props) {
     {providerHttpWarning(cfg.serverUrl)?<Text style={{color:colors.textMuted}}>{t('providerManagement.httpWarning')}</Text>:null}
     {!supported?<Text>{t('scopedSecrets.unbound')}</Text>:<>
       <Button title={t('scopedSecrets.refresh')} testID="scoped-secret-refresh" disabled={busy} press={()=>void run()}/>
-      {busy?<View style={{flexDirection:'row',gap:spacing.sm}}><ActivityIndicator/><Text>{t(writing?'scopedSecrets.saving':'scopedSecrets.loading')}</Text></View>:null}
+      {busy?<View style={{flexDirection:'row',gap:spacing.sm}}><ActivityIndicator/><Text>{t(independent
+        ? writing?'scopedSecrets.nodeSaving':'scopedSecrets.nodeLoading'
+        : writing?'scopedSecrets.saving':'scopedSecrets.loading')}</Text></View>:null}
       {snapshot?<View style={{borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:spacing.md,gap:spacing.sm}}>
         {!snapshot.keys.length?<Text style={{color:colors.textMuted}}>{t('scopedSecrets.empty')}</Text>:snapshot.keys.map(item=><View key={item.key} style={{gap:spacing.xs}}>
           <Text style={{color:colors.text}}>{item.key}</Text><Text style={{color:colors.textMuted,fontSize:type.small}}>{t(item.source==='node'?'scopedSecrets.sourceNode':nodeId?'scopedSecrets.sourceDaemon':'scopedSecrets.sourceOwnDaemon')}</Text>

@@ -11,7 +11,7 @@ sg docker -c 'docker build -t anet-bundled-hub-contract:test -f tests/bundled-hu
 sg docker -c 'docker run --rm --network none anet-bundled-hub-contract:test'
 ```
 
-The Dockerfile pins Bun by digest, downloads exact Hub preview.127 and verifies
+The Dockerfile pins Bun by digest, downloads exact Hub preview.128 and verifies
 its tarball SHA256 before extraction; the probe also checks npm SHA512 against
 the product lock. The non-root offline probe checks
 V1 argv, precise missing-consent refusal, exact V2 argv (unsafe opt-in is a

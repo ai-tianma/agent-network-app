@@ -7,7 +7,7 @@ const buildScript = fs.readFileSync(new URL('../scripts/build-local-hub-sidecar.
 const desktopWorkflow = fs.readFileSync(new URL('../.github/workflows/desktop-tauri.yml', import.meta.url), 'utf8');
 const releaseWorkflow = fs.readFileSync(new URL('../.github/workflows/release-desktop-auto-update.yml', import.meta.url), 'utf8');
 
-const pinned = '0.9.0-preview.127';
+const pinned = '0.9.0-preview.128';
 const supervisorSource = fs.readFileSync(new URL('../src-tauri/src/local_hub.rs', import.meta.url), 'utf8');
 const checks: Array<[string, boolean]> = [
   ['native supervisor expects the bundled Hub version', supervisorSource.includes(`const EXPECTED_HUB_VERSION: &str = "${pinned}";`)],
