@@ -545,6 +545,10 @@
     "test-window-controls/drive.mjs": {
       "kind": "stub",
       "secs": 20
+    },
+    "task-list-pagination/drive.mjs": {
+      "kind": "manual",
+      "why": "Runs automatically in the dedicated task-list-pagination.yml Docker workflow: exact baseline and candidate exports, offline495-row fixture and /output metrics. Not the shared external bundle/shard runner."
     }
   }
 }

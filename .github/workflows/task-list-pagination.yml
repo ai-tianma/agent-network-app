@@ -1,0 +1,44 @@
+name: Task list pagination core
+on:
+  pull_request:
+    paths:
+      - 'src/RequirementBoard.tsx'
+      - 'src/TaskListTable.tsx'
+      - 'src/TaskListPager.tsx'
+      - 'src/task-list-pagination*'
+      - 'tests/task-list-pagination/**'
+      - '.github/workflows/task-list-pagination.yml'
+permissions:
+  contents: read
+jobs:
+  pagination:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          path: candidate
+      - name: Core pagination and typecheck first
+        run: |
+          docker build --target core -f candidate/tests/task-list-pagination/Dockerfile -t task-pagination-core candidate
+          docker run --rm --network none task-pagination-core
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: 66c7bb089eddb44c941ba03061910152e573bc7d
+          path: baseline
+      - name: Measure unchanged baseline, same Docker fixture
+        run: |
+          mkdir -p baseline/tests/task-list-pagination "$RUNNER_TEMP/task-pagination-baseline"
+          cp candidate/tests/task-list-pagination/Dockerfile candidate/tests/task-list-pagination/drive.mjs baseline/tests/task-list-pagination/
+          docker build --target browser -f baseline/tests/task-list-pagination/Dockerfile -t task-pagination-baseline baseline
+          docker run --rm --network none -e BASELINE=1 -v "$RUNNER_TEMP/task-pagination-baseline:/output" task-pagination-baseline
+      - name: Verify paged exported UI
+        run: |
+          mkdir -p "$RUNNER_TEMP/task-pagination-candidate"
+          docker build --target browser -f candidate/tests/task-list-pagination/Dockerfile -t task-pagination-ui candidate
+          docker run --rm --network none -v "$RUNNER_TEMP/task-pagination-candidate:/output" task-pagination-ui
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: TEST-ONLY-task-pagination-metrics
+          path: ${{ runner.temp }}/task-pagination-*

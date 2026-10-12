@@ -32,8 +32,9 @@ const HANDLE = 8, KEY_STEP = 16;
 type PointerLike = { nativeEvent: { clientX: number; pointerId: number }; currentTarget: unknown };
 type CellEditorState = { pos: CellPos; anchor: SelectAnchor | null };
 const TOAST_MS = 5000;
-export default function TaskListTable({ rows, terms, people, projects, sort, setSort, s, today, selectedId, onOpen, filtered, needsUpdateUpgrade, touch, onMenu, items, selection, onProject, seqCapable = false, edit }: {
+export default function TaskListTable({ rows, pageKey, terms, people, projects, sort, setSort, s, today, selectedId, onOpen, filtered, needsUpdateUpgrade, touch, onMenu, items, selection, onProject, seqCapable = false, edit }: {
   rows: Requirement[]; people: RequirementPerson[];
+  pageKey?: string;
   /** 搜索词(task-search.ts searchTerms):标题里命中的字高亮。 */
   terms?: readonly string[]; projects: RequirementProject[] | null;
   sort: SortSpec; setSort: (next: SortSpec) => void; s: TaskStyles; today: string;
@@ -62,6 +63,8 @@ export default function TaskListTable({ rows, terms, people, projects, sort, set
   const titleDone = useRef(false);
   const [toast, setToast] = useState<{ text: string; anchor: SelectAnchor | null } | null>(null);
   const cellRefs = useRef(new Map<string, any>());
+  const bodyScroll = useRef<ScrollView>(null);
+  useEffect(() => { bodyScroll.current?.scrollTo({ y: 0, animated: false }); setHoverRow(null); }, [pageKey]);
   // 悬停的行:格子是 Pressable 以后,行自己的 hovered 在鼠标进到格子里时变 false(RN-web 的嵌套 Pressable),
   // 「展开」按钮和行底色改按 DOM 的 pointerenter / pointerleave(进出子元素不触发)。
   const [hoverRow, setHoverRow] = useState<string | null>(null);
@@ -239,7 +242,7 @@ export default function TaskListTable({ rows, terms, people, projects, sort, set
               </View>;
             })}
           </View>
-          <ScrollView style={{ flex: 1 }}>
+          <ScrollView ref={bodyScroll} style={{ flex: 1 }}>
             {!rows.length ? <View style={[s.center, { paddingVertical: spacing.xl * 2 }]}><Text style={s.muted}>{t(filtered ? 'tasks.copy.46' : 'tasks.copy.55')}</Text></View> : null}
             {rows.map(item => {
               const picked = !!selection?.ids.includes(item.id);
