@@ -5,6 +5,11 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.252:",
+  "- Agent 会话列表新增“进行中”筛选，桌面和手机都能集中查看正在执行任务的 Agent。",
+  "- 执行状态随 Hub 状态刷新，任务结束后自动移出；保留搜索、置顶和分组，可随时返回“全部”。",
+  "- 此更新只调整客户端列表，不会升级、重启远端节点或切换账号、Provider 和模型。",
+  "",
   "What's new in 0.2.251:",
   "- 未绑定 Daemon 的节点也可在“密钥”页面保存、修改和删除自己的环境密钥；无需绑定 Daemon，也不会替换节点身份令牌。",
   "- 保存结果由目标节点确认，密钥不回显，后续完整启动时供运行时使用；当前会话不会自动重启。已绑定节点仍保留 Daemon 默认继承。",
@@ -1116,6 +1121,7 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.251": "2026-10-12T09:36:54Z",
   "0.2.250": "2026-10-12T07:58:16Z",
   "0.2.249": "2026-10-12T03:17:28Z",
   "0.2.248": "2026-10-11T23:29:06Z",

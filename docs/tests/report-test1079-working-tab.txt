@@ -27,4 +27,15 @@ in avatar, people-loading and Ubuntu/Windows units. Product assertion failure
 not observed in those logs. Added dedicated-workflow registration (like the
 existing prelogin entry), plus registry assertion to this core gate; no guard
 or assertion relaxed. Follow-up exact-head CI remains PENDING.
+Follow-up exact head bbb0fd31d5753513821ee0782fc15a25b7f676a9:
+run38234801075/job114762726950 core-and-ui SUCCESS; core registry, existing
+unread, typecheck and both actual exported UI modes PASS. The original missing
+registry failure is resolved, not an environment failure or ignored guard.
+PR900 normal SHA-locked squash merged 2026-10-12T10:14:42Z:
+main 6c7be43bbf40a95ba419a58fa80371b85ff95e14. Broad stub drives and Windows
+units were still in progress at merge; not counted as PASS. No admin bypass,
+rule change, production action or local product suite was used.
+0.2.252 version/notes preparation starts from this main commit. Formal package
+inputs must be the later exact merged main release SHA, never this PR head or
+the TEST-ONLY browser artifact. Native package/publication remains PENDING.
 No feature release claimed; 0.2.251 does not include #1079.
