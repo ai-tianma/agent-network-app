@@ -5,6 +5,11 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.254:",
+  "- 独立节点的“密钥”页前置检查已知旧 runtime，直接显示当前版本及所需 2.5.0-preview.137，避免填写后才发现保存不可用。",
+  "- 修复 Hub 通过 SSE 返回升级或权限提示时被误显示为“尚未确认保存”；未知响应仍需刷新确认，不会误报保存成功。",
+  "- 无需绑定 Daemon；此更新不会自动升级或重启节点，也不会切换账号、Provider 或模型。桌面本机安装继续配套 CLI .172 / runtime .138。",
+  "",
   "What's new in 0.2.253:",
   "- 桌面本机 Daemon 的安装与升级入口配套 CLI 2.3.0-preview.172 / runtime 2.5.0-preview.138，包含 OpenCode V1 会话恢复与升级支持。",
   "- CLI 下载继续支持经摘要校验的独立下载地址；保留停止旧进程、私有安装目录和安装后版本确认。",
@@ -1126,6 +1131,7 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.253": "2026-10-12T14:47:55Z",
   "0.2.252": "2026-10-12T10:40:25Z",
   "0.2.251": "2026-10-12T09:36:54Z",
   "0.2.250": "2026-10-12T07:58:16Z",

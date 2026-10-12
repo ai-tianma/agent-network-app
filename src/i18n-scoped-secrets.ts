@@ -1,6 +1,7 @@
 import { registerTranslations } from './i18n';
 registerTranslations({
   'scopedSecrets.title':['环境密钥','Environment secrets'],
+  'scopedSecrets.nodeRuntimeVersion':['此节点当前 runtime：{version}（Hub 心跳）。','Current node runtime: {version} (Hub heartbeat).'],
   'scopedSecrets.nodeIndependent':['此节点独立管理自己的密钥，无需绑定 Daemon。','This node manages its own keys without a Daemon binding.'],
   'scopedSecrets.nodeSaved':['节点已确认保存。下次完整启动生效，当前运行进程未修改。','Node confirmed the save. Effective on next full start; the running process was not changed.'],
   'scopedSecrets.nodeDeleted':['节点已确认删除。下次完整启动生效，当前运行进程未修改。','Node confirmed deletion. Effective on next full start; the running process was not changed.'],

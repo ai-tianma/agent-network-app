@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { ANDROID_PACKAGE, androidVersionCode } from './android-update-core';
 
-const expected = '0.2.253';
+const expected = '0.2.254';
 const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const packageLock = JSON.parse(fs.readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
 const appJson = JSON.parse(fs.readFileSync(new URL('../app.json', import.meta.url), 'utf8'));

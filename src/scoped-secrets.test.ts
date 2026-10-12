@@ -1,8 +1,11 @@
-import { manageSecrets, parseSecretSnapshot } from './scoped-secrets';
+import { manageSecrets, nodeSecretsNeedsUpgrade, parseSecretSnapshot } from './scoped-secrets';
 import { scopedSecrets } from './scoped-secrets-api';
 const scope={networkId:'net-fixture',daemonId:'daemon-fixture',nodeId:'node-fixture'};
 const snapshot={network_id:scope.networkId,daemon_node_id:scope.daemonId,node_id:scope.nodeId,revision:1,activation:'next_start',keys:[{key:'TEST_VENDOR_KEY',source:'node'}]};
 let count=0;function check(name:string,pass:boolean){if(!pass)throw Error(name);count++;}
+check('known old runtime needs an explicit upgrade',nodeSecretsNeedsUpgrade('2.5.0-preview.126') && nodeSecretsNeedsUpgrade('2.4.0'));
+check('minimum and later versions keep capability readback',!nodeSecretsNeedsUpgrade('2.5.0-preview.137') && !nodeSecretsNeedsUpgrade('2.5.0-preview.138') && !nodeSecretsNeedsUpgrade('2.5.0'));
+check('unknown or custom version is not a guessed refusal',!nodeSecretsNeedsUpgrade(null) && !nodeSecretsNeedsUpgrade('TEST-ONLY') && !nodeSecretsNeedsUpgrade('2.5.0-custom.126'));
 const id='dsk_11111111-1111-4111-8111-111111111111';
 const requests:any[]=[];
 const result=await manageSecrets(scope,async(args,_signal,containsKey)=>{

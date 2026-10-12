@@ -3,6 +3,16 @@ export type SecretSnapshot = { network_id: string; daemon_node_id: string | null
   revision: number; activation: 'next_start'; keys: { key: string; source: 'daemon' | 'node' }[] };
 export type SecretResult = { kind: 'ready'; snapshot: SecretSnapshot } | { kind: 'unconfirmed' | 'cancelled' | 'forbidden' | 'unsupported' | 'invalid' };
 export type SecretWrite = { action: 'put' | 'delete'; key: string; value?: string; revision: number };
+// Only known release versions preflight here; custom/unknown builds still use Hub capability readback.
+export function nodeSecretsNeedsUpgrade(version?: string | null): boolean {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?$/.exec(version ?? '');
+  if (!match) return false;
+  const [major, minor, patch] = match.slice(1, 4).map(Number);
+  if (major !== 2) return major < 2;
+  if (minor !== 5) return minor < 5;
+  if (patch !== 0) return false;
+  return match[4] !== undefined && Number(match[4]) < 137;
+}
 export function validSecretInput(key: string, value: string): boolean {
   return /^[A-Z_][A-Z0-9_]{0,127}$/.test(key) && !!value && new TextEncoder().encode(value).length <= 8192 && !value.includes('\0');
 }

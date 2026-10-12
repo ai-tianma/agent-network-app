@@ -4,14 +4,14 @@ import { serveExport, initScript, findChromium, TEST_LOCALE } from '../test-layo
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const web=await serveExport(process.env.WEB_DIR),browser=await chromium.launch({headless:true,executablePath:findChromium()});
 let passed=0;
-function secretsFixture({unbound=false}={}) {
+function secretsFixture({unbound=false,runtimeVersion='TEST-ONLY'}={}) {
     const daemon={node_id:'daemon-fixture',alias:'daemon-fixture',role:'host_supervisor',lifecycle_state:'running',config_snapshot:{role:'host_supervisor'}},node={node_id:'node-fixture',alias:'child-fixture',runtime:'codex-app-server',...(unbound?{}:{lifecycle_daemon_node_id:'daemon-fixture',lifecycle_controllable:true})};
     window.__secretCalls=[];window.__secretRevision=0;window.__secretKeys=[];window.__secretNode=null;window.__secretUnsupported=false;
     const id=unbound?'nsk_11111111-1111-4111-8111-111111111111':'dsk_11111111-1111-4111-8111-111111111111';
     const envelope=payload=>({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:JSON.stringify(payload)}]}});
     window.__routeOverride=(url,text)=>{
       if(url.pathname==='/api/nodes')return {nodes:[daemon,node]};
-      if(url.pathname==='/api/status')return {sessions:[daemon,node].map(n=>({...n,status:'idle',version:'TEST-ONLY',updated_at:new Date().toISOString()}))};
+      if(url.pathname==='/api/status')return {sessions:[daemon,node].map(n=>({...n,status:'idle',version:runtimeVersion,updated_at:new Date().toISOString()}))};
       if(url.pathname==='/api/host-supervisors')return {ok:true,daemons:[{daemon_node_id:daemon.node_id,alias:daemon.alias,online:true}]};
       if(url.pathname!=='/mcp')return;
       const params=JSON.parse(text||'{}').params;
@@ -99,4 +99,17 @@ try {
   assert.equal(await unbound.getByTestId('scoped-secret-value').inputValue(),'');passed++;
   await unbound.screenshot({path:'/output/node-secrets1075-unbound.png',fullPage:true});
   await own.close();console.log(`scoped secrets with independent node: ${passed}/${passed} checks passed`);
+  const older=await browser.newContext({locale:TEST_LOCALE,viewport:{width:1200,height:850}}),oldPage=await older.newPage();
+  await oldPage.addInitScript({content:`(${initScript.toString().replace('http://mock-hub.invalid','http://127.0.0.1:9200')})({theme:'light'});`});
+  await oldPage.addInitScript(secretsFixture,{unbound:true,runtimeVersion:'2.5.0-preview.126'});
+  await oldPage.goto(`${web.url}?safeAreaSim=0,0,0,0`);await oldPage.getByTestId('desktop-workspace-sidebar').waitFor();
+  await oldPage.evaluate(()=>window.__anetLayoutSweep.setScreen({name:'nodeInfo',alias:'child-fixture'}));
+  await oldPage.getByTestId('node-section-nav').getByText('密钥',{exact:true}).click();
+  await oldPage.getByTestId('scoped-secret-upgrade').waitFor();
+  const hint=await oldPage.getByTestId('scoped-secret-upgrade').innerText();
+  assert(hint.includes('2.5.0-preview.126')&&hint.includes('2.5.0-preview.137'));passed++;
+  assert.equal(await oldPage.getByTestId('scoped-secret-value').count(),0);assert.equal(await oldPage.getByTestId('scoped-secret-save').count(),0);passed++;
+  assert.deepEqual(await oldPage.evaluate(()=>window.__secretCalls),[]);passed++;
+  await oldPage.screenshot({path:'/output/node-secrets906-old-runtime.png',fullPage:true});
+  await older.close();console.log(`scoped secrets with runtime preflight: ${passed}/${passed} checks passed`);
 } finally {await browser.close();web.close();}

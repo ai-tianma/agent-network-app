@@ -3,25 +3,26 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Text, TextInput } from './ui-text';
 import type { HubConfig } from './api';
 import { scopedSecrets } from './scoped-secrets-api';
-import { validSecretInput, type SecretSnapshot, type SecretWrite } from './scoped-secrets';
+import { nodeSecretsNeedsUpgrade, validSecretInput, type SecretSnapshot, type SecretWrite } from './scoped-secrets';
 import { useTranslation } from './i18n-react';
 import './i18n-scoped-secrets';
 import './i18n-provider-management';
 import { providerHttpWarning } from './daemon-provider-management-api';
 import { colors, spacing, radius, type } from './theme';
 import { buttonStyle, buttonTextStyle } from './elevation';
-type Props={cfg:HubConfig;daemonId?:string|null;nodeId?:string|null};
+type Props={cfg:HubConfig;daemonId?:string|null;nodeId?:string|null;nodeRuntimeVersion?:string|null};
 export default function ScopedSecretsSection(props:Props) {
-  return <Page key={JSON.stringify([props.cfg.serverUrl,props.cfg.networkId,props.cfg.token,props.daemonId,props.nodeId])} {...props}/>;
+  return <Page key={JSON.stringify([props.cfg.serverUrl,props.cfg.networkId,props.cfg.token,props.daemonId,props.nodeId,props.nodeRuntimeVersion])} {...props}/>;
 }
-function Page({cfg,daemonId,nodeId}:Props) {
+function Page({cfg,daemonId,nodeId,nodeRuntimeVersion}:Props) {
   const {t}=useTranslation();const [snapshot,setSnapshot]=useState<SecretSnapshot|null>(null),[key,setKey]=useState(''),[value,setValue]=useState('');
   const [busy,setBusy]=useState(false),[writing,setWriting]=useState(false),[notice,setNotice]=useState(''),[deleting,setDeleting]=useState<string|null>(null);
   const active=useRef<AbortController|null>(null), mounted=useRef(true);
   const supported=!!(daemonId||nodeId) && !!cfg.networkId;
   const independent=!!nodeId && !daemonId;
+  const upgradeRequired=independent && nodeSecretsNeedsUpgrade(nodeRuntimeVersion);
   const run=async(write?:SecretWrite)=>{
-    if(!supported||active.current)return;
+    if(!supported||upgradeRequired||active.current)return;
     const ctrl=new AbortController();active.current=ctrl;setBusy(true);setWriting(!!write);setNotice('');setDeleting(null);
     if(write){setValue('');setSnapshot(null);}
     const result=await scopedSecrets(cfg,{networkId:cfg.networkId!,daemonId:daemonId??null,nodeId:nodeId??null},ctrl.signal,write);
@@ -40,7 +41,10 @@ function Page({cfg,daemonId,nodeId}:Props) {
     <Text style={{color:colors.textMuted}}>{t(independent?'scopedSecrets.nodeIndependent':nodeId?'scopedSecrets.node':'scopedSecrets.daemon')}</Text>
     <Text style={{color:colors.textMuted,fontSize:type.small}}>{t(independent?'scopedSecrets.nodeBoundary':'scopedSecrets.boundary')}</Text>
     {providerHttpWarning(cfg.serverUrl)?<Text style={{color:colors.textMuted}}>{t('providerManagement.httpWarning')}</Text>:null}
-    {!supported?<Text>{t('scopedSecrets.unbound')}</Text>:<>
+    {!supported?<Text>{t('scopedSecrets.unbound')}</Text>:upgradeRequired?<View testID="scoped-secret-upgrade" style={{gap:spacing.sm}}>
+      <Text style={{color:colors.text}}>{t('scopedSecrets.nodeRuntimeVersion',{version:nodeRuntimeVersion!})}</Text>
+      <Text style={{color:colors.textMuted}}>{t('scopedSecrets.nodeUnsupported')}</Text>
+    </View>:<>
       <Button title={t('scopedSecrets.refresh')} testID="scoped-secret-refresh" disabled={busy} press={()=>void run()}/>
       {busy?<View style={{flexDirection:'row',gap:spacing.sm}}><ActivityIndicator/><Text>{t(independent
         ? writing?'scopedSecrets.nodeSaving':'scopedSecrets.nodeLoading'
