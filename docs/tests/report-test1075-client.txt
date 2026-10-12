@@ -1,0 +1,16 @@
+2026-10-12 16:10 Asia/Shanghai — source implementation, CI pending
+----------------------------------------------------------------
+Original Hub #1075 / backend Issue2646; client base exact main8c94d9af.
+An unbound node now renders its real key form and targets node_secret_* with
+its node ID instead of requiring a lifecycle_daemon_node_id. Ready/saved state
+still requires exact names-only receipt and revision; legacy bound-node and
+Daemon transport remains unchanged. Node and Daemon notices describe actual
+receipt ownership; unsupported old software is not a saved success claim.
+Four protocol checks added to existing Docker core; one independent browser
+context covers the exported unbound-node page and one precise save with cleared
+password field. Old node/Daemon cases and assertions retained.
+At authoring: NOT EXECUTED, no PASS; existing GitHub Actions Docker core then
+exported UI workflow will run. No local product tests, new dependencies,
+backend substitution, production credentials, restart or installation.
+This feature is NOT in the frozen/public0.2.250 release; next delivery needs
+actual backend capability and exact-main formal package/release pairing.

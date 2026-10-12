@@ -8,7 +8,7 @@ export function scopedSecrets(cfg: HubConfig, scope: SecretScope, signal: AbortS
       method:'POST',signal:requestSignal,
       headers:{Authorization:`Bearer ${cfg.token}`,'Content-Type':'application/json',Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-03-26'},
       body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'daemon_provider_snapshot',arguments:{
-        action:`secret_${args.action}`,id:args.id,network_id:args.network_id,
+        action:args.action==='read' ? 'secret_read' : `${scope.daemonId?'secret':'node_secret'}_${args.action}`,id:args.id,network_id:args.network_id,
         ...(args.action==='read'?{}:{provider:{node_id:args.node_id,...(args.key?{key:args.key}:{}),...(containsKey?{value:args.value}:{})},
           ...(args.revision!==undefined?{revision:args.revision}:{})}),
       }}}),
@@ -24,7 +24,7 @@ export function scopedSecrets(cfg: HubConfig, scope: SecretScope, signal: AbortS
       // a compatibility failure, not an endlessly pending save.
       if(envelope.error?.code===-32602)return {ok:false,error:'unsupported'};
       const value=JSON.parse(envelope.result.content[0].text);
-      if(['secret_admin_required','user_token_required','scoped_secrets_upgrade_required','invalid_secret_input'].includes(value.error))return {ok:false,error:value.error};
+      if(['secret_admin_required','user_token_required','scoped_secrets_upgrade_required','node_secrets_upgrade_required','invalid_secret_input'].includes(value.error))return {ok:false,error:value.error};
     } catch {}
     return {ok:false,error:'unconfirmed'};
   },signal,write);

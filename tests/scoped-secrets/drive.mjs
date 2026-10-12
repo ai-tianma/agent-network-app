@@ -4,6 +4,29 @@ import { serveExport, initScript, findChromium, TEST_LOCALE } from '../test-layo
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const web=await serveExport(process.env.WEB_DIR),browser=await chromium.launch({headless:true,executablePath:findChromium()});
 let passed=0;
+function secretsFixture({unbound=false}={}) {
+    const daemon={node_id:'daemon-fixture',alias:'daemon-fixture',role:'host_supervisor',lifecycle_state:'running',config_snapshot:{role:'host_supervisor'}},node={node_id:'node-fixture',alias:'child-fixture',runtime:'codex-app-server',...(unbound?{}:{lifecycle_daemon_node_id:'daemon-fixture',lifecycle_controllable:true})};
+    window.__secretCalls=[];window.__secretRevision=0;window.__secretKeys=[];window.__secretNode=null;window.__secretUnsupported=false;
+    const id=unbound?'nsk_11111111-1111-4111-8111-111111111111':'dsk_11111111-1111-4111-8111-111111111111';
+    const envelope=payload=>({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:JSON.stringify(payload)}]}});
+    window.__routeOverride=(url,text)=>{
+      if(url.pathname==='/api/nodes')return {nodes:[daemon,node]};
+      if(url.pathname==='/api/status')return {sessions:[daemon,node].map(n=>({...n,status:'idle',version:'TEST-ONLY',updated_at:new Date().toISOString()}))};
+      if(url.pathname==='/api/host-supervisors')return {ok:true,daemons:[{daemon_node_id:daemon.node_id,alias:daemon.alias,online:true}]};
+      if(url.pathname!=='/mcp')return;
+      const params=JSON.parse(text||'{}').params;
+      if(params?.name!=='daemon_provider_snapshot'||!(/^(secret_|node_secret_)/.test(params.arguments?.action||'')))return;
+      const raw=params.arguments;window.__secretCalls.push(raw);
+      const args={...raw.provider,action:raw.action.replace(/^(node_)?secret_/,''),id:raw.id,revision:raw.revision};
+      if(window.__secretUnsupported)return envelope({ok:false,error:unbound?'node_secrets_upgrade_required':'scoped_secrets_upgrade_required'});
+      const parent=unbound?null:daemon.node_id;
+      if(args.action==='read')return envelope({ok:true,request_id:id,daemon_node_id:parent,node_id:window.__secretNode,status:'succeeded',snapshot:{network_id:'net-sweep',daemon_node_id:parent,node_id:window.__secretNode,revision:window.__secretRevision,activation:'next_start',keys:window.__secretKeys}});
+      window.__secretNode=unbound?node.node_id:args.node_id??null;
+      if(args.action==='put'){if(args.value!=='TEST-ONLY-ui-1053')throw Error('fixture accepts only synthetic key');window.__secretRevision++;window.__secretKeys=[{key:args.key,source:unbound||args.node_id?'node':'daemon'}];}
+      if(args.action==='delete'){window.__secretRevision++;window.__secretKeys=[];}
+      return envelope({ok:true,request_id:id,status:'pending'});
+    };
+}
 try {
   const ctx=await browser.newContext({locale:TEST_LOCALE,viewport:{width:1200,height:850}}),page=await ctx.newPage();
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
@@ -61,4 +84,19 @@ try {
   await page.screenshot({path:'/output/daemon-secrets1053.png',fullPage:true});
   assert.deepEqual(errors,[]);passed++;
   await ctx.close();console.log(`scoped secrets exported UI: ${passed}/${passed} checks passed`);
+  const own=await browser.newContext({locale:TEST_LOCALE,viewport:{width:1200,height:850}}),unbound=await own.newPage();
+  await unbound.addInitScript({content:`(${initScript.toString().replace('http://mock-hub.invalid','http://127.0.0.1:9200')})({theme:'light'});`});
+  await unbound.addInitScript(secretsFixture,{unbound:true});
+  await unbound.goto(`${web.url}?safeAreaSim=0,0,0,0`);await unbound.getByTestId('desktop-workspace-sidebar').waitFor();
+  await unbound.evaluate(()=>window.__anetLayoutSweep.setScreen({name:'nodeInfo',alias:'child-fixture'}));
+  await unbound.getByTestId('node-section-nav').getByText('密钥',{exact:true}).click();
+  await unbound.waitForFunction(()=>{const button=document.querySelector('[data-testid="scoped-secret-save"]');return !!button&&button.getAttribute('aria-disabled')!=='true';});
+  assert((await unbound.getByTestId('scoped-secrets').innerText()).includes('无需绑定 Daemon'));passed++;
+  await unbound.getByTestId('scoped-secret-name').fill('TEST_VENDOR_KEY');await unbound.getByTestId('scoped-secret-value').fill('TEST-ONLY-ui-1053');
+  await unbound.getByTestId('scoped-secret-save').click();await unbound.getByTestId('scoped-secret-notice').getByText(/节点已确认保存/).waitFor();
+  const direct=await unbound.evaluate(()=>window.__secretCalls.filter(c=>c.action==='node_secret_put'));
+  assert.equal(direct.length,1);assert.equal(direct[0].id,'node-fixture');assert.equal(direct[0].revision,0);passed++;
+  assert.equal(await unbound.getByTestId('scoped-secret-value').inputValue(),'');passed++;
+  await unbound.screenshot({path:'/output/node-secrets1075-unbound.png',fullPage:true});
+  await own.close();console.log(`scoped secrets with independent node: ${passed}/${passed} checks passed`);
 } finally {await browser.close();web.close();}

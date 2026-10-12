@@ -18,15 +18,18 @@ function Page({cfg,daemonId,nodeId}:Props) {
   const {t}=useTranslation();const [snapshot,setSnapshot]=useState<SecretSnapshot|null>(null),[key,setKey]=useState(''),[value,setValue]=useState('');
   const [busy,setBusy]=useState(false),[writing,setWriting]=useState(false),[notice,setNotice]=useState(''),[deleting,setDeleting]=useState<string|null>(null);
   const active=useRef<AbortController|null>(null), mounted=useRef(true);
-  const supported=!!daemonId && !!cfg.networkId;
+  const supported=!!(daemonId||nodeId) && !!cfg.networkId;
+  const independent=!!nodeId && !daemonId;
   const run=async(write?:SecretWrite)=>{
     if(!supported||active.current)return;
     const ctrl=new AbortController();active.current=ctrl;setBusy(true);setWriting(!!write);setNotice('');setDeleting(null);
     if(write){setValue('');setSnapshot(null);}
-    const result=await scopedSecrets(cfg,{networkId:cfg.networkId!,daemonId:daemonId!,nodeId:nodeId??null},ctrl.signal,write);
+    const result=await scopedSecrets(cfg,{networkId:cfg.networkId!,daemonId:daemonId??null,nodeId:nodeId??null},ctrl.signal,write);
     if(!mounted.current||ctrl.signal.aborted)return;
-    if(result.kind==='ready') {setSnapshot(result.snapshot);if(write)setNotice(t(write.action==='put'?'scopedSecrets.saved':'scopedSecrets.deleted'));}
-    else {setSnapshot(null);setNotice(t(`scopedSecrets.${result.kind==='cancelled'?'unconfirmed':result.kind}`));}
+    if(result.kind==='ready') {setSnapshot(result.snapshot);if(write)setNotice(t(independent
+      ? write.action==='put'?'scopedSecrets.nodeSaved':'scopedSecrets.nodeDeleted'
+      : write.action==='put'?'scopedSecrets.saved':'scopedSecrets.deleted'));}
+    else {setSnapshot(null);setNotice(t(result.kind==='unsupported'&&independent?'scopedSecrets.nodeUnsupported':`scopedSecrets.${result.kind==='cancelled'?'unconfirmed':result.kind}`));}
     active.current=null;setBusy(false);
   };
   useEffect(()=>{mounted.current=true;void run();return()=>{mounted.current=false;active.current?.abort();};},[]);
@@ -34,8 +37,8 @@ function Page({cfg,daemonId,nodeId}:Props) {
   const Button=({title,press,disabled=false,testID}:{title:string;press:()=>void;disabled?:boolean;testID?:string})=><Pressable testID={testID} accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={press} style={[buttonStyle('secondary'),{opacity:disabled?0.45:1}]}><Text style={buttonTextStyle('secondary')}>{title}</Text></Pressable>;
   return <View testID="scoped-secrets" style={{gap:spacing.md}}>
     <Text style={{fontSize:type.title,fontWeight:'600',color:colors.text}}>{t('scopedSecrets.title')}</Text>
-    <Text style={{color:colors.textMuted}}>{t(nodeId?'scopedSecrets.node':'scopedSecrets.daemon')}</Text>
-    <Text style={{color:colors.textMuted,fontSize:type.small}}>{t('scopedSecrets.boundary')}</Text>
+    <Text style={{color:colors.textMuted}}>{t(independent?'scopedSecrets.nodeIndependent':nodeId?'scopedSecrets.node':'scopedSecrets.daemon')}</Text>
+    <Text style={{color:colors.textMuted,fontSize:type.small}}>{t(independent?'scopedSecrets.nodeBoundary':'scopedSecrets.boundary')}</Text>
     {providerHttpWarning(cfg.serverUrl)?<Text style={{color:colors.textMuted}}>{t('providerManagement.httpWarning')}</Text>:null}
     {!supported?<Text>{t('scopedSecrets.unbound')}</Text>:<>
       <Button title={t('scopedSecrets.refresh')} testID="scoped-secret-refresh" disabled={busy} press={()=>void run()}/>

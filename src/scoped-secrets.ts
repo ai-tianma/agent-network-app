@@ -1,5 +1,5 @@
-export type SecretScope = { networkId: string; daemonId: string; nodeId: string | null };
-export type SecretSnapshot = { network_id: string; daemon_node_id: string; node_id: string | null;
+export type SecretScope = { networkId: string; daemonId: string | null; nodeId: string | null };
+export type SecretSnapshot = { network_id: string; daemon_node_id: string | null; node_id: string | null;
   revision: number; activation: 'next_start'; keys: { key: string; source: 'daemon' | 'node' }[] };
 export type SecretResult = { kind: 'ready'; snapshot: SecretSnapshot } | { kind: 'unconfirmed' | 'cancelled' | 'forbidden' | 'unsupported' | 'invalid' };
 export type SecretWrite = { action: 'put' | 'delete'; key: string; value?: string; revision: number };
@@ -12,13 +12,13 @@ export function parseSecretSnapshot(v: any, scope: SecretScope): SecretSnapshot 
     || !Number.isSafeInteger(v.revision) || v.revision < 0 || v.activation !== 'next_start' || !Array.isArray(v.keys) || v.keys.length > 256
     || new Set(v.keys.map((x:any)=>x?.key)).size !== v.keys.length || v.keys.some((x:any)=>!x
       || Object.keys(x).some(k=>!['key','source'].includes(k)) || typeof x.key !== 'string' || !/^[A-Z_][A-Z0-9_]{0,127}$/.test(x.key)
-      || !['node','daemon'].includes(x.source) || (!scope.nodeId && x.source !== 'daemon'))) return null;
+      || !['node','daemon'].includes(x.source) || (!scope.nodeId && x.source !== 'daemon') || (!scope.daemonId && x.source !== 'node'))) return null;
   return v;
 }
 type Rpc = (args: Record<string,unknown>, signal: AbortSignal, containsKey: boolean) => Promise<any>;
 export async function manageSecrets(scope: SecretScope, rpc: Rpc, signal: AbortSignal, write?: SecretWrite,
   options: { timeoutMs?: number; pollMs?: number } = {}): Promise<SecretResult> {
-  if (!scope.networkId || !scope.daemonId) return { kind: 'unsupported' };
+  if (!scope.networkId || (!scope.daemonId && !scope.nodeId)) return { kind: 'unsupported' };
   if (signal.aborted) return { kind: 'cancelled' };
   if (write?.action === 'put' && !validSecretInput(write.key,write.value ?? '')) return { kind: 'invalid' };
   const ctrl = new AbortController(), cancel = ()=>ctrl.abort(); signal.addEventListener('abort',cancel,{once:true});
@@ -28,11 +28,12 @@ export async function manageSecrets(scope: SecretScope, rpc: Rpc, signal: AbortS
   const errorResult = (r:any): SecretResult => ({kind: signal.aborted ? 'cancelled'
     : r?.error === 'invalid_secret_input' ? 'invalid'
     : ['user_token_required','secret_admin_required','forbidden'].includes(r?.error) ? 'forbidden'
-    : ['unsupported','scoped_secrets_upgrade_required'].includes(r?.error) ? 'unsupported' : 'unconfirmed'});
+    : ['unsupported','scoped_secrets_upgrade_required','node_secrets_upgrade_required'].includes(r?.error) ? 'unsupported' : 'unconfirmed'});
   try {
-    const request=await call({action:write?.action ?? 'list',id:scope.daemonId,network_id:scope.networkId,node_id:scope.nodeId,
+    const request=await call({action:write?.action ?? 'list',id:scope.daemonId ?? scope.nodeId,network_id:scope.networkId,node_id:scope.nodeId,
       ...(write ? {key:write.key,revision:write.revision,...(write.action==='put'?{value:write.value}:{})} : {})},write?.action==='put');
-    if (!request?.ok || request.status !== 'pending' || !/^dsk_[a-f0-9-]{36}$/.test(request.request_id)) return errorResult(request);
+    const requestIdPattern=scope.daemonId ? /^dsk_[a-f0-9-]{36}$/ : /^nsk_[a-f0-9-]{36}$/;
+    if (!request?.ok || request.status !== 'pending' || !requestIdPattern.test(request.request_id)) return errorResult(request);
     while (!ctrl.signal.aborted) {
       const r=await call({action:'read',id:request.request_id,network_id:scope.networkId});
       if (!r?.ok) return errorResult(r);

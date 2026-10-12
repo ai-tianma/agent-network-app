@@ -22,4 +22,20 @@ check('bounded pending is unconfirmed, not endless loading',pending.kind==='unco
 globalThis.fetch=async()=>new Response(JSON.stringify({jsonrpc:'2.0',id:1,error:{code:-32602,message:'Invalid arguments for tool daemon_provider_snapshot: action enum'}}),{status:200,headers:{'Content-Type':'application/json'}});
 const oldEnum=await scopedSecrets({serverUrl:'https://fixture.invalid',token:'TEST-ONLY-human',networkId:scope.networkId},scope,new AbortController().signal);
 check('old known management tool rejects secret enum as unsupported',oldEnum.kind==='unsupported');
+const ownScope={...scope,daemonId:null}, ownId='nsk_22222222-2222-4222-8222-222222222222';
+const ownSnapshot={...snapshot,daemon_node_id:null};
+const ownCalls:any[]=[];
+globalThis.fetch=async(_url,init)=>{
+  const args=JSON.parse(String(init?.body)).params.arguments;ownCalls.push(args);
+  return new Response(JSON.stringify({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:JSON.stringify(args.action==='secret_read'
+    ? {ok:true,request_id:ownId,daemon_node_id:null,node_id:scope.nodeId,status:'succeeded',snapshot:ownSnapshot}
+    : {ok:true,request_id:ownId,status:'pending'})}]}}),{status:200});
+};
+const independent=await scopedSecrets({serverUrl:'https://fixture.invalid',token:'TEST-ONLY-human',networkId:scope.networkId},ownScope,new AbortController().signal,
+  {action:'put',key:'TEST_VENDOR_KEY',value:'TEST-ONLY-fixture',revision:0});
+check('unbound node can save through its own exact receipt',independent.kind==='ready');
+check('unbound write targets node, not a guessed daemon',ownCalls.length===2&&ownCalls[0].action==='node_secret_put'&&ownCalls[0].id===scope.nodeId&&ownCalls[1].action==='secret_read');
+check('independent receipt cannot claim daemon inheritance',parseSecretSnapshot({...ownSnapshot,keys:[{key:'TEST_VENDOR_KEY',source:'daemon'}]},ownScope)===null);
+const nodeOld=await manageSecrets(ownScope,async()=>({ok:false,error:'node_secrets_upgrade_required'}),new AbortController().signal);
+check('old node capability remains unsupported, not a saved claim',nodeOld.kind==='unsupported');
 console.log(`scoped secrets: ${count}/${count} checks passed`);

@@ -1,6 +1,11 @@
 import { registerTranslations } from './i18n';
 registerTranslations({
   'scopedSecrets.title':['环境密钥','Environment secrets'],
+  'scopedSecrets.nodeIndependent':['此节点独立管理自己的密钥，无需绑定 Daemon。','This node manages its own keys without a Daemon binding.'],
+  'scopedSecrets.nodeSaved':['节点已确认保存。下次完整启动生效，当前运行进程未修改。','Node confirmed the save. Effective on next full start; the running process was not changed.'],
+  'scopedSecrets.nodeDeleted':['节点已确认删除。下次完整启动生效，当前运行进程未修改。','Node confirmed deletion. Effective on next full start; the running process was not changed.'],
+  'scopedSecrets.nodeBoundary':['保存到节点本机私有存储，值不回显；下次完整启动时使用。不会自动重启，也不会更换账号、Provider 或模型。已有显式环境/Provider 配置仍可能优先。','Saved privately on the node; values are never returned. Used on the next full start without automatic restart or account/provider/model changes. Existing explicit configuration may take precedence.'],
+  'scopedSecrets.nodeUnsupported':['当前 Hub 或节点尚未支持独立密钥管理；需要升级对应软件，不需要绑定 Daemon。','This Hub or node does not yet support independent key management. Upgrade the relevant software; no Daemon binding is required.'],
   'scopedSecrets.daemon':['此 Daemon 的默认密钥，供它管理的节点继承。节点的同名密钥优先。','Defaults inherited by nodes managed by this daemon. Node keys override matching defaults.'],
   'scopedSecrets.node':['节点密钥覆盖此 Daemon 的同名默认值；其他节点不受影响。','Node keys override matching daemon defaults; other nodes are unaffected.'],
   'scopedSecrets.boundary':['保存到 Daemon 本机私有存储，值不回显。节点下次完整启动时注入环境；不会自动重启，也不会更换 Provider 或模型。已有显式环境/Provider 配置仍可能优先。','Saved in daemon-private storage; values are never returned. Injected on the next full node start; no automatic restart or provider/model change. Existing explicit environment/provider configuration may take precedence.'],
