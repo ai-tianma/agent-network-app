@@ -26,7 +26,11 @@ was terminated but no container init reaped it, so kill(pid,0) still saw its PID
 Ubuntu and macOS host fixture jobs passed independently; not Docker acceptance.
 Correction: add --init to this disposable Docker run; unchanged product process
 exit guard and fixture assertions. No blanket rerun or weakened stop condition.
-Corrected core CI: pending. New focused Actions job uses the existing per-suite Dockerfile
+Corrected core CI: run38260866021/job114850707473 SUCCESS; exact PR head
+d1af23274427e0075e170ba06867f96dc901c8c6, tested merge
+db4fc613eafb83ee99e5427edf84e46986831b7d. 20/20 passed in21.73s,
+finished2026-10-12T14:11:49Z. No product exit guard or assertion was changed.
+New focused Actions job uses the existing per-suite Dockerfile
 tests/local-daemon-init/Dockerfile and actual product local_daemon.rs. It exercises
 stop-before-replace, paired install, real public GitHub archive/hash, fixture npm
 and Hub, startup/registration readback, wrong hash and temporary archive cleanup.
@@ -39,6 +43,6 @@ data still require their existing protected backup; clone does not restore them.
 Rollback the client to its previous exact main-built release, retaining original
 daemon config and private package backups; this patch itself upgrades no host.
 
-STATUS: SOURCE CANDIDATE / NOT MERGED / NOT A PUBLIC CLIENT RELEASE.
+STATUS: CORE DOCKER PASS / CLIENT253 RELEASE PREPARATION / NOT PUBLIC.
 Real macOS/Windows installer, OAuth/model rights, production model invocation and
 fresh-machine recovery are NOT VERIFIED by this report.

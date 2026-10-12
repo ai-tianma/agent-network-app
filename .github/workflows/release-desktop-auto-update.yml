@@ -183,6 +183,11 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.253:
+            - 桌面本机 Daemon 的安装与升级入口配套 CLI 2.3.0-preview.172 / runtime 2.5.0-preview.138，包含 OpenCode V1 会话恢复与升级支持。
+            - CLI 下载继续支持经摘要校验的独立下载地址；保留停止旧进程、私有安装目录和安装后版本确认。
+            - 需手动点击本机安装或升级；不会自动升级远端节点，也不会切换账号、Provider 或模型。已有 OpenCode V1 节点首次升级需按文档保留原会话。
+
             What's new in 0.2.252:
             - Agent 会话列表新增“进行中”筛选，桌面和手机都能集中查看正在执行任务的 Agent。
             - 执行状态随 Hub 状态刷新，任务结束后自动移出；保留搜索、置顶和分组，可随时返回“全部”。
