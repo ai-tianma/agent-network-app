@@ -1,0 +1,25 @@
+name: client daemon current pair
+
+on:
+  pull_request:
+    paths:
+      - src-tauri/src/local_daemon.rs
+      - tests/local-daemon-init/**
+      - .github/workflows/client-daemon-pair.yml
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    name: Client daemon install core (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build actual installer fixture
+        run: sg docker -c 'docker build -t anet-client-daemon-core:test -f tests/local-daemon-init/Dockerfile .'
+      - name: Init, stop-before-replace, exact archive fallback and cleanup
+        # Detached fixture daemons need a PID1 reaper, just like a real host init.
+        # Keep the installer's old-process-exited check; do not treat zombies as PASS.
+        run: sg docker -c 'docker run --rm --init --cap-drop ALL --security-opt no-new-privileges anet-client-daemon-core:test'

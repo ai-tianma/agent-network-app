@@ -1,0 +1,44 @@
+#906 client local daemon package pin — 2026-10-12
+
+Scope: only the desktop local-daemon installer package versions, formal GitHub
+fallback URL/SHA256 and existing fixture expectations. No UI, Hub schema,
+provider/auth/session migration, automatic remote upgrade or global npm change.
+
+Package source main: b61c0e490659e94ad1e487cc8086cb73dfa8f6ad (agent-network).
+CLI 2.3.0-preview.172: 2118019 bytes,
+SHA256 6f19a3b63ce70d5157cf2ea1f5b036662a4f47920f857e5eecb7f755d3ec759a.
+Runtime 2.5.0-preview.138: 593514 bytes,
+SHA256 101c9a85622db3c6934e48ec5239d105e1b315cc0f7d53a183056b6514ccfd7f.
+Formal public provenance and complete download comparisons are in the backend
+docs/tests/report-test906-v1-release-pair.txt, main
+dded9963dbfabcdae4845ff4b35446741d24ef13 / PR2660.
+
+Existing CLI primary npm -> exact main archive with hash -> private prefix ->
+paired runtime -> init/start/readback order is unchanged. Existing guards,
+rollback behavior and minimum Hub128 remain unchanged. Historical162/128 and
+native171/137 test fixtures retain their independent evidence, not current pins.
+
+First core CI: run38260626431/job114849875940, head
+74267c84fa95a1dc496965e855b09fcc9dddc7b4: FAILURE, 19/20 passed.
+Actual public archive/hash and wrong-hash refusal passed. Second install in the
+upgrade fixture failed at src/lib.rs:134: the detached previous fixture daemon
+was terminated but no container init reaped it, so kill(pid,0) still saw its PID.
+Ubuntu and macOS host fixture jobs passed independently; not Docker acceptance.
+Correction: add --init to this disposable Docker run; unchanged product process
+exit guard and fixture assertions. No blanket rerun or weakened stop condition.
+Corrected core CI: pending. New focused Actions job uses the existing per-suite Dockerfile
+tests/local-daemon-init/Dockerfile and actual product local_daemon.rs. It exercises
+stop-before-replace, paired install, real public GitHub archive/hash, fixture npm
+and Hub, startup/registration readback, wrong hash and temporary archive cleanup.
+No local test suite was run. Platform CI remains independently reported.
+
+Recovery: src-tauri/src/local_daemon.rs is the authoritative installer; private
+prefix and daemon profile paths and user-triggered restart sequence are unchanged.
+No reverse proxy/port or secret source is changed. Secrets/config and production
+data still require their existing protected backup; clone does not restore them.
+Rollback the client to its previous exact main-built release, retaining original
+daemon config and private package backups; this patch itself upgrades no host.
+
+STATUS: SOURCE CANDIDATE / NOT MERGED / NOT A PUBLIC CLIENT RELEASE.
+Real macOS/Windows installer, OAuth/model rights, production model invocation and
+fresh-machine recovery are NOT VERIFIED by this report.

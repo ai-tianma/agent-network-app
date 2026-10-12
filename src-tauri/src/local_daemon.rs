@@ -30,12 +30,12 @@ use sha2::{Digest, Sha256};
 use super::{app_root, ensure_private_dir, write_private_atomic};
 
 pub const LOCAL_DAEMON_NAME: &str = "local-daemon";
-const ANET_PACKAGE: &str = "@sleep2agi/agent-network@2.3.0-preview.171";
+const ANET_PACKAGE: &str = "@sleep2agi/agent-network@2.3.0-preview.172";
 // Same bytes as the formal main release, independent of npm processing delays.
-const ANET_TARBALL_URL: &str = "https://github.com/sleep2agi/agent-network/releases/download/cli-v2.3.0-preview.171/sleep2agi-agent-network-2.3.0-preview.171.tgz";
-const ANET_TARBALL_SHA256: &str = "4a3572b5caa60bee7ff3e5c178783f88bdff32703e3b2c3c648b8ab3e3e54be6";
+const ANET_TARBALL_URL: &str = "https://github.com/sleep2agi/agent-network/releases/download/cli-v2.3.0-preview.172/sleep2agi-agent-network-2.3.0-preview.172.tgz";
+const ANET_TARBALL_SHA256: &str = "6f19a3b63ce70d5157cf2ea1f5b036662a4f47920f857e5eecb7f755d3ec759a";
 /// Desktop features require the preview runtime, not npm's older `latest` tag.
-const AGENT_NODE_PACKAGE: &str = "@sleep2agi/agent-node@2.5.0-preview.137";
+const AGENT_NODE_PACKAGE: &str = "@sleep2agi/agent-node@2.5.0-preview.138";
 const MIN_HUB_VERSION: &str = "0.9.0-preview.128";
 static INSTALL_LOCK: Mutex<()> = Mutex::new(());
 const NPM_MIRROR: &str = "https://registry.npmmirror.com";
@@ -694,7 +694,7 @@ pub(crate) fn install_with_cli_download(session: &LocalHubSession, download_cli:
             output.push_str("\n--- exact CLI package via GitHub release ---\n");
             match download_cli().and_then(|bytes| {
                 verify_cli_tarball(&bytes, ANET_TARBALL_SHA256)?;
-                let file = daemon_dir.join("anet-cli-2.3.0-preview.171.tgz");
+                let file = daemon_dir.join("anet-cli-2.3.0-preview.172.tgz");
                 write_private_atomic(&file, &bytes)?;
                 let cmd = with_path(&format!("{} install -g --prefix {} {}",
                     shell_quote(&npm_bin.display().to_string()),
@@ -969,9 +969,9 @@ mod tests {
         let info = |version: &str| ToolInfo { path: "/fixture/package".into(), version: Some(version.into()) };
         assert!(!package_compatible(Some(&info("2.3.0-preview.76")), ANET_PACKAGE));
         assert!(!package_compatible(Some(&info("2.5.0-preview.58")), AGENT_NODE_PACKAGE));
-        assert!(package_compatible(Some(&info("2.3.0-preview.171")), ANET_PACKAGE));
+        assert!(package_compatible(Some(&info("2.3.0-preview.172")), ANET_PACKAGE));
         assert!(!package_compatible(Some(&info("2.5.0-preview.135")), AGENT_NODE_PACKAGE));
-        assert!(package_compatible(Some(&info("2.5.0-preview.137")), AGENT_NODE_PACKAGE));
+        assert!(package_compatible(Some(&info("2.5.0-preview.138")), AGENT_NODE_PACKAGE));
         assert!(package_compatible(Some(&info("2.5.0")), AGENT_NODE_PACKAGE));
         assert!(!package_compatible(Some(&info("2.5.0-preview.12")), AGENT_NODE_PACKAGE));
         assert!(!package_compatible(Some(&info("2.5.0-preview.bad")), AGENT_NODE_PACKAGE));

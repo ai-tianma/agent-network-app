@@ -125,7 +125,7 @@ mod regression {
         assert!(cfg["daemonExtraPath"].as_array().unwrap().iter().any(|v| v.as_str().unwrap().ends_with("/tools")));
         let events = fs::read_to_string(f.root.path().join("events")).unwrap();
         assert!(events.starts_with("stop old-daemon\n"), "{events}");
-        assert!(events.contains("agent-network@2.3.0-preview.171") && events.contains("agent-node@2.5.0-preview.137"), "{events}");
+        assert!(events.contains("agent-network@2.3.0-preview.172") && events.contains("agent-node@2.5.0-preview.138"), "{events}");
         assert!(!events.contains("@latest"));
         let start_env = fs::read_to_string(f.root.path().join("start-env")).unwrap();
         assert!(start_env.ends_with("agent-node/dist/cli.js"), "{start_env}");
@@ -190,10 +190,10 @@ mod regression {
         let report = local_daemon::install(&f.session).unwrap();
         assert!(report.ok, "{:?}", report.error);
         let events = fs::read_to_string(f.root.path().join("events")).unwrap();
-        assert!(events.contains("anet-cli-2.3.0-preview.171.tgz"), "{events}");
-        assert!(events.contains("agent-node@2.5.0-preview.137"), "{events}");
-        assert_eq!(events.matches("agent-network@2.3.0-preview.171").count(), 1);
-        assert!(!f.root.path().join("local-daemon/anet-cli-2.3.0-preview.171.tgz").exists());
+        assert!(events.contains("anet-cli-2.3.0-preview.172.tgz"), "{events}");
+        assert!(events.contains("agent-node@2.5.0-preview.138"), "{events}");
+        assert_eq!(events.matches("agent-network@2.3.0-preview.172").count(), 1);
+        assert!(!f.root.path().join("local-daemon/anet-cli-2.3.0-preview.172.tgz").exists());
         assert!(report.steps.iter().any(|s| s.output.contains("CLI SHA256 已校验")));
         println!("PASS: actual public main tarball download/hash -> npm archive path -> paired runtime -> init/start; npm/Hub are fixture adapters");
     }
