@@ -1,0 +1,389 @@
+ANet iteration snapshot / scheduler a5fed8cf-9cad-4b71-accd-c2e25e6fd08a
+Observed2026-10-13 around01:00 Asia/Shanghai (snapshot, not a continuously live feed).
+Hub ANet tag: 483, done353, doing68, pool57, abandoned5; exhaustive response has_more=false.
+Coordination: 通信欧2号 offline; message48332fba queued, not accepted/started delegation.
+Main public client remains immutable0.2.255; no new client or npm package cut this iteration.
+Main app hover source39f2e17a749f746e1aa4fd9e22ae81cd45010d03; reportPR915 main88e19270fa829300c854ca2d20b8b4c9b7297f10.
+Main Hub capability source7589316b069d788e1f94a06b5483d5f2af22cf23; PR2662 exact5bab2fd235e34a6b1238a4385e18d55f75865037 affected Docker/anchor gates SUCCESS, other matrices not declared complete.
+One old own superseded-source Docker workflow38280125104 cancelled; no latest or another owner's jobs cancelled.
+Operations: delegated original74409034 and unique successor11f13cbc terminal; no parallel upgrade worker. The latter stopped after old CLI coupled shutdown and bounded rollback; first cloud-node success is separate.
+Classification: all prior482 ANet project cards carried ANet tag. Search-only TMWork references not moved; actual node restore#43 moved/tagged with original owner/gates retained.
+Recent user requests#1089/#1091/#1075 remain linked to issues and知识库 label; no duplicate product ticket.
+Experience persisted at ~/.anet/skills/anet-capability-wire-and-upgrade/SKILL.md using skill-creator; metadata validator PASS, not a product test/recovery script.
+
+Open task inventory (all doing/pool rows). Existing due is original metadata, NOT a new ETA or confirmation. Unknown owner evidence stays unknown; do not impose invented schedules.
+#1091 | pool | normal | 客户端仪表盘：按标签展示各状态任务数量柱状图
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-app/issues/914
+  This iteration: 已登记app914/pool；当前标签x状态快照/Hub全量聚合设计。不插队P0；启动后1-2小时候选开发+核心验证，未启动/不作发布时间承诺。
+#1087 | pool | normal | Agent 节点读取与编辑客户端令牌/密钥：按作用域授权
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/issues/2661
+  This iteration: pool；Agent读取/编辑客户端令牌的范围与原文/元数据授权待明确。不授凭据权限、无可信完工ETA。
+#1084 | doing | normal | OpenCode V2 共享持久 Server 产品化（含 V1-TUI 可行性裁定）
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/pull/2645
+  This iteration: PR2645@5780d61f OPEN，无CI。共享Server恢复入口/备份与双节点验收差额待补。01:15(+08)范围检查，尚无正式完工ETA。
+#1083 | doing | high | P0｜ANet 绑定项目下拉框不可选择：修复真实选择链路
+  Owner: n_4fa5a536; existing due: not set; carrier: https://github.com/tianma-ai/tmwork/issues/1497
+  This iteration: 原Owner TMA客户端牛，源码/公开alpha503已有交接，但用户原机选择/真实闭环待验。不代签/抢线，ETA由原Owner依据实际反馈回填。
+#1075 | doing | normal | 节点环境密钥独立管理：无需绑定 Daemon
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/issues/2646
+  This iteration: 源码修复已main7589316b；wire核心2/2+startup1/1通过，生产未激活。最快01:15-01:30(+08)候选Hub发布/激活窗口，须先129精确版本/正式main包及原部署入口确认；01:05证据检查，不承诺窗口必达。
+#1050 | pool | normal | 客户端：聊天输入 / 命令与节点技能快捷菜单
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-app/issues/886
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#1015 | doing | normal | TMWork ANet｜客户端只读复核与待裁集成跟踪
+  Owner: n_4fa5a536; existing due: not set; carrier: https://github.com/tianma-ai/tmwork/issues/1415
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#1014 | doing | high | P0｜天启ANet插件真正收发消息闭环（Hub→所选会话→回复）
+  Owner: node_990d88a9-b115-4a2e-bc55-cd643fe84d83; existing due: not set; carrier: https://github.com/tianma-ai/tmwork/releases/tag/v1.20.12-alpha.504
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#993 | pool | normal | Hub / Daemon 分层规则：下属节点继承与实际生效
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/issues/2602
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#973 | pool | normal | Daemon 统一软件升级：客户端升级 Daemon 自身及托管节点
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/issues/2594
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#959 | doing | normal | 客户端：Daemon 设置使用独立窗口（macOS / Windows）
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-app/issues/837
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#939 | doing | normal | P0｜插件列表增加飞书，与 ANet 并列并复用现有授权入口
+  Owner: n_4fa5a536; existing due: not set; carrier: https://github.com/tianma-ai/tmwork/issues/1426
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#935 | doing | high | Dashboard对齐客户端：任务+组织架构+美化
+  Owner: n_24345979; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-dashboard/pull/45
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#927 | pool | low | Grok Bot 插件（后置）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#925 | pool | low | activity count 501（后置）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#924 | doing | low | 账号页头像提示对比度（排后面）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#923 | doing | normal | 本机 Hub+daemon 验收（local accept）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#911 | doing | normal | 客户端：Hub 非 JSON 错误要友好提示（勿直接 JSON Parse error）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#910 | doing | high | 客户端：设置里「Agent 组织架构」点不动，修复并做可用版（下个版本）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#909 | pool | normal | 分层管理：anet.sh Skills + Hub/Daemon/节点 Skills·密钥env·Provider（后置）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#907 | doing | high | Hub 级 Provider：集中配置、授权下发与 Daemon/节点选用
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/pull/2601
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#906 | doing | high | Daemon 级 Provider 管理：客户端统一管理及各 Runtime 可用模型展示
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/pull/2600
+  This iteration: daemon-vdev172/138 no-op；云盘牛138成功；TMHR鲸试升回滚122，不算成功；狗/负责人既有异常。先受控Bridge-only方法，01:15(+08)给方法/阻塞检查，剩余升级无可信完工时间。
+#905 | doing | normal | Codex TUI 共存创建：支持目标机器已配置的 DeepSeek provider 与模型
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-app/issues/884
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#902 | pool | normal | Daemon 配套 OpenCode 诊断助手：规则失败后的受控修复兜底
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#899 | doing | normal | 客户端任务列表卡顿：隔离行悬停重渲染并验证大列表性能
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-app/pull/797
+  This iteration: 新head175af1b2核心组件及分页UI21/21通过，main39f2e17a；未正式客户端交付/native滚动未验。下个最小客户端片候选01:20-01:45(+08)，须确定256范围且从main构建；不重建255。
+#897 | doing | high | P0｜设置连接增加插件模块，首个支持 ANet
+  Owner: n_91d493ae; existing due: not set; carrier: https://github.com/tianma-ai/tmwork/issues/1415
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#844 | pool | normal | ANet 标签树：拖拽层级与排序由 Hub 持久化、跨客户端同步
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#833 | doing | normal | ANet：用户可更换自己的头像
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#829 | doing | normal | #539 · daemon/API/客户端 OpenCode V2 创建与管理入口
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/issues/2544
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#815 | doing | normal | P0 Agent 节点通过 API 批量修改定时任务执行间隔
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#780 | doing | normal | 聊天首屏加载慢：列表有摘要，进入会话后消息迟迟才显示
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-app/issues/765
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#778 | doing | normal | 桌面安装包更名 ANet 的升级兼容
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network-app/issues/772
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#767 | pool | high | 现有 team 字段 → Agent 团队的迁移建议
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#763 | pool | high | vdev：3 个 TM 节点共用同一份 codex 登录，一起掉线的风险（需逐个重新登录）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#759 | pool | high | codex 掉线或登录失效时把节点标为「降级」、停止派活并告警
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#756 | pool | high | 定时任务连续空转自动退避（2 分钟 → 10–30 分钟，有新事件恢复）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#750 | doing | normal | Agent 也进组织架构：像人类成员一样归属部门、可当负责人
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#746 | doing | normal | 任务可见范围：普通成员默认能看到全部任务（task_access 默认 all）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#740 | pool | normal | #734-4 客户端：节点恢复失败时提供「fork 恢复」按钮（二次确认）
+  Owner: n_e06d936d; existing due: 2026-10-10T06:00:00Z; carrier: https://github.com/sleep2agi/agent-network-app/issues/780
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#735 | pool | low | 定时任务工具后续：alias 换行校验 + 修改时的并发冲突检查
+  Owner: n_e06d936d; existing due: 2026-10-10T06:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#734 | doing | normal | codex 共存节点重启时线程恢复失败（旧 rollout 缺 ordinal），缺少安全的新线程恢复路径
+  Owner: n_e06d936d; existing due: 2026-10-09T06:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#730 | pool | high | 节点忙长任务时，人发的消息排队 30 分钟就过期——人类消息要能插队或注入当前回合
+  Owner: n_e06d936d; existing due: 2026-10-09T06:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#725 | pool | normal | 客户端：已登记但还没启动过的节点在 agent 列表里看不到（应显示「未启动」）
+  Owner: n_e06d936d; existing due: 2026-10-09T06:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#723 | doing | normal | 客户端：任务的「参与人」可以选 Agent（现在只能选人）
+  Owner: n_e06d936d; existing due: 2026-10-07T14:30:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#717 | pool | high | 改密码时，绑定网络的具名令牌也应能一并撤销（承接 #711 复审）
+  Owner: n_e06d936d; existing due: 2026-10-09T06:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#713 | pool | low | #707-C 登录会话加过期时间，并提供「清理其他登录」（承接 #428）
+  Owner: n_e06d936d; existing due: 2026-10-12; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#712 | pool | low | #707-B 客户端：改密码页写清楚哪些会退出、哪些保留，并加「同时吊销 CLI 令牌」选项
+  Owner: n_e06d936d; existing due: 2026-10-08T08:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#707 | pool | high | 改密码时不踢掉 CLI / 脚本的登录；单独清理 2625 个陈旧登录会话
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#702 | pool | normal | anet / agent-node：codex 共存节点 config.env 没传进 codex 进程（DEEPSEEK_KEY 缺失导致回空）
+  Owner: n_e06d936d; existing due: 2026-10-07T08:30:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#700 | pool | high | 任务链接：点链接直接打开客户端并弹出这条任务的详情
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#696 | pool | high | P0：用户令牌 / atok 发任务时 from_session 可以填任意节点名（署名可伪造，安全，禁公开）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#694 | doing | normal | 客户端一键重启 vdev / TM 节点：把现有节点收编进 daemon，并让 daemon 处理好启动的坑
+  Owner: n_e06d936d; existing due: 2026-10-08T10:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#691 | pool | high | 节点身份收尾两处：改名只查 sessions；任务发送方 node_id 按 alias 反查
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#690 | pool | high | 按名字吊销 / 改名节点令牌的三处，可能误伤抢注的同名令牌
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#689 | pool | high | P0：只有 session、没有节点行的 alias 可被同网成员抢注（安全，禁公开）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#688 | pool | high | P0：get_inbox / ack_inbox 未核调用者身份
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#684 | doing | normal | vdev 上 TM 节点 08:35 起全部离线
+  Owner: n_e06d936d; existing due: 2026-10-07T08:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#682 | pool | normal | 旧无 owner 节点的显式管理员认领与审计
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#680 | pool | normal | 待 Vincent 决策：节点 owner 降为 viewer 后的 daemon 权限
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#677 | pool | normal | test668 偶发失败（later message）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#675 | pool | normal | L1 套件按目录登记，并行 PR 不再抢同一行
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#669 | pool | normal | 父任务推断会挂错任务：考虑彻底取消推断
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#666 | doing | normal | TMAI负责人 登记目录异常：自停新增派单，待授权 TMHR鲸 修复
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#665 | doing | normal | TM 中文名 codex 节点 .96–.113 隐患：升到 .114（待授权）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#661 | pool | normal | 收编 v2-E：Docker 假三段端到端、变异门与恢复文档
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#660 | pool | normal | 收编 v2-D：Hub 与 app 复用接口及三段错误提示
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#659 | doing | normal | 收编 v2-C：daemon 三段顺序启动与失败恢复
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/pull/2464
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#657 | doing | normal | 收编 v2-A：codex 三段身份与启动布局取证契约
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#649 | doing | normal | 安全：服务器地址显示太全 + admin 仍是默认弱密码（公网可达）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#647 | doing | normal | vdev 备用机 vansin-dev-64g-1t-2：装 anet 运行环境 + daemon（不双开节点）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#646 | pool | normal | API key 10/10：生产 Hub 配置密钥库主密钥（需 Vincent 批准 + 备份方案）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#645 | pool | normal | API key 9/10：app 新建向导：选第三方模型时选 / 填 key（只进 Hub 密钥库）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#644 | pool | normal | API key 8/10：重启后环境变量不更新的启动器修复（来自 #2004）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#643 | pool | normal | API key 7/10：供应商密钥 → 环境变量名映射 + 按模型带 base URL
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#642 | pool | normal | API key 6/10：明文 HTTP 下拒绝下发 key（本机 / HTTPS 才允许）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#641 | pool | normal | API key 5/10：create_node 接 Hub 密钥库：带 key 建节点只限 owner / admin
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#640 | pool | normal | API key 4/10：anet daemon 支持 init 之后修改允许下发的 key 列表
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#639 | pool | normal | API key 3/10：anet secret / anet node secret 命令（来自 #2056，值从终端读，文件 0600）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#636 | doing | normal | 新建节点时能给节点配 API key（DeepSeek / MiniMax 等第三方模型）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#634 | doing | normal | TMA云盘牛 codex 沙箱禁网：本地 HTTP / PG 监听 EPERM，云盘测试跑不了
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#630 | doing | normal | 收编 v2：codex 共存节点（三段 tmux：app-server / TUI / 桥）的收编与启停 —— vdev 上的 TM 节点都属于这类
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#621 | doing | normal | RELAY 磁盘 97%（剩约 1.2GB）：清旧 anet 前缀，防止写满
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#619 | doing | normal | 每个 daemon 的 Runtime / Provider / 模型管理与可用能力展示、节点创建贯通
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#616 | doing | normal | TM 公司服务器装 daemon 并收编现有节点：以后在 app 里就能重启 / 启停它们
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#615 | doing | normal | Windows 机器的 daemon（daemon-vanisn）升级到 .113，让 app 能在上面新建 / fork / 启停节点
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#613 | doing | normal | 在 TM 内网机器上实测节点控制（启动 / 停止 / 改模型 / daemon）
+  Owner: n_ce2a4dce; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#611 | doing | normal | 🔴 TM 公司服务器 41 个节点 08:15 同时离线
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#606 | doing | normal | Codex 共存节点在跑一轮时 stop，偶尔留下一个进程（stop 返回 1）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#604 | pool | normal | test466 测试框架把 HOME / npm 缓存放在 /tmp（1777）导致包身份校验失败
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#601 | pool | normal | anet：配对版本和本机已装的 agent-node 一致时直接用，不先去 npm 查
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#599 | pool | normal | 外部起的 codex app-server（TM 起法）也能自愈：节点托管或给守护
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#597 | pool | normal | grok-build-cli 经 daemon 建出来大概率也不是共存（app 写着「共存模式」）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#594 | doing | normal | codex 多节点共用一个账号会互相踢掉登录：每个节点单独登录 / 一键检测
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#593 | doing | normal | TM codex 节点升级到 agent-node .112（3 天 355 次 app-server 连不上，.96 起已自愈）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#592 | pool | normal | 共存节点：显示 attach 命令 / 「TUI 不在，重新拉起」
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#590 | pool | normal | Hub 加 fork / clone 节点的接口，再给 app 加「复制节点」
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#589 | pool | normal | Codex 共存②：模型列表 + 换模型真正生效（app-server 和 TUI 一起换）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#588 | pool | normal | 操作后轮询节点状态直到稳定（不再只说「已提交」）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#587 | pool | normal | 操作结果显示在弹窗里 + 节点忙时提供「强制」
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#583 | doing | normal | 目标4：客户端管理各 runtime 全生命周期（创建/fork/模型），优先 Codex TUI 共存
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#581 | pool | normal | #499 真机验证：Vincent 10-06 到期卡片的提醒通知
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#580 | pool | normal | #570 收编 v1：Hub 绑定表 + daemon 收编 + anet daemon adopt 命令
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#575 | doing | normal | 目标③｜Hub 需求池里军团相关需求：开发 / 测试 / 落地
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#574 | doing | normal | 目标②｜小版本迭代上线 + 经验写进 ~/.anet/skills
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#573 | doing | normal | 目标①｜任务页面项目管理：负责人 / 参与人 / 全生命周期，人和 Agent 都好用
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#572 | doing | normal | 定时任务拆小任务：三个目标各建父卡，挂上所有子任务
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#570 | doing | normal | Hub：远程管理节点的 4 个缺口（请求状态、daemon 在线检查、受限可见性、收编手动起的节点）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#562 | doing | normal | 用 anet 跨机器管理整个团队的节点（含 TM 团队）
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#555 | doing | normal | 🔴 多网络账号（fiona）在 Agent 会话发图片全部失败 network_id_required
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#539 | doing | normal | 支持 OpenCode V2（新 TUI）的共存节点
+  Owner: n_e06d936d; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/issues/2544
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#530 | doing | normal | anet CLI 对 codex runtime 的支持全面变好
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#499 | doing | normal | app：任务提醒在手机后台也弹系统通知 + Agent 会话里的提醒带「查看任务」链接
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#495 | doing | normal | 清理 agent-network 仓 15 个旧的未合 PR（取代的关闭、有用的变基合入）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#491 | doing | normal | 任务到期提醒与逾期标记（负责人 / 参与人 / Agent）
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#487 | doing | normal | 节点（Agent）自己的权限：能看哪些、能改哪些、哪些只有人能做
+  Owner: n_e06d936d; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#444 | doing | normal | iPad 发送图片闪退
+  Owner: unassigned; existing due: not set; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#428 | doing | normal | 登录设备 2617 台：每次密码登录都新增一条且永不过期；「退出其他所有设备」会踢掉在用的脚本 / agent
+  Owner: n_e06d936d; existing due: 2026-09-30T11:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#427 | doing | normal | 设置页整体重新设计（账号页 + 其他设置页统一组件）
+  Owner: n_e06d936d; existing due: 2026-09-30T10:30:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#419 | doing | normal | 人类成员组织架构（管理和编辑）
+  Owner: n_e06d936d; existing due: 2026-09-30T10:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#403 | pool | lowest | 国内连硅谷 Hub 慢：app 请求提速 + Hub 迁香港
+  Owner: n_e06d936d; existing due: 2026-10-31T04:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#262 | pool | normal | Hub 上游｜子任务结果覆盖父任务终态
+  Owner: n_22b777bf; existing due: not set; carrier: https://github.com/sleep2agi/agent-network/issues/1879
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#43 | doing | normal | P0：恢复 TMA门户鲸 app-server 24731 与出站身份验收
+  Owner: n_22b777bf; existing due: not set; carrier: https://github.com/tianma-ai/Node-TMAI/issues/37
+  This iteration: 明确ANet节点恢复，分类迁入ANet，原Owner/四门/凭据和具名授权不变，待其新鲜验收，未因当前在线勾完。
+#22 | doing | high | 官网文档（anet.sh docs）持续维护：与最新功能同步、准确精炼
+  Owner: n_72be30e0; existing due: 2026-09-30T10:00:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#21 | doing | low | Hub 支持 PostgreSQL 数据库（与 SQLite 并存可选）
+  Owner: n_e06d936d; existing due: 2026-09-30T06:30:00Z; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
+#11 | doing | normal | https://www.anet.sh/ 官网首页 UI/UX 优化
+  Owner: unassigned; existing due: 2026-09-30; carrier: not set
+  This iteration: No new implementation/acceptance verified this iteration. Preserve owner/status; requires owner evidence and scope estimate before a credible fastest-completion time.
