@@ -1,0 +1,28 @@
+name: Search across render pages core
+on:
+  pull_request:
+    paths:
+      - 'tests/test-task-search/**'
+      - '.github/workflows/task-search-pagination.yml'
+permissions:
+  contents: read
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Core and typecheck first
+        run: |
+          docker build --target core -f tests/test-task-search/Dockerfile -t task-search-core .
+          docker run --rm --network none task-search-core
+      - name: Exact search identities across render pages
+        run: |
+          mkdir -p "$RUNNER_TEMP/task-search"
+          docker build --target browser -f tests/test-task-search/Dockerfile -t task-search-ui .
+          docker run --rm --network none -v "$RUNNER_TEMP/task-search:/output" task-search-ui
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: TEST-ONLY-search-pagination
+          path: ${{ runner.temp }}/task-search

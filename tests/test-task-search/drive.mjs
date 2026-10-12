@@ -1,5 +1,5 @@
 // 任务页搜索 —— 在 web 导出里量出来,不靠眼睛。
-// Not in CI: needs Playwright + Chromium and a web export. Hub data is placeholder, answered in-page by the
+// CI: task-search-pagination.yml runs the exported UI in Docker. Hub data is placeholder, answered in-page by the
 // Tauri stub in tests/test-layout-sweep/harness.mjs (window.__tasksFixture) — no hub process, no port, no HOME.
 //
 //   WEB_DIR=<expo export dir> [OUT=<png dir>] [PLAYWRIGHT_MODULE=<…/playwright/index.mjs>] node tests/test-task-search/drive.mjs
@@ -326,7 +326,8 @@ for (const kind of ['new', 'old']) {
     await page.goto(url);
     await page.locator('[data-testid="desktop-rail"] [aria-label="任务"]').first().click({ timeout: 30000 });
     await page.locator(tid('tasks-view-list')).first().click({ timeout: 20000 });
-    await page.locator(tid(kind === 'old' ? 'req-row-n0' : 'req-row-n1')).first().waitFor({ timeout: 20000 });
+    // Old-Hub rows are sorted before paging; n0 need not be on the first page.
+    await page.locator('[data-testid^="req-row-n"]').first().waitFor({ timeout: 20000 });
     await page.locator(tid('task-search-input')).first().fill('归档前方案');
     await page.waitForTimeout(900);
     const got = await page.evaluate(() => [...document.querySelectorAll('[data-testid^="req-row-"]')].map(e => e.dataset.testid.slice(8)).filter(id => /^[a-z]+\d+$/.test(id)).join(','));
@@ -370,6 +371,33 @@ for (const v of [{ w: 1320, h: 754, kind: 'desktop' }, { w: 390, h: 844, kind: '
   await page.addInitScript(initScript, { theme: 'light' });
   const shot = (name) => OUT && page.screenshot({ path: join(OUT, `${v.kind}-${v.w}x${v.h}-light-history-${name}.png`) });
   const ids = () => page.evaluate(() => [...new Set([...document.querySelectorAll('[data-testid^="req-row-"]')].filter(e => e.getClientRects().length).map(e => e.dataset.testid.slice(8)).filter(id => /^[a-z]+\d+$/.test(id)))]);
+  // Count exact results across render pages, not simultaneously mounted DOM rows.
+  // Keep server cursor/loading assertions independent of the 50-row render window.
+  const allIds = async () => {
+    const previous = page.locator(tid('task-page-previous')).first();
+    const next = page.locator(tid('task-page-next')).first();
+    const reset = async () => {
+      for (let i = 0; i < 16 && await previous.getAttribute('aria-disabled') !== 'true'; i++) {
+        await previous.click(); await settle(page);
+      }
+      if (await previous.getAttribute('aria-disabled') !== 'true') throw new Error('pager did not reach first page');
+    };
+    await reset();
+    const result = [];
+    for (let i = 0; i < 16; i++) {
+      const current = await ids();
+      if (current.length > 50) throw new Error('render page exceeded 50 rows');
+      result.push(...current);
+      if (await next.getAttribute('aria-disabled') === 'true') {
+        if (new Set(result).size !== result.length) throw new Error('duplicate result across pages');
+        await reset();
+        return result.sort();
+      }
+      await next.click(); await settle(page);
+    }
+    throw new Error('pager did not reach last page');
+  };
+  const sameIds = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected.sort());
   try {
     if (v.kind === 'desktop') {
       await page.goto(url);
@@ -392,15 +420,15 @@ for (const v of [{ w: 1320, h: 754, kind: 'desktop' }, { w: 390, h: 844, kind: '
     record(vp, 'old archived task found by default, tagged', { row: (await ids()).join() === 'a1', tagged: !!tag, askedInclude: (await page.evaluate(() => (window.__tasksQueries || []).join(' '))).includes('include_archived=1') }, { rows: (await ids()).join() || '(none)' });
 
     await search('周报');
-    const first = (await ids()).length;
+    const first = await allIds();
     const count1 = (await box(page, tid('task-search-count')))?.text;
     const more = await box(page, tid('task-search-load-more'));
     await shot('2-load-more');
     await page.locator(tid('task-search-load-more')).first().click();
     await page.waitForTimeout(900);
-    const second = (await ids()).length;
+    const second = await allIds();
     const asked = await page.evaluate(() => (window.__tasksQueries || []).filter(q => q.includes('cursor=')).join(' '));
-    record(vp, '加载更多 reads the next page', { firstPage: first === 200, button: !!more, allAfter: second === 250, cursor: asked.includes('cursor=200'), gone: !(await box(page, tid('task-search-load-more'))), noOverflow: (await overflow(page)) <= 0 }, { first, second, count1 });
+    record(vp, '加载更多 reads the next page', { firstPage: sameIds(first, Array.from({ length: 200 }, (_, i) => `m${i}`)), button: !!more, allAfter: sameIds(second, Array.from({ length: 250 }, (_, i) => `m${i}`)), cursor: asked.includes('cursor=200'), gone: !(await box(page, tid('task-search-load-more'))), noOverflow: (await overflow(page)) <= 0 }, { first: first.length, second: second.length, count1 });
 
     // 隐藏已完成 via the status filter: the status line says how many hits it hides; 清除筛选 brings them back
     await page.locator(tid('task-filter-status')).first().click();
@@ -408,11 +436,11 @@ for (const v of [{ w: 1320, h: 754, kind: 'desktop' }, { w: 390, h: 844, kind: '
     await page.locator(tid('task-filter-scrim')).first().click({ position: { x: 5, y: v.h - 5 } }).catch(() => {});
     await page.waitForTimeout(500);
     const hidden = await box(page, tid('task-search-hidden'));
-    const filtered = (await ids()).length;
+    const filtered = await allIds();
     await shot('3-hidden-by-filter');
     await page.locator(tid('task-search-clear-filters')).first().click();
     await page.waitForTimeout(500);
-    record(vp, 'hits hidden by filters are counted and 清除筛选 shows them', { counted: hidden?.text === '另有 125 个被筛选隐藏', filtered: filtered === 125, back: (await ids()).length === 250, barGone: !(await box(page, tid('task-search-hidden'))) }, { hidden: hidden?.text, filtered });
+    record(vp, 'hits hidden by filters are counted and 清除筛选 shows them', { counted: hidden?.text === '另有 125 个被筛选隐藏', filtered: sameIds(filtered, Array.from({ length: 125 }, (_, i) => `m${i * 2}`)), back: sameIds(await allIds(), Array.from({ length: 250 }, (_, i) => `m${i}`)), barGone: !(await box(page, tid('task-search-hidden'))) }, { hidden: hidden?.text, filtered: filtered.length });
   } catch (e) {
     record(vp, 'drive', { finished: false }, { error: String(e).split('\n')[0] });
     await shot('x-error');
