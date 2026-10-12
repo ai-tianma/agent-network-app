@@ -39,3 +39,51 @@ rule change, production action or local product suite was used.
 inputs must be the later exact merged main release SHA, never this PR head or
 the TEST-ONLY browser artifact. Native package/publication remains PENDING.
 No feature release claimed; 0.2.251 does not include #1079.
+
+Publication receipt (2026-10-12; the pending statements above are historical):
+Version PR901 normal squash -> main f9361e0334cb1a68ece8b23035925abb887e455a.
+Release metadata Docker run38235195979 SUCCESS. Formal source remains that full
+main SHA; ancestry rechecked before dispatch and before publication. No branch
+test artifact, repack, asset replacement, moved tag or admin bypass was used.
+
+Desktop formal run38235420301: macOS job114764790309, Windows job114764790307,
+verify-draft job114772144017 all SUCCESS, including packaged smoke/retention.
+Linux selection=false. Release410487711 desktop-v0.2.252 published10:40:25Z
+(18:40:25+08), non-draft/non-prerelease/latest. Tag resolves to exact f9361e03.
+https://github.com/sleep2agi/agent-network-app/releases/tag/desktop-v0.2.252
+Owner full authenticated draft downloads match public GitHub asset digests:
+app.tar.gz 38294289B sha256:846fba98b1045a508c04428f5740effd071da2a7e111a779240184741ee3222e
+dmg 38950977B sha256:754018e8f059304cb49fa157c4045c8f16d791816f08fda89c3737e5934e1800
+exe 37346887B sha256:4e4850df1e5f095ba7204dc3942a94ec31ac8ffc383c92311744ef2ef23112ae
+msi 51171328B sha256:aa9b8256e6d66a17ff07e024817b5db6b1b854d93acf785c1677dcade44eb72d
+latest.json 92029B sha256:2cd98afa238730ac5478ef79471a194f0230fee55e8f72ad75c52e5a4a860b6b
+Five aliases map to exact app/exe/msi asset IDs633457651/633467388/633467253;
+all serialized signature strings match their three .sig assets, without decoding
+one side. This owner byte comparison is not additional cryptographic proof.
+After publication, a full anonymous EXE download matches its exact hash/size;
+anonymous DMG HEAD gives200/octet-stream/38950977, not full anonymous DMG proof.
+
+Android formal run38235423728/job114764800175 SUCCESS, same main/source;
+versionName0.2.252/versionCode2252/package/install permission/cert gates passed.
+Publisher38237277823/job114770950712 SUCCESS completed10:36:26Z, source pinned.
+Owner full anonymous APK:83826441B sha256:9850c38fab8d7505214dbbbaa4a7e22b127984741972816f88347c008d23d8df,
+matching public .sha256; android/latest/VERSION0.2.252 and notes current3items.
+https://modelscope.cn/datasets/SmartFlowAI/agent-network-releases/resolve/master/android/agent-network-0.2.252.apk
+Actual phone installation/live account or model execution was NOT performed.
+
+anet.sh/desktop/update/latest.json returns0.2.252 and five anonymous GitHub
+platform URLs. Drift run38238050255 SUCCESS (compare release vs deployment).
+Manual ModelScope mirror38237849580/job114773633177 SUCCESS. Its large-package
+range+listing digest checks are not owner full anonymous downloads of all four
+desktop installers. Only automatic same-tag/SHA mirror38237798041 was cancelled
+after the retained manual run existed; terminal completed/cancelled confirmed.
+No main, other-owner QA or formal signing/build gate was cancelled.
+
+Separate unselected Linux CI: PR901 run38235195829/job114764916458 FAILURE at
+Unavailable Secret Service fails before application workload. Exact failed log
+shows the negative keyring gate exits1; root cause NOT established. No Linux
+native UI acceptance inferred; artifact11741136673 is TEST-ONLY, not published.
+Do not call this an environment outage or hide it behind the selected-platform
+success. Preserve the Linux gate for a later scoped diagnosis; Linux remains
+outside this user-selected release. No new local product tests or production
+restart/login/provider/model changes were used for this receipt.
