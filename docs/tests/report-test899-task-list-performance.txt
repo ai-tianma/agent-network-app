@@ -1,12 +1,22 @@
 Task #899: task list hover performance, first bounded slice
-2026-10-13 restack checkpoint (Actions pending, not a new PASS):
+2026-10-13 restack core receipt:
 Original PR797/source727482282102ea74f852277c9ea1a8e3ff6d2867 had23SUCCESS/1SKIPPED.
 Restacked onto main289eda8aa32900fe5a37cd7ea355b40fe46ac2d1 after0.2.255 pagination;
 kept tag-count Docker job and body scroll reset, moved page/query hover reset to
 the row-local component using pageKey, and added retained-row reset coverage.
+New head175af1b25f463424f5fd5002c836f2deae17b7e8 Actions hover Docker
+run38279301270/job114912377793 SUCCESS:1000 actual component rows, enter1-row
+render/leave+enter2-row render, exact edit/open ID, pageKey retained-row reset,
+listener cleanup; edit54/54,width28/28,tablet22/22. Win/Ubuntu push+PR units SUCCESS.
+Dedicated pagination38279301262/job114912377097 SUCCESS:core7/7+typecheck,
+unchanged baseline4/4, actual exported desktop/mobile UI21/21. Single synthetic
+timings desktop baseline2579ms/paged379ms, phone747ms/195ms; mounted495->50.
+Do not collapse these samples with prior255 or claim native/user-device FPS.
+Normal SHA-lock squash main39f2e17a749f746e1aa4fd9e22ae81cd45010d03 at16:46:53Z.
+Eight shared stub shards were still running at merge, not declared PASS.
 Below historical tests/negative control belong to the old exact source, not this
-restack. New core and exported pagination Actions must verify this head before
-merge. No local product tests, production mutations, npm or public build started.
+restack. No local product tests, production mutations, npm or public build started.
+Public0.2.255 remains unchanged; this merged slice is NOT yet in a released app.
 
 Observed: 2026-10-10 08:16 Asia/Shanghai
 Baseline: a48e697c92bf8a647a62f48890f2b59da7da9590
