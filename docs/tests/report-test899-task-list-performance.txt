@@ -1,0 +1,71 @@
+Task #899: task list hover performance, first bounded slice
+2026-10-13 restack checkpoint (Actions pending, not a new PASS):
+Original PR797/source727482282102ea74f852277c9ea1a8e3ff6d2867 had23SUCCESS/1SKIPPED.
+Restacked onto main289eda8aa32900fe5a37cd7ea355b40fe46ac2d1 after0.2.255 pagination;
+kept tag-count Docker job and body scroll reset, moved page/query hover reset to
+the row-local component using pageKey, and added retained-row reset coverage.
+Below historical tests/negative control belong to the old exact source, not this
+restack. New core and exported pagination Actions must verify this head before
+merge. No local product tests, production mutations, npm or public build started.
+
+Observed: 2026-10-10 08:16 Asia/Shanghai
+Baseline: a48e697c92bf8a647a62f48890f2b59da7da9590
+
+Finding:
+TaskListTable stores hoverRow at table scope. Each DOM pointerenter/leave
+updates that state and rerenders every row, including off-screen rows.
+All rows are mounted by ScrollView + rows.map; virtualization is not fixed here.
+
+Change:
+TaskListRowHover owns each row's hover state and DOM listeners. The render-prop
+boundary adds no DOM/native wrapper. Existing table selection, title editing,
+keyboard cell refs, row attributes, menus and width logic stay in place.
+Listeners detach on ref removal/replacement or disabled desktop editing.
+No Hub/network/polling/auth/data/protocol changes.
+
+Docker commands (via sg docker -c):
+docker build -f tests/task-list-performance/Dockerfile -t anet-list-perf:899 .
+docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-list-perf:899
+docker build -f tests/task-list-performance/typecheck.Dockerfile -t anet-list-perf-types:899 .
+Base image digests, fixture versions and transitive bun.lock are committed.
+
+Final focused run PASS, exit 0:
+- Real TaskListTable + real TaskListRowHover, React 19.2.3 test renderer.
+  RN host components, child badges/pickers are mocked; no browser/native FPS claim.
+  1000 rows initially render 1000 OwnerBadge probes.
+  Pointer-enter r0: exactly 1 probe (r0).
+  Pointer-leave r0 then enter r999: exactly 2 probes (r0, r999).
+  Expand invokes the correct task ID; title editing saves exactly one field.
+  Removing a row, switching touch mode and unmounting remove listeners.
+  1 component test / 14 expect calls, all PASS.
+- Inline edit model: 54/54.
+- List width model: 28/28.
+- Tablet/title regression: 22/22.
+- Full app TypeScript check: PASS in Docker (npm ci from app lockfile).
+- git diff --check: PASS.
+
+Negative control:
+The identical initial component regression was run with only TaskListTable.tsx
+replaced read-only by the baseline main file in a disposable Docker container.
+It failed the first post-hover assertion: received r0 through r999 rather than
+only r0. Exit 1, 0 pass / 1 fail. This confirms the test detects the original
+whole-table rerender. This is render-work reduction, NOT a 1000x speed/FPS claim.
+
+Harness corrections:
+Initial i18n stub lacked registerTranslations; replaced it with real i18n.
+Adding full title-edit/removal/touch checks exceeded Bun's default 5s timeout;
+suite budget is now 30s, with all exact render-count assertions unchanged.
+Final functional suite completed in 6.45s; duration is not a performance gate.
+
+Limits / next slice:
+No production profiling, native Windows/WebView2 timing, real browser screenshot,
+scroll FPS, first-paint latency or full client E2E measured. All-row mounting,
+parent rerenders on selection/edit and periodic refresh remain candidates for
+profiling. Do not claim the entire task-list performance issue is closed.
+Required CI/Docker E2E must pass before merge. No merge or release performed.
+
+Cleanup / recovery:
+All test containers --rm, no production calls or credentials. Negative-control
+mount contains repository source only. Local images retained for reproduction.
+No persistent server/service/ports/secrets/schema/backup state added; existing
+client build/deploy/rollback procedures unchanged, no new recovery dependency.
