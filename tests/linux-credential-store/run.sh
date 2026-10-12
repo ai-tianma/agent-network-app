@@ -3,18 +3,15 @@ set -eu
 probe=/probe/target/release/anet-linux-credential-store
 # No session bus: fail closed instead of a successful mock write.
 DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/anet-no-session-bus "$probe" unavailable
-dbus-run-session -- sh -eu -c '
-  mkdir -p "$HOME/.local/share/keyrings"
-  export GNOME_KEYRING_CONTROL="$(mktemp -d)"
-  printf "%s" "dummy-keyring-password" | gnome-keyring-daemon --unlock --components=secrets --control-directory "$GNOME_KEYRING_CONTROL"
+# Wait for the explicitly unlocked service to own its bus name before probing.
+# Reuse the native CI helper so D-Bus cannot race a second daemon into startup.
+ANET_ISOLATED_KEYRING_TEST=1 sh /probe/with-linux-test-keyring.sh sh -eu -c '
   /probe/target/release/anet-linux-credential-store missing
   /probe/target/release/anet-linux-credential-store write
   /probe/target/release/anet-linux-credential-store read
 '
 # Restart both the session bus and service; keep only the fixture user's disk data.
-dbus-run-session -- sh -eu -c '
-  export GNOME_KEYRING_CONTROL="$(mktemp -d)"
-  printf "%s" "dummy-keyring-password" | gnome-keyring-daemon --unlock --components=secrets --control-directory "$GNOME_KEYRING_CONTROL"
+ANET_ISOLATED_KEYRING_TEST=1 sh /probe/with-linux-test-keyring.sh sh -eu -c '
   /probe/target/release/anet-linux-credential-store read
   dbus-send --session --print-reply --dest=org.freedesktop.secrets \
     /org/freedesktop/secrets org.freedesktop.Secret.Service.Lock \
@@ -23,9 +20,7 @@ dbus-run-session -- sh -eu -c '
 '
 # A fresh, explicitly unlocked session must recover the unchanged stored item.
 # --unlock on an already-running locked daemon is not a portable unlock UI.
-dbus-run-session -- sh -eu -c '
-  export GNOME_KEYRING_CONTROL="$(mktemp -d)"
-  printf "%s" "dummy-keyring-password" | gnome-keyring-daemon --unlock --components=secrets --control-directory "$GNOME_KEYRING_CONTROL"
+ANET_ISOLATED_KEYRING_TEST=1 sh /probe/with-linux-test-keyring.sh sh -eu -c '
   /probe/target/release/anet-linux-credential-store read
   /probe/target/release/anet-linux-credential-store delete
   /probe/target/release/anet-linux-credential-store missing

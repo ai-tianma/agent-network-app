@@ -1,0 +1,29 @@
+name: Release metadata (Docker core)
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.json'
+      - 'src/version.ts'
+      - 'src/version-consistency.test.ts'
+      - 'src/changelog-bundled.ts'
+      - 'src-tauri/Cargo.toml'
+      - 'src-tauri/Cargo.lock'
+      - 'src-tauri/tauri.conf.json'
+      - '.github/workflows/release-desktop-auto-update.yml'
+      - '.github/workflows/release-metadata.yml'
+      - 'tests/release-metadata/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: docker build -t anet-release-metadata:test -f tests/release-metadata/Dockerfile .
+      - run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges anet-release-metadata:test

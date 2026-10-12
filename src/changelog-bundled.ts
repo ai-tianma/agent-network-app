@@ -5,6 +5,11 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.250:",
+  "- OpenCode 创建页明确区分 V1 兼容后台模式与 V2 实验性 TUI 共存，确认页同步展示代际与模式，避免把后台节点误认为已打开 TUI。",
+  "- 修复节点启停确认按钮的文字对比度，确认和返回更易辨认；删除确认保留独立警示。",
+  "- V2 仍需要目标机器已有的 Provider/模型配置和明确工具授权；此更新不会自动切换账号、模型或重启节点。",
+  "",
   "What's new in 0.2.249:",
   "- Daemon 和节点的环境密钥改为真实保存；节点继承 Daemon 默认值，也可单独覆盖。显示来源与保存回执，不回显密钥；下次完整启动时生效。",
   "- 创建 Codex TUI 共存节点时，可选择目标机器已绑定的 API-key Provider，读取其配置与模型后继续创建，不再被“发现/扫描”入口挡住。",
@@ -1106,6 +1111,11 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.249": "2026-10-12T03:17:28Z",
+  "0.2.248": "2026-10-11T23:29:06Z",
+  "0.2.247": "2026-10-11T22:02:19Z",
+  "0.2.246": "2026-10-11T21:17:16Z",
+  "0.2.245": "2026-10-11T19:59:10Z",
   "0.2.244": "2026-10-11T17:54:52Z",
   "0.2.243": "2026-10-11T16:20:51Z",
   "0.2.242": "2026-10-11T15:30:17Z",
