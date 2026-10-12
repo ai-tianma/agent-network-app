@@ -64,6 +64,10 @@ export const chatTranslations = {
   // board #449 会话列表顶部「全部 / 未读 N」(飞书同款,「标记」暂缓)。
   'chat.tabAll': ['全部', 'All'],
   'chat.tabUnread': ['未读', 'Unread'],
+  'chat.tabWorking': ['进行中', 'In progress'],
+  'chat.workingEmpty': ['没有正在执行任务的 Agent', 'No agents are working right now'],
+  'chat.workingSearchEmpty': ['没有匹配的进行中 Agent', 'No matching agents in progress'],
+  'chat.workingEmptyHint': ['Agent 开始执行后会出现在这里', 'Agents will appear here when they start working'],
   'chat.tabsLabel': ['会话筛选', 'Conversation filter'],
   'chat.unreadEmpty': ['没有未读消息', 'No unread messages'],
   'chat.unreadEmptyHint': ['新消息到达后会出现在这里', 'New messages will show up here'],

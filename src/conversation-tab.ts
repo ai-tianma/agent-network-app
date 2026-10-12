@@ -11,13 +11,15 @@
 // 「读完就离开未读视图,但不能在用户正看着的时候把它抽走」:keep 里的会话(当前打开的那一个)照留,
 // 离开它(选了别的 / 关掉)后下一次计算自然消失。手机上打开会话时列表本身不在屏上,回来时它已读 → 不在。
 
-export type ConversationTab = 'all' | 'unread';
+import { isWorking } from './agents-list';
 
-export const CONVERSATION_TABS: readonly ConversationTab[] = ['all', 'unread'];
+export type ConversationTab = 'all' | 'unread' | 'working';
+
+export const CONVERSATION_TABS: readonly ConversationTab[] = ['all', 'unread', 'working'];
 
 /** 存储值 → tab。认不出的一律当「全部」(别因为一个坏值让用户以为会话都没了)。 */
 export function parseConversationTab(raw: unknown): ConversationTab {
-  return raw === 'unread' ? 'unread' : 'all';
+  return raw === 'unread' || raw === 'working' ? raw : 'all';
 }
 
 export type UnreadSource = {
@@ -58,12 +60,15 @@ export function formatTabCount(n: number): string {
  * 按 tab 过滤 agent 会话。「全部」原样返回(同一个数组,不复制 —— 下游 useMemo 依赖不该因此变)。
  * 「未读」只留有未读的 + keep(正打开着的那一个,读完也不抽走)。
  */
-export function applyConversationTab<T extends { alias: string }>(
+export function applyConversationTab<T extends { alias: string; status?: string }>(
   rows: T[],
   tab: ConversationTab,
   src: UnreadSource,
   keep?: string | null,
 ): T[] {
+  // Execution state comes from the live Hub status, never unread/queue/task text.
+  // Unlike unread, an open idle conversation must not remain in this view.
+  if (tab === 'working') return rows.filter(r => isWorking({ status: r.status ?? '' }));
   if (tab !== 'unread') return rows;
   return rows.filter(r => r.alias === keep || isUnreadConversation(r.alias, src));
 }
@@ -74,6 +79,7 @@ export function applyConversationTabToPeople<T extends { username: string; unrea
   tab: ConversationTab,
   keep?: string | null,
 ): T[] {
+  if (tab === 'working') return [];
   if (tab !== 'unread') return rows;
   return rows.filter(p => p.unread > 0 || p.username === keep);
 }

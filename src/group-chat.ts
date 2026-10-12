@@ -79,7 +79,8 @@ export function conversationUnreadTotal(people: readonly { unread: number }[], g
 }
 
 /** 「未读」视图:只留有未读的群 + 正打开着的那一个(读完也不在眼前抽走)。与 applyConversationTabToPeople 同规则。 */
-export function applyConversationTabToGroups<T extends { group_id: string; unread: number }>(rows: T[], tab: 'all' | 'unread', keep?: string | null): T[] {
+export function applyConversationTabToGroups<T extends { group_id: string; unread: number }>(rows: T[], tab: 'all' | 'unread' | 'working', keep?: string | null): T[] {
+  if (tab === 'working') return [];
   if (tab !== 'unread') return rows;
   return rows.filter(g => g.unread > 0 || g.group_id === keep);
 }

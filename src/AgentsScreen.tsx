@@ -64,7 +64,7 @@ import { applyCollapsed, buildSections, countShown, holdWhileActive, SORT_BY_ACT
 import { AGENT_ROW_AVATAR, AGENT_ROW_DOT, AGENT_ROW_GAP, AGENT_ROW_HEIGHT, AGENT_ROW_PAD_X, AGENT_ROW_PAD_Y, AGENT_ROW_SEPARATOR_INSET, AGENT_ROW_TOUCH_MIN, agentRowGeometry, agentRowModel, latestMessageByAgent, rowActivity } from './agent-row-model';
 import { TaskTimeResolver } from './agent-task-time';
 import { loadCollapsedGroups, loadConversationTab, peekConversationTab, saveCollapsedGroups, saveConversationTab } from './agent-list-prefs';
-import { applyConversationTab, applyConversationTabToPeople, formatTabCount, unreadConversationCount, type ConversationTab } from './conversation-tab';
+import { CONVERSATION_TABS, applyConversationTab, applyConversationTabToPeople, formatTabCount, unreadConversationCount, type ConversationTab } from './conversation-tab';
 import { agentUnreadCounts, latestMessageAtByAgent } from './agent-unread-counts';
 import { pinyinMatch } from './lib/pinyin';
 import { ackAgentUnread } from './agent-ack';
@@ -928,10 +928,10 @@ export default function AgentsScreen({
         // 飞书 / 微信的位置:搜索框下面、列表上面,左缘对齐行的头像(手机 = 行的 padX;桌面侧栏 = 列表内边距 + 行内边距)。
         <View testID="conversation-tabs-bar" style={[rowStyles.tabsBar, compact ? rowStyles.tabsBarCompact : null, { backgroundColor: compact ? colors.listBg : colors.bg }]}>
           <View testID="conversation-tabs" accessibilityRole="tablist" accessibilityLabel={t('chat.tabsLabel')} style={[rowStyles.tabsTrack, { backgroundColor: colors.subtleFill }]}>
-            {(['all', 'unread'] as const).map(k => {
+            {CONVERSATION_TABS.map(k => {
               const on = tab === k;
               const n = k === 'unread' ? formatTabCount(unreadTabCount) : '';
-              const label = k === 'all' ? t('chat.tabAll') : t('chat.tabUnread');
+              const label = k === 'all' ? t('chat.tabAll') : k === 'working' ? t('chat.tabWorking') : t('chat.tabUnread');
               return (
                 <Pressable
                   key={k}
@@ -1039,7 +1039,15 @@ export default function AgentsScreen({
           tintColor={colors.accent}
         />
       }
-      ListEmptyComponent={effectiveTab === 'unread' && !q && !filtering ? (
+      ListEmptyComponent={effectiveTab === 'working' ? (
+        <View style={styles.center} testID="agents-empty-working">
+          <Text style={styles.errorTitle}>{q ? t('chat.workingSearchEmpty') : t('chat.workingEmpty')}</Text>
+          <Text style={styles.errorHint}>{t('chat.workingEmptyHint')}</Text>
+          <Pressable testID="agents-empty-working-show-all" style={styles.retryBtn} onPress={() => setTab('all')}>
+            <Text style={styles.retryBtnText}>{t('chat.showAll')}</Text>
+          </Pressable>
+        </View>
+      ) : effectiveTab === 'unread' && !q && !filtering ? (
         // 未读视图空了:说清楚是「没有未读」,不是列表挂了;一键回到「全部」。人员区块里还有未读私信时不出现。
         peopleShown.rows.length || groupsMatched.length ? null : (
           <View style={styles.center} testID="agents-empty-unread">

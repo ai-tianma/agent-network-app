@@ -1,0 +1,37 @@
+name: Agent working tab core
+on:
+  pull_request:
+    paths:
+      - 'src/AgentsScreen.tsx'
+      - 'src/conversation-tab.ts'
+      - 'src/conversation-working-tab.test.ts'
+      - 'src/agents-list.ts'
+      - 'src/group-chat.ts'
+      - 'src/i18n-chat.ts'
+      - 'tests/test1079-working-tab/**'
+      - '.github/workflows/agent-working-tab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core-and-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core filter and types (Docker)
+        run: |
+          sg docker -c 'docker build --target core -f tests/test1079-working-tab/Dockerfile -t working-tab-core .'
+          sg docker -c 'docker run --rm --init --network none working-tab-core'
+      - name: Desktop and phone core UI (Docker)
+        run: |
+          sg docker -c 'docker build --target browser -f tests/test1079-working-tab/Dockerfile -t working-tab-ui .'
+          mkdir -p "$RUNNER_TEMP/working-tab-evidence"
+          chmod 777 "$RUNNER_TEMP/working-tab-evidence"
+          sg docker -c "docker run --rm --init --network none -v '$RUNNER_TEMP/working-tab-evidence:/evidence' working-tab-ui"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TEST-ONLY-working-tab-${{ github.sha }}
+          path: ${{ runner.temp }}/working-tab-evidence
+          if-no-files-found: ignore

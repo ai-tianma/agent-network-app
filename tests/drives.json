@@ -1,6 +1,10 @@
 {
   "//": "Every tests/*/drive.mjs and tests/*/run.mjs, and how CI runs it. stub = needs only the web export + Chromium (run by .github/workflows/drives.yml in shards; secs = measured runtime, used to balance shards); docker = builds its own bundle with its Dockerfile (nightly job); hub / manual = not in CI, with the reason. src/drive-registry.test.ts fails when a drive is missing here.",
   "drives": {
+    "test1079-working-tab/drive.mjs": {
+      "kind": "manual",
+      "why": "Dedicated agent-working-tab.yml runs staged Docker core and real exported desktop/phone UI automatically on relevant PRs; excluded from duplicate generic stub shards."
+    },
     "node-confirm-contrast/drive.mjs": {
       "kind": "stub",
       "secs": 35

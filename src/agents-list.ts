@@ -21,7 +21,7 @@ export function teamOf(alias: string): string {
 }
 
 export const isOffline = (s: Session) => s.status === 'offline';
-export const isWorking = (s: Session) => s.status === 'working' || s.status === 'running';
+export const isWorking = (s: Pick<Session, 'status'>) => s.status === 'working' || s.status === 'running';
 
 export type AgentSection = {
   title: string;
