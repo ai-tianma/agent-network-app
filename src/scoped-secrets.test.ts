@@ -38,4 +38,20 @@ check('unbound write targets node, not a guessed daemon',ownCalls.length===2&&ow
 check('independent receipt cannot claim daemon inheritance',parseSecretSnapshot({...ownSnapshot,keys:[{key:'TEST_VENDOR_KEY',source:'daemon'}]},ownScope)===null);
 const nodeOld=await manageSecrets(ownScope,async()=>({ok:false,error:'node_secrets_upgrade_required'}),new AbortController().signal);
 check('old node capability remains unsupported, not a saved claim',nodeOld.kind==='unsupported');
+for(const [error,expected] of [
+  ['node_secrets_upgrade_required','unsupported'],
+  ['scoped_secrets_upgrade_required','unsupported'],
+  ['secret_admin_required','forbidden'],
+] as const){
+  globalThis.fetch=async()=>new Response(`event: message\r\nid: fixture-event\r\ndata: ${JSON.stringify({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:JSON.stringify({ok:false,error})}]}})}\r\n\r\n`,
+    {status:200,headers:{'Content-Type':'text/event-stream'}});
+  const refusal=await scopedSecrets({serverUrl:'https://fixture.invalid',token:'TEST-ONLY-human',networkId:scope.networkId},ownScope,new AbortController().signal);
+  check(`event-framed SSE preserves ${error}`,refusal.kind===expected);
+}
+globalThis.fetch=async()=>new Response(JSON.stringify({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:JSON.stringify({ok:false,error:'node_secrets_upgrade_required'})}]}}),{status:200});
+const jsonRefusal=await scopedSecrets({serverUrl:'https://fixture.invalid',token:'TEST-ONLY-human',networkId:scope.networkId},ownScope,new AbortController().signal);
+check('JSON old-node response keeps the explicit upgrade requirement',jsonRefusal.kind==='unsupported');
+globalThis.fetch=async()=>new Response('event: message\ndata: not-json\n\n',{status:200,headers:{'Content-Type':'text/event-stream'}});
+const malformed=await scopedSecrets({serverUrl:'https://fixture.invalid',token:'TEST-ONLY-human',networkId:scope.networkId},ownScope,new AbortController().signal);
+check('malformed event frame stays unconfirmed, never saved',malformed.kind==='unconfirmed');
 console.log(`scoped secrets: ${count}/${count} checks passed`);

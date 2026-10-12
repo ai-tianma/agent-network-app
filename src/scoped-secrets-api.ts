@@ -18,7 +18,10 @@ export function scopedSecrets(cfg: HubConfig, scope: SecretScope, signal: AbortS
     if(parsed.kind==='forbidden')return {ok:false,error:'forbidden'};
     if(parsed.kind==='unsupported')return {ok:false,error:'unsupported'};
     try {
-      const envelope=JSON.parse(text.startsWith('data:')?text.split(/\r?\n/).filter(l=>l.startsWith('data:')).at(-1)!.slice(5):text);
+      // MCP SSE may start with event:/id: before data:. Preserve the precise
+      // refusal instead of turning a known upgrade requirement into unconfirmed.
+      const data=text.split(/\r?\n/).filter(l=>l.startsWith('data:'));
+      const envelope=JSON.parse(data.length?data.at(-1)!.slice(5).trim():text);
       // Older Hubs know the management tool but not the secret_* actions.
       // Valid locally constructed protocol arguments failing MCP validation are
       // a compatibility failure, not an endlessly pending save.
