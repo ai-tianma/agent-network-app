@@ -39,3 +39,16 @@ and44px count-button targets; retain the unforced actual click test. Initial
 avatar radius and people drive-registry gates also FAIL: use radius.inline and
 register the new drive as a stub in the existing complete registry, preserving
 all gate assertions. Bounded local radius30/30 PASS; final CI pending.
+
+Final chart/runtime inputs at5bf576aacad13eff517edf7852b8615e3aba8875:
+Docker38474479962/job115561679526 SUCCESS22:03:03Z, contract18/18, existing
+dashboard65/65, full typecheck PASS, actual exported Chromium desktop/phone
+full/old Hub52/52 checks PASS. The original ordinary thin-segment click now
+passes on phone;6px geometry verified. Project/none, late old scope, Top10/
+expand, exact/no-label/abandoned actual list drill-down and no page errors all
+passed. Screenshots/result are in TEST-ONLY-task-tag-status-ui artifact.
+5bf global unit412/413 failed only i18n-copy-guard because its explicit import
+list lacked the new translation module; import it and add the chart to the
+guarded surfaces, leaving every original assertion. Pagination failed before
+functional tests on npm ECONNRESET; retry at the next final candidate without
+changing packages/locks or weakening checks. Metadata already PASS.
