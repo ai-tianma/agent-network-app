@@ -493,6 +493,7 @@ function DashPhone(props: ViewProps & { periodSeg: React.ReactNode; onShare: () 
           <PhoneKpi label={tr('dash.rate')} value={pct(data.rate)} c={c} testID="dash-hero-rate" />
         </View>
         <Notes data={data} c={c} />
+        <View style={c.card}><TaskTagStatusChart snapshot={props.tagSnapshot} phone onPick={props.onTagStatus} /></View>
         <View style={c.card}>
           <CardHead c={c} title={tr('dash.daily')} sub={tr('dash.last30')} />
           <DailyChart data={data} c={c} height={170} />

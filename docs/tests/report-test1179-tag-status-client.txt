@@ -47,6 +47,14 @@ full/old Hub52/52 checks PASS. The original ordinary thin-segment click now
 passes on phone;6px geometry verified. Project/none, late old scope, Top10/
 expand, exact/no-label/abandoned actual list drill-down and no page errors all
 passed. Screenshots/result are in TEST-ONLY-task-tag-status-ui artifact.
+Finalebb3039e full Linux/Windows413/413 test files and i18n guard83/83
+PASS38475149339; pagination38475149473 PASS after the network-only failure.
+Before release, source review found the existing browser dashboard contract
+requires recent completions directly below the heroes. Place the tag chart
+after that existing overview on both layouts and run the unchanged existing
+dashboard browser drive in the same staged Docker job. No old layout/share
+assertion is relaxed. Intermediate6aff layout omitted the phone insertion;
+restore it before validation/publication. Final layout validation pending.
 5bf global unit412/413 failed only i18n-copy-guard because its explicit import
 list lacked the new translation module; import it and add the chart to the
 guarded surfaces, leaving every original assertion. Pagination failed before
