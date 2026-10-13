@@ -4,7 +4,7 @@ import { Text } from './ui-text';
 import { t } from './i18n';
 import { useTranslation } from './i18n-react';
 import './i18n-tag-status';
-import { colors, mixHex, radius, spacing } from './theme';
+import { colors, radius, spacing, themeMode } from './theme';
 import type { ReqColumn } from './requirements-model';
 import { TAG_STATES, type TagSnapshot } from './task-tag-status';
 
@@ -14,15 +14,20 @@ export default function TaskTagStatusChart({ snapshot, phone, onPick }: { snapsh
   const [width, setWidth] = useState(0);
   const compact = phone || width < 680;
   const buckets = expanded ? snapshot.buckets : snapshot.buckets.slice(0, 10);
-  // Keep saturated semantic colors for urgent controls; this chart uses quiet
-  // theme-derived fills and neutral text. Recompute on render for theme changes.
-  const tone = { pool: mixHex(colors.blocked, colors.card, 0.45), doing: mixHex(colors.accent, colors.card, 0.25), done: mixHex(colors.accent, colors.textMuted, 0.7), abandoned: mixHex(colors.textMuted, colors.card, 0.45) };
+  // Shenming's reviewed chart palette: active work stands out, completed work
+  // recedes. Status fills carry no text; neutral figures retain theme contrast.
+  const dark = themeMode() === 'dark';
+  const tone = dark ? { pool: '#c9944a', doing: '#6f9bcb', done: '#4a5563', abandoned: '#8e96a1' } : { pool: '#d9a55b', doing: '#4f7cac', done: '#c3cdd8', abandoned: '#7c838d' };
   const max = Math.max(1, ...snapshot.buckets.map(r => r.total));
   const title = (tag: string | null) => tag ?? t('tagStats.untagged');
   const stateTitle = (k: ReqColumn) => t(`tagStats.${k}`);
   return <View testID="dash-tag-status" onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ gap: spacing.sm }}>
-    <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{t('tagStats.title')}</Text>
-    <Text testID="dash-tag-scope" style={{ color: colors.textSecondary, fontSize: 12 }}>{t(snapshot.complete ? 'tagStats.full' : 'tagStats.partial', { n: snapshot.total })}</Text>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
+      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{t('tagStats.title')}</Text>
+      {!snapshot.complete ? <Text testID="dash-tag-scope" accessibilityLabel={t('tagStats.partial', { n: snapshot.total })} style={{ color: dark ? '#e8c77a' : '#8a6d24', backgroundColor: dark ? '#3a3222' : '#fbf3dd', fontSize: 11, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.pill }}>{t('tagStats.partialBadge', { n: snapshot.total })}</Text> : null}
+    </View>
+    {snapshot.complete ? <Text testID="dash-tag-scope" style={{ color: colors.textSecondary, fontSize: 12 }}>{t('tagStats.full', { n: snapshot.total })}</Text> : null}
+    <Text style={{ color: colors.textMuted, fontSize: 11 }}>{t('tagStats.note')}</Text>
     <View style={{ flexDirection: 'row', justifyContent: compact ? 'flex-start' : 'flex-end', paddingTop: spacing.sm }}>
       {TAG_STATES.map(k => <View key={k} style={{ width: compact ? undefined : 64, flex: compact ? 1 : undefined, flexDirection: 'row', alignItems: 'center', justifyContent: compact ? 'flex-start' : 'center', gap: 5 }}><View style={{ width: 6, height: 6, borderRadius: radius.pill, backgroundColor: tone[k] }} /><Text dense style={{ color: colors.textSecondary, fontSize: 11 }}>{stateTitle(k)}</Text></View>)}
     </View>
@@ -36,7 +41,7 @@ export default function TaskTagStatusChart({ snapshot, phone, onPick }: { snapsh
         <View testID={`dash-tag-track-${i}`} style={{ flex: compact ? undefined : 1, minWidth: 0, height: 44, flexDirection: 'row', alignItems: 'center' }}>
           <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, height: 10, borderRadius: radius.inline, backgroundColor: colors.subtleFill }} />
           {TAG_STATES.filter(k => r[k] > 0).map(k => <Pressable key={k} testID={`dash-tag-bar-${i}-${k}`} accessibilityRole="button" accessibilityLabel={t('tagStats.open', { tag: title(r.tag), status: stateTitle(k), n: r[k] })} onPress={() => onPick(r.tag, k)} style={{ width: `${r[k] / max * 100}%` as `${number}%`, minWidth: 6, flexShrink: 1, height: 44, justifyContent: 'center' }}>
-            <View testID={`dash-tag-fill-${i}-${k}`} style={{ height: 10, borderRadius: radius.inline, backgroundColor: tone[k] }} />
+            <View testID={`dash-tag-fill-${i}-${k}`} style={{ height: 10, borderRadius: radius.mark, borderRightWidth: 1, borderRightColor: colors.card, backgroundColor: tone[k] }} />
           </Pressable>)}
         </View>
         <View testID={`dash-tag-counts-${i}`} style={{ flexDirection: 'row', width: compact ? '100%' : 256 }}>
@@ -48,6 +53,5 @@ export default function TaskTagStatusChart({ snapshot, phone, onPick }: { snapsh
       </View>)}
     </View>
     {snapshot.buckets.length > 10 ? <Pressable testID="dash-tag-expand" accessibilityRole="button" onPress={() => setExpanded(v => !v)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: colors.accent }}>{t(expanded ? 'tagStats.collapse' : 'tagStats.expand', { n: snapshot.buckets.length })}</Text></Pressable> : null}
-    <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t('tagStats.note')}</Text>
   </View>;
 }

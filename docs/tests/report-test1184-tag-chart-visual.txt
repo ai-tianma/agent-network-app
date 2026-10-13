@@ -11,7 +11,7 @@ Replace desktop columns with horizontal rows. Measured card width selects
 single-line table or compact label/total + thin stack + four equal counters.
 All four real states remain pool/doing/done/abandoned; do not introduce a
 failure state, hide0 values or alter counters/filter semantics. Neutral text
-and theme-derived amber/blue/blue-gray/gray fill families keep color confined
+and Shenming's theme-aware amber/blue/light blue-gray/gray fills keep color confined
 to10px bars and6px dots. Each bar/count keeps44px touch height; nonzero bars
 keep6px width floor. Shared max uses all buckets, stable when expanding.
 No full-width horizontal chart scroll, huge vertical empty slot or arbitrary
@@ -37,3 +37,16 @@ sources and backups unchanged. Exact merged-main client source reproduces UI;
 previous signed client supplies rollback. No schema/data/credential migration.
 Git clone alone does not restore private keys or history; whole private-data
 recovery remains outside this UI change. Release SOP remains authoritative.
+
+Initiale263 UI run38481825159: core18/model65/typecheck PASS; actual desktop
+full/old counts, thin-fill geometry,44px targets, project/none/late response,
+Top10/expand and real drill-down passed. New landscape test then looked for
+desktop-only sidebar project control, absent for touch landscape. Use the
+actual dashboard project picker on landscape as on phone, retaining original
+desktop late-response/sidebar checks. This is a test navigation failure,
+not a proved chart/data failure. Original failure remains in CI history.
+Shenming subsequently viewed the authenticated original attachment and gave
+three refinements: separate active/completed lightness, maintain left-to-right
+state order, and promote partial scope/multi-tag explanation. Apply reviewed
+light/dark palette,1px card-colored separators, title-row partial badge and
+note near the legend. Fresh actual responsive screenshots/CI pending.

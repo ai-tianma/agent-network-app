@@ -51,7 +51,7 @@ try {
     ck('top10 default', await page.locator('[data-testid^="dash-tag-row-"]').count() === 10);
     await page.getByTestId('dash-tag-expand').click(); ck('expand all buckets', await page.locator('[data-testid^="dash-tag-row-"]').count() === 16);
     ck('responsive chart container', await page.getByTestId(name === 'phone' ? 'dash-tag-horizontal' : 'dash-tag-columns').count() === 1);
-    if (name !== 'phone') {
+    if (name === 'desktop') {
       await page.evaluate(() => { window.__lateGlobal = true; });
       await page.getByTestId('dash-period').getByText('全部', { exact: true }).click();
       await page.getByTestId('task-side-project-p1').click();
@@ -66,7 +66,7 @@ try {
       await page.getByTestId('task-side-project-all').click();
       await page.waitForFunction(full => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes(full ? '516 个可见任务' : '部分数据 · 35'), mode === 'full');
     }
-    if (name === 'phone') {
+    if (name !== 'desktop') {
       await page.getByTestId('dash-project').click();
       await page.getByText('项目-A', { exact: true }).last().click();
       await page.waitForFunction(full => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes(full ? '503 个可见任务' : '部分数据 · 22'), mode === 'full');
