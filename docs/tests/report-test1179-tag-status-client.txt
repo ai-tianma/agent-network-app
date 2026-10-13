@@ -25,3 +25,8 @@ data mutation. Git clone does not restore user history/private keys; existing
 backup sources remain necessary and whole private-key recovery NOT_COVERED.
 Hub software contract is already published; this patch does not adopt Hub139
 or alter any original node/daemon/provider/model/thread/login.
+
+Initial metadata CI38473722978 failed because the fixed version assertion still
+expected257 after the258 bump; update that assertion with unchanged checks.
+The first superseded source runs were cancelled to release shared runners;
+final source validation is pending on the current head.

@@ -65,6 +65,15 @@ try {
       await page.getByTestId('task-side-project-all').click();
       await page.waitForFunction(full => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes(full ? '516 个可见任务' : '部分数据 · 35'), mode === 'full');
     }
+    if (name === 'phone') {
+      await page.getByTestId('dash-project').click();
+      await page.getByText('项目-A', { exact: true }).last().click();
+      await page.waitForFunction(full => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes(full ? '503 个可见任务' : '部分数据 · 22'), mode === 'full');
+      ck('phone project picker scopes chart', (await page.getByTestId('dash-tag-scope').innerText()).includes(mode === 'full' ? '503' : '22'));
+      await page.getByTestId('dash-project').click();
+      await page.getByText('全部项目', { exact: true }).last().click();
+      await page.waitForFunction(full => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes(full ? '516 个可见任务' : '部分数据 · 35'), mode === 'full');
+    }
     const rowA = await indexOf(page, 'ANet');
     await page.getByTestId(`dash-tag-bar-${rowA}-pool`).click();
     await page.getByTestId('req-row-poolA').waitFor();

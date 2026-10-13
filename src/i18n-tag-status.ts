@@ -12,5 +12,6 @@ registerTranslations({
   'tagStats.empty': ['当前范围没有未归档任务。', 'No unarchived tasks in this scope.'],
   'tagStats.expand': ['展开全部 {n} 个标签', 'Show all {n} tags'],
   'tagStats.collapse': ['收起为前 10 个', 'Show top 10'],
+  'tagStats.allProjects': ['全部项目', 'All projects'],
   'tagStats.open': ['查看 {tag} · {status} · {n} 个任务', 'View {tag} · {status} · {n} tasks'],
 });

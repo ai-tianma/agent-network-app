@@ -37,6 +37,7 @@ import { copyImageBlob } from './image-clipboard';
 import TaskTagStatusChart from './TaskTagStatusChart';
 import { inStatsProject, loadedTagSnapshot, parseTagSnapshot, type TagSnapshot } from './task-tag-status';
 import type { ReqColumn } from './requirements-model';
+import { SelectField } from './TaskSelectMenu';
 
 const POLL_MS = 15_000;
 /** 本机估的时候整张表读得比较重(含归档):一分钟一次就够,看板自己的 15 秒轮询会把没归档的卡带进来。 */
@@ -57,6 +58,7 @@ type Props = {
   onOpen: (id: string) => void;
   projectFilter?: string | null;
   onTagStatus: (tag: string | null, status: ReqColumn) => void;
+  onProject: (project: string | null) => void;
 };
 
 /** 读数据:Hub stats 或本机估。返回的 data 为 null = 还没读到。 */
@@ -404,6 +406,11 @@ function CardHead({ title, sub, right, c }: { title: string; sub?: string; right
   );
 }
 
+function DashboardProject(props: Props) {
+  if (!props.projects) return null;
+  return <View style={{ minWidth: 150, maxWidth: 280 }}><SelectField testID="dash-project" value={props.projectFilter ?? null} touch={props.phone} title={tr('tasks.copy.30')} noneLabel={tr('tagStats.allProjects')} placeholder={tr('tagStats.allProjects')} options={[{ id: 'none', label: tr('tasks.copy.31') }, ...props.projects.filter(p => !p.archived).map(p => ({ id: p.id, label: p.name, color: p.color }))]} onPick={props.onProject} /></View>;
+}
+
 function DashDesktop(props: ViewProps & { periodSeg: React.ReactNode; shareButton: React.ReactNode }) {
   const { data, c, period } = props;
   const last30 = data.daily.slice(-30);
@@ -415,6 +422,7 @@ function DashDesktop(props: ViewProps & { periodSeg: React.ReactNode; shareButto
     <ScrollView style={{ flex: 1 }} contentContainerStyle={c.desktopBody} testID="dash-desktop">
       <View style={c.toolbar}>
         {props.periodSeg}
+        <DashboardProject {...props} />
         <View style={{ flex: 1 }} />
         <Notes data={data} c={c} />
         {props.shareButton}
@@ -459,6 +467,7 @@ function DashPhone(props: ViewProps & { periodSeg: React.ReactNode; onShare: () 
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={c.phoneBody} testID="dash-phone">
         {props.periodSeg}
+        <DashboardProject {...props} />
         <View style={c.card}><TaskTagStatusChart snapshot={props.tagSnapshot} phone onPick={props.onTagStatus} /></View>
         <View style={c.phoneHero} testID="dash-hero-today">
           <Text style={c.phoneHeroLabel}>{tr('dash.todayDone')}</Text>
