@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { serveExport, initScript, findChromium, TEST_LOCALE } from '../test-layout-sweep/harness.mjs';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const output = process.env.OUT || '/output';
 const web = await serveExport(process.env.WEB_DIR), browser = await chromium.launch({ headless: true, executablePath: findChromium() });
 let checks = 0;
 const ck = (name, value) => { assert(value, name); checks++; console.log(`PASS ${name}`); };
@@ -33,7 +34,7 @@ async function indexOf(page, name) {
   }, name);
 }
 try {
-  mkdirSync('/output', { recursive: true });
+  mkdirSync(output, { recursive: true });
   for (const device of [{ name: 'desktop', viewport: { width: 1200, height: 900 } }, { name: 'phone', viewport: { width: 390, height: 844 }, userAgent: 'Android TEST-ONLY', isMobile: true, hasTouch: true }]) for (const mode of ['full', 'old']) {
     const { name, ...options } = device, ctx = await browser.newContext({ locale: TEST_LOCALE, ...options }), page = await ctx.newPage(), errors = [];
     page.on('pageerror', e => errors.push(String(e)));
@@ -74,7 +75,10 @@ try {
       await page.getByText('全部项目', { exact: true }).last().click();
       await page.waitForFunction(full => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes(full ? '516 个可见任务' : '部分数据 · 35'), mode === 'full');
     }
+    await page.screenshot({ path: `${output}/${name}-${mode}-chart.png`, fullPage: true });
     const rowA = await indexOf(page, 'ANet');
+    const segmentBox = await page.getByTestId(`dash-tag-bar-${rowA}-pool`).boundingBox();
+    ck('small nonzero segment remains visible', name === 'phone' ? segmentBox.width >= 6 : segmentBox.height >= 6);
     await page.getByTestId(`dash-tag-bar-${rowA}-pool`).click();
     await page.getByTestId('req-row-poolA').waitFor();
     ck('actual list drill-down filters tag and status', await page.locator('[data-testid^="req-row-"]').count() === 1);
@@ -91,7 +95,7 @@ try {
     await page.getByTestId(abandoned).click(); await page.getByTestId('req-row-abandonedLabel').waitFor();
     ck('abandoned explicit drill-down visible', await page.locator('[data-testid^="req-row-"]').count() === 1);
     ck('no client page errors', errors.length === 0);
-    await page.screenshot({ path: `/output/${name}-${mode}-drilldown.png`, fullPage: true }); await ctx.close();
+    await page.screenshot({ path: `${output}/${name}-${mode}-drilldown.png`, fullPage: true }); await ctx.close();
   }
-  console.log(`${checks}/${checks} checks passed`); writeFileSync('/output/result.json', JSON.stringify({ checks, acceptance: 'synthetic Hub + actual exported UI; no native device/model claim' }, null, 2));
+  console.log(`${checks}/${checks} checks passed`); writeFileSync(`${output}/result.json`, JSON.stringify({ checks, acceptance: 'synthetic Hub + actual exported UI; no native device/model claim' }, null, 2));
 } finally { await browser.close(); web.close(); }

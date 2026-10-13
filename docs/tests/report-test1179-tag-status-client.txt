@@ -30,3 +30,12 @@ Initial metadata CI38473722978 failed because the fixed version assertion still
 expected257 after the258 bump; update that assertion with unchanged checks.
 The first superseded source runs were cancelled to release shared runners;
 final source validation is pending on the current head.
+
+First e529e36a CI38473885707: model18/18, existing dashboard65/65 and
+typecheck PASS; desktop new/old Hub and drill-down PASS. Phone project scope
+passed, but a1/502 fraction was subpixel-wide and its neighbor intercepted
+an ordinary click. Keep exact counts, give nonzero segments a6px visual floor
+and44px count-button targets; retain the unforced actual click test. Initial
+avatar radius and people drive-registry gates also FAIL: use radius.inline and
+register the new drive as a stub in the existing complete registry, preserving
+all gate assertions. Bounded local radius30/30 PASS; final CI pending.

@@ -125,8 +125,14 @@
       "kind": "stub",
       "secs": 101
     },
-    "test-chat-older-batches/drive.mjs": { "kind": "stub", "secs": 70 },
-    "test-chat-first-paint/drive.mjs": { "kind": "stub", "secs": 75 },
+    "test-chat-older-batches/drive.mjs": {
+      "kind": "stub",
+      "secs": 70
+    },
+    "test-chat-first-paint/drive.mjs": {
+      "kind": "stub",
+      "secs": 75
+    },
     "test-chat-time-visible/drive.mjs": {
       "kind": "stub",
       "secs": 30
@@ -549,6 +555,10 @@
     "task-list-pagination/drive.mjs": {
       "kind": "manual",
       "why": "Runs automatically in the dedicated task-list-pagination.yml Docker workflow: exact baseline and candidate exports, offline495-row fixture and /output metrics. Not the shared external bundle/shard runner."
+    },
+    "task-tag-status/drive.mjs": {
+      "kind": "stub",
+      "secs": 14
     }
   }
 }

@@ -20,7 +20,7 @@ export default function TaskTagStatusChart({ snapshot, phone, onPick }: { snapsh
     <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{t('tagStats.title')}</Text>
     <Text testID="dash-tag-scope" style={{ color: colors.textSecondary, fontSize: 12 }}>{t(snapshot.complete ? 'tagStats.full' : 'tagStats.partial', { n: snapshot.total })}</Text>
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-      {TAG_STATES.map(k => <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: tone[k] }} /><Text style={{ color: colors.textSecondary, fontSize: 12 }}>{stateTitle(k)}</Text></View>)}
+      {TAG_STATES.map(k => <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><View style={{ width: 8, height: 8, borderRadius: radius.inline, backgroundColor: tone[k] }} /><Text style={{ color: colors.textSecondary, fontSize: 12 }}>{stateTitle(k)}</Text></View>)}
     </View>
     {!buckets.length ? <Text testID="dash-tag-empty" style={{ color: colors.textMuted }}>{t('tagStats.empty')}</Text> : null}
     <ScrollView horizontal={!phone} testID={phone ? 'dash-tag-horizontal' : 'dash-tag-columns'} contentContainerStyle={{ flexDirection: phone ? 'column' : 'row', gap: spacing.md, minWidth: '100%' }}>
@@ -28,10 +28,10 @@ export default function TaskTagStatusChart({ snapshot, phone, onPick }: { snapsh
         <Text testID={`dash-tag-name-${i}`} style={{ color: colors.text, fontSize: 12 }} selectable>{title(r.tag)}</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{r.total}</Text>
         <View style={{ height: phone ? 32 : 180, flexDirection: phone ? 'row' : 'column-reverse', justifyContent: 'flex-start', backgroundColor: colors.subtleFill, borderRadius: radius.inline, overflow: 'hidden' }}>
-          {TAG_STATES.filter(k => r[k] > 0).map(k => <Pressable key={k} testID={`dash-tag-bar-${i}-${k}`} accessibilityRole="button" accessibilityLabel={t('tagStats.open', { tag: title(r.tag), status: stateTitle(k), n: r[k] })} onPress={() => onPick(r.tag, k)} style={{ backgroundColor: tone[k], ...(phone ? { width: `${r[k] / max * 100}%` as `${number}%`, height: '100%' as const } : { height: `${r[k] / max * 100}%` as `${number}%`, width: '100%' as const }) }} />)}
+          {TAG_STATES.filter(k => r[k] > 0).map(k => <Pressable key={k} testID={`dash-tag-bar-${i}-${k}`} accessibilityRole="button" accessibilityLabel={t('tagStats.open', { tag: title(r.tag), status: stateTitle(k), n: r[k] })} onPress={() => onPick(r.tag, k)} style={{ backgroundColor: tone[k], flexShrink: 1, ...(phone ? { width: `${r[k] / max * 100}%` as `${number}%`, minWidth: 6, height: '100%' as const } : { height: `${r[k] / max * 100}%` as `${number}%`, minHeight: 6, width: '100%' as const }) }} />)}
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-          {TAG_STATES.map(k => <Pressable key={k} testID={`dash-tag-count-${i}-${k}`} accessibilityRole="button" accessibilityLabel={t('tagStats.open', { tag: title(r.tag), status: stateTitle(k), n: r[k] })} onPress={() => onPick(r.tag, k)} style={{ minHeight: 36, paddingHorizontal: 4, justifyContent: 'center' }}><Text style={{ color: tone[k], fontSize: 12 }}>{stateTitle(k)} {r[k]}</Text></Pressable>)}
+          {TAG_STATES.map(k => <Pressable key={k} testID={`dash-tag-count-${i}-${k}`} accessibilityRole="button" accessibilityLabel={t('tagStats.open', { tag: title(r.tag), status: stateTitle(k), n: r[k] })} onPress={() => onPick(r.tag, k)} style={{ minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' }}><Text style={{ color: tone[k], fontSize: 12 }}>{stateTitle(k)} {r[k]}</Text></Pressable>)}
         </View>
       </View>)}
     </ScrollView>
