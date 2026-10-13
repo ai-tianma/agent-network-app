@@ -1,0 +1,29 @@
+#730 / #1145 — task execution receipt, client 0.2.257
+
+Source base: main eea61658c21d00543b95fe789152d5fb9579f80c.
+Read Expo v56 official versioned docs before writing app code, per AGENTS.md.
+
+Delivered scope:
+- Chat receipts and node task rows distinguish Hub receipt, runtime submission,
+  runtime consumption/awaiting reply, terminal failure/cancellation, and unknown.
+- A running status or started_at alone never proves model consumption.
+- Task detail reuses existing GET /api/tasks/:id diagnostic v1, authenticated and
+  network scoped. Legacy 404/501/non-JSON/help falls back to existing list detail;
+  auth/server failures remain errors. Detail shows a stale-result notice on refresh
+  failure, and ignores responses from an old account/network/task scope.
+- Missing/future diagnostic evidence remains unknown. No per-message network calls.
+- Node creation-order list no longer claims exact runtime execution rank.
+
+Local validation, isolated tmux and Docker (2026-10-13):
+timeout 110s sg docker -c 'docker build -f tests/task-execution/Dockerfile
+  -t anet:task-wait1145 . && docker run --rm --network none anet:task-wait1145'
+Exit 0. Build ~5s; fixed Bun 1.3.14 image digest and frozen test dependency lock.
+Actual React receipt component tests, API/network/legacy/error tests, node stamp
+projection and existing node task/view regressions PASS. Full source/platform
+typecheck and unit suites delegated to PR CI. Local build preceded version-only
+bump; CI validates final exact candidate, including synchronized release versions.
+
+Public release, native original-device acceptance, and existing-node adoption
+are pending at this source report. Source/CI alone does not prove those gates.
+Parent #730 also retains active-owned-turn steering and original-device UI
+confirmation. This patch provides no exact queue rank or guaranteed start time.

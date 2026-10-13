@@ -5,6 +5,10 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.257:",
+  "- 消息发送后区分 Hub 已收到、已提交运行时、运行时已开始等待回复；旧节点没有证据时明确显示开始状态未确认。",
+  "- 任务详情显示 Hub 已知的等待或连接原因；节点任务列表按创建时间展示，不再把列表序号当成精确执行名次。",
+  "",
   "What's new in 0.2.256:",
   "- 优化任务列表悬停：鼠标移入或移出只刷新对应行，减少大列表交互卡顿。",
   "- 任务内容未变化时，后台刷新保留当前列表，避免重复重绘列表和侧栏；有变化的权限、评论和子任务进度仍正常更新。",
@@ -1141,6 +1145,7 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.256": "2026-10-13T10:06:25Z",
   "0.2.255": "2026-10-12T16:26:59Z",
   "0.2.254": "2026-10-12T15:34:28Z",
   "0.2.253": "2026-10-12T14:47:55Z",

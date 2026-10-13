@@ -30,6 +30,7 @@ import {
   fetchStatus,
   fetchScopedStatus,
   fetchTaskDetail,
+  fetchTaskInspection,
   fetchTasks,
   fetchUserMessages,
   fetchUserMessagesWithSystemRows,
@@ -138,6 +139,10 @@ const ENDPOINTS: Record<string, { scope: Scope; drive: () => Promise<unknown> }>
   fetchTaskDetail: {
     scope: { kind: 'network' },
     drive: () => fetchTaskDetail(cfg, 'task_1'),
+  },
+  fetchTaskInspection: {
+    scope: { kind: 'network' },
+    drive: () => fetchTaskInspection(cfg, 'task_1'),
   },
   fetchMessages: {
     // Same known gap as fetchStatus.

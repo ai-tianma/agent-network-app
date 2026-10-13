@@ -1,13 +1,13 @@
 import { t as tr } from './i18n';
 import { useTranslation } from './i18n-react';
 import { taskText } from './i18n-tasks';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from './ui-text';
 import { Ionicons } from './icons';
 import AliasAvatar from './AliasAvatar';
 import {
-  fetchTaskDetail,
+  fetchTaskInspection,
   fetchTaskEvents,
   HubConfig,
   HubTask,
@@ -25,6 +25,8 @@ import { formatTime } from './time';
 import { usePoll } from './usePoll';
 import { PANE_BACK_TEST_ID, paneShowsBack } from './pane-header';
 import { elevated, buttonStyle, buttonTextStyle } from './elevation';
+import TaskExecutionNotice from './TaskExecutionNotice';
+import type { TaskDiagnostic } from './task-execution';
 
 // Detail screen for one task. Mirrors the dashboard `/tasks` detail
 // pane's four blocks (timeline, info, content, result), pared down for
@@ -69,33 +71,41 @@ export default function TaskDetailScreen({
 }) {
   useTranslation();
   const [task, setTask] = useState<HubTask | null>(null);
+  const [diagnostic, setDiagnostic] = useState<TaskDiagnostic | null>(null);
   const [taskLoaded, setTaskLoaded] = useState(false);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [eventsResult, setEventsResult] = useState<FetchTaskEventsResult | null>(null);
+  const scope = useRef({ cfg, taskId });
+  scope.current = { cfg, taskId };
 
   const load = useCallback(async () => {
     try {
-      const t = await fetchTaskDetail(cfg, taskId);
-      setTask(t);
+      const inspection = await fetchTaskInspection(cfg, taskId);
+      if (scope.current.cfg !== cfg || scope.current.taskId !== taskId) return;
+      setTask(inspection.task);
+      setDiagnostic(inspection.diagnostic);
       setTaskError(null);
     } catch (e) {
+      if (scope.current.cfg !== cfg || scope.current.taskId !== taskId) return;
       setTaskError(e instanceof Error ? e.message : String(e));
     } finally {
-      setTaskLoaded(true);
+      if (scope.current.cfg === cfg && scope.current.taskId === taskId) setTaskLoaded(true);
     }
     // Events feed: fetch in parallel via its discriminated helper. Its
     // return type already encodes the three failure kinds — we never
     // swallow them. See tasks-filter.eventsResultToState().
     const evR = await fetchTaskEvents(cfg, taskId);
+    if (scope.current.cfg !== cfg || scope.current.taskId !== taskId) return;
     setEventsResult(evR);
   }, [cfg, taskId]);
 
   useEffect(() => {
     setTask(null);
+    setDiagnostic(null);
     setTaskLoaded(false);
     setTaskError(null);
     setEventsResult(null);
-  }, [taskId]);
+  }, [taskId, cfg]);
 
   usePoll(load, POLL_DETAIL_MS, [load]);
 
@@ -139,6 +149,10 @@ export default function TaskDetailScreen({
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+          {taskError ? <Text style={styles.errBody} testID="task-execution-stale">{tr('execution.stale')}</Text> : null}
+          <Section title={tr('execution.title')} testID="task-detail-block-execution">
+            <TaskExecutionNotice task={task} diagnostic={diagnostic} detail />
+          </Section>
           {/* Block 1 — TIMELINE */}
           <Section title={tr('tasks.copy.152')} testID="task-detail-block-timeline">
             <View style={styles.timelineRow}>

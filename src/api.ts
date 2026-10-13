@@ -1,4 +1,5 @@
 import type { RuntimeReadinessMap } from './runtime-readiness';
+import { readTaskDiagnostic, type TaskDiagnostic } from './task-execution';
 import { appFetch, appFetchLoad } from './app-fetch';
 import { reportProfileAuthResponse } from './profile-auth-state';
 import type { NodePermissionReport } from './node-permission-model';
@@ -629,6 +630,26 @@ export const fetchTaskDetail = async (
   const data = await get<{ tasks: HubTask[] }>(cfg, `/api/tasks?${q}`);
   return data.tasks?.[0] ?? null;
 };
+
+/** Single-task diagnostic reuses the existing authenticated, network-scoped Hub endpoint.
+ * Only legacy unsupported/not-found responses fall back. Auth/connection failures remain errors. */
+export async function fetchTaskInspection(cfg: HubConfig, taskId: string): Promise<{
+  task: HubTask | null; diagnostic: TaskDiagnostic | null;
+}> {
+  const q = new URLSearchParams();
+  if (cfg.networkId) q.set('network_id', cfg.networkId);
+  try {
+    const data = await get<{ task?: HubTask; diagnostic?: unknown }>(cfg,
+      `/api/tasks/${encodeURIComponent(taskId)}${q.size ? `?${q}` : ''}`);
+    if (data.task?.task_id === taskId) {
+      return { task: data.task, diagnostic: readTaskDiagnostic(data.diagnostic) };
+    }
+    // Old Hubs may answer an unknown route with their JSON help response.
+  } catch (e) {
+    if (!(e instanceof SyntaxError) && !(e instanceof Error && /^HTTP (404|501) on /.test(e.message))) throw e;
+  }
+  return { task: await fetchTaskDetail(cfg, taskId), diagnostic: null };
+}
 
 // Task events feed — status transitions logged by the hub.
 //

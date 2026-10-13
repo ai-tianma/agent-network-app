@@ -19,6 +19,7 @@ import { priorityPill, relativeTime, splitStale, taskPreview, type PillTone } fr
 import { groupNodeTasks, type NodeTaskGroups } from './node-task-groups';
 import { colors, onThemeChange, radius, spacing, type as typeScale, weight } from './theme';
 import { usePoll } from './usePoll';
+import TaskExecutionNotice from './TaskExecutionNotice';
 
 const POLL_MS = 10_000;
 const LIMIT = 100;
@@ -54,7 +55,7 @@ function TaskRow({ row, index, kind, now }: { row: NodeTaskRow; index: number; k
       onPress={() => setExpanded(v => !v)}
       accessibilityRole="button"
       accessibilityState={{ expanded }}
-      accessibilityLabel={`${kind === 'queue' ? `排队第 ${index + 1} 条,` : ''}来自 ${row.from}:${preview}`}
+      accessibilityLabel={`来自 ${row.from}:${preview}`}
       style={(state: { pressed: boolean; hovered?: boolean }) => [
         { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, marginHorizontal: -spacing.sm, borderRadius: radius.control },
         (state.hovered || expanded) && { backgroundColor: colors.rowHover },
@@ -66,12 +67,12 @@ function TaskRow({ row, index, kind, now }: { row: NodeTaskRow; index: number; k
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
-          {kind === 'queue' ? <Text style={{ color: colors.textMuted, fontSize: typeScale.small, fontVariant: ['tabular-nums'] }}>#{index + 1}</Text> : null}
           <Text style={{ color: muted ? colors.textMuted : colors.textSecondary, fontSize: typeScale.small, fontWeight: weight.strong }} numberOfLines={1}>{row.from}</Text>
           {when ? <Text style={{ color: colors.textMuted, fontSize: typeScale.small }}>{when}{TIME_SUFFIX[kind]}</Text> : null}
           {pill ? <Pill label={pill.label} tone={pill.tone} /> : null}
           {failed ? <Pill label="失败" tone="danger" /> : null}
         </View>
+        {kind === 'running' || kind === 'stale' || kind === 'queue' ? <TaskExecutionNotice task={{ status: row.status, runtime_submitted_at: row.runtimeSubmittedAt, consumed_at: row.consumedAt }} /> : null}
         {expanded ? (
           <View style={{ paddingTop: 2 }}>
             <MarkdownMessage>{row.content || row.summary}</MarkdownMessage>
@@ -160,7 +161,7 @@ export default function NodeTasksSection({ cfg, alias, embedded = false }: { cfg
             {split.active.length ? split.active.map((row, i) => <TaskRow key={row.taskId} row={row} index={i} kind="running" now={now} />) : empty(split.stale.length ? '最近一天没有在动的任务' : '没有正在进行的任务')}
           </Group>
           {g.queue.length ? (
-            <Group title="排队" count={g.queue.length} hint="按执行顺序">
+            <Group title="排队" count={g.queue.length} hint="按创建时间展示，当前没有精确执行名次">
               {g.queue.map((row, i) => <TaskRow key={row.taskId} row={row} index={i} kind="queue" now={now} />)}
             </Group>
           ) : null}

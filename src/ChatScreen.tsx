@@ -3,6 +3,8 @@ import { t } from './i18n';
 import { useTranslation } from './i18n-react';
 import './i18n-chat';
 import './i18n-tasks';
+import TaskExecutionNotice from './TaskExecutionNotice';
+import { taskExecutionState } from './task-execution';
 import ModalKeyboardAvoider from './ModalKeyboardAvoider';
 import { PanResponder, ActivityIndicator, Alert, BackHandler, FlatList, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StatusBar, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text, TextInput } from './ui-text';
@@ -1905,7 +1907,7 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
     m =>
       !m._localId &&
       !m.result &&
-      ['created', 'delivered', 'started'].includes(m.status ?? '') &&
+      taskExecutionState(m) === 'consumed' &&
       m.created_at &&
       Date.now() - new Date(`${m.created_at.replace(' ', 'T')}Z`).getTime() < 10 * 60 * 1000,
   );
@@ -2373,7 +2375,7 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
                   // PR3 要求2:「送达了但对方没回」≠「未送达」——前者灰勾不可点(不用重试),
                   // 后者红字带重试。服务器行(无 _localId 标志)= hub 已收 = 已送达。
                   // 只对自己发出的消息成立:别人派来的任务标「已送达」等于说这条是你发的。
-                  <Text style={styles.deliveredMark}>{t('chat.delivered')}</Text>
+                  <TaskExecutionNotice task={item} />
                 ) : null}
               </View>
             );

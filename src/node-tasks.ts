@@ -21,6 +21,8 @@ export interface NodeTaskRow {
   /** 节点侧最后一次动静(送达/开始/提交运行时/消费/创建里最晚的),判「可能卡住」用。 */
   lastActivity?: string;
   priority?: string;
+  runtimeSubmittedAt?: string;
+  consumedAt?: string;
 }
 
 export interface NodeTaskPartition {
@@ -56,10 +58,12 @@ function toRow(t: HubTask, since?: string): NodeTaskRow | null {
     since,
     lastActivity: latestActivity(t),
     priority: t.priority,
+    runtimeSubmittedAt: t.runtime_submitted_at,
+    consumedAt: t.consumed_at,
   };
 }
 
-/** 运行中按开始时间升序(最早开始的在前);队列按创建时间升序 = 实际执行顺序,编号从 1 起。 */
+/** Delivery groups retain legacy ordering; creation order is not runtime execution rank. */
 export function partitionNodeTasks(tasks: readonly HubTask[] | undefined | null): NodeTaskPartition {
   const running: NodeTaskRow[] = [];
   const queue: NodeTaskRow[] = [];
