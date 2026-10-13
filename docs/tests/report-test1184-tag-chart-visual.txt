@@ -1,0 +1,39 @@
+Task1184: client259 tag/status visual revision
+User supplied client258 landscape screenshot: saturated large columns, tall
+empty gray tracks and wrapping status text. Shenming provided a bounded visual
+review: horizontal thin stacks, restrained status fills with neutral text,
+aligned numeric columns/tabular figures and compact responsive rows.
+Its first review used the description because its local screenshot path was
+inaccessible; it did not claim to view the original image. CommunicationNiu
+viewed the actual supplied attachment and is the sole implementation owner.
+
+Replace desktop columns with horizontal rows. Measured card width selects
+single-line table or compact label/total + thin stack + four equal counters.
+All four real states remain pool/doing/done/abandoned; do not introduce a
+failure state, hide0 values or alter counters/filter semantics. Neutral text
+and theme-derived amber/blue/blue-gray/gray fill families keep color confined
+to10px bars and6px dots. Each bar/count keeps44px touch height; nonzero bars
+keep6px width floor. Shared max uses all buckets, stable when expanding.
+No full-width horizontal chart scroll, huge vertical empty slot or arbitrary
+status wrapping. Existing sorting, Top10, expanded view, full/partial scope,
+project filters, four states and list paging are unchanged.
+
+Validation pending: existing contract18/model65/typecheck, actual exported
+Chromium desktop/landscape/phone, full and old Hub, whole vs loaded counts,
+project/none/late request, Top10, real thin-segment click and list drill-down;
+thin10px fill/four equal count columns/44px targets. Eight390/768/1024/1440
+light/dark screenshots use the user's six-tag distribution synthetically in
+the real UI; they are not production/native-device acceptance. Existing
+unchanged dashboard/share drive runs after the chart. No broad local testing.
+
+Release version259; lockfile changes only root package version, no dependency
+resolution change. Source must merge to main before exactSHA formal builds.
+Existing published258 assets/tag stay immutable. No liveHub137 or original
+node/provider/model/login/thread adoption is implied. Primary software build,
+signing, draft verification and public-byte postcheck remain pending.
+
+Recovery: native startup/storage paths, services/ports, private credential
+sources and backups unchanged. Exact merged-main client source reproduces UI;
+previous signed client supplies rollback. No schema/data/credential migration.
+Git clone alone does not restore private keys or history; whole private-data
+recovery remains outside this UI change. Release SOP remains authoritative.

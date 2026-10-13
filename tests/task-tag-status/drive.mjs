@@ -15,8 +15,8 @@ function fixture(mode) {
   const states = (tag, pool, doing, done, abandoned) => ({ tag, pool, doing, done, abandoned, total: pool + doing + done + abandoned });
   window.__tasksFixture = { requirements: loaded, archived: [], hasMore: false, people: [], projects: [{ id: 'p1', name: '项目-A', color: '#2563eb', sort: 1 }, { id: 'p2', name: '项目-B', color: '#d97706', sort: 2 }], capabilities: ['description', 'checklist', 'tags', 'projects', 'requirement_seq', 'column_abandoned', 'stats'], stats: q => {
     const project = q.get('project_id'), none = project === 'none';
-    const buckets = [states('ANet', 1, 501, 0, 0), states('知识库', 1, 0, 0, 0), states(null, 0, 0, 1, 0), states('未设置标签', 0, 0, 0, 1), ...Array.from({ length: 12 }, (_, i) => states(`标签${String(i).padStart(2, '0')}`, 1, 0, 0, 0))];
-    return { totals: { done: 0, done_approx: 0, created: 0, created_done: 0, completion_rate: null, doing: project ? none ? 0 : project === 'p1' ? 501 : 0 : 501, pool: 1 }, daily: [], by_project: [], by_completer: [], recent: [], unattributed: 0, ...(mode === 'full' ? { tag_status: { basis: 'current', complete: true, includes_archived: false, project_filter: project, total: none ? 1 : project === 'p1' ? 503 : project === 'p2' ? 12 : 516, by_tag: none ? [buckets[2]] : project === 'p1' ? [buckets[0], buckets[1], buckets[3]] : project === 'p2' ? buckets.slice(4) : buckets } } : {}) };
+    const buckets = mode === 'review' ? [states('TMWork', 2, 73, 76, 0), states('知识库', 10, 58, 100, 0), states('ANet', 25, 38, 217, 5), states('TM知识库', 2, 39, 27, 0), states('组织架构权限', 0, 18, 12, 5), states('界面体验', 1, 13, 12, 0)] : [states('ANet', 1, 501, 0, 0), states('知识库', 1, 0, 0, 0), states(null, 0, 0, 1, 0), states('未设置标签', 0, 0, 0, 1), ...Array.from({ length: 12 }, (_, i) => states(`标签${String(i).padStart(2, '0')}`, 1, 0, 0, 0))];
+    return { totals: { done: 0, done_approx: 0, created: 0, created_done: 0, completion_rate: null, doing: project ? none ? 0 : project === 'p1' ? 501 : 0 : 501, pool: 1 }, daily: [], by_project: [], by_completer: [], recent: [], unattributed: 0, ...(mode !== 'old' ? { tag_status: { basis: 'current', complete: true, includes_archived: false, project_filter: project, total: mode === 'review' ? 500 : none ? 1 : project === 'p1' ? 503 : project === 'p2' ? 12 : 516, by_tag: none ? [buckets[2]] : project === 'p1' ? [buckets[0], buckets[1], buckets[3]] : project === 'p2' ? buckets.slice(4) : buckets } } : {}) };
   } };
   // Delay only an old all-project stats request, then switch projects in the UI.
   const original = window.__TAURI_INTERNALS__.invoke, requests = new Map();
@@ -35,7 +35,7 @@ async function indexOf(page, name) {
 }
 try {
   mkdirSync(output, { recursive: true });
-  for (const device of [{ name: 'desktop', viewport: { width: 1200, height: 900 } }, { name: 'phone', viewport: { width: 390, height: 844 }, userAgent: 'Android TEST-ONLY', isMobile: true, hasTouch: true }]) for (const mode of ['full', 'old']) {
+  for (const device of [{ name: 'desktop', viewport: { width: 1200, height: 900 } }, { name: 'landscape', viewport: { width: 1024, height: 724 }, userAgent: 'Android TEST-ONLY', isMobile: true, hasTouch: true }, { name: 'phone', viewport: { width: 390, height: 844 }, userAgent: 'Android TEST-ONLY', isMobile: true, hasTouch: true }]) for (const mode of ['full', 'old']) {
     const { name, ...options } = device, ctx = await browser.newContext({ locale: TEST_LOCALE, ...options }), page = await ctx.newPage(), errors = [];
     page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript({ content: `(${initScript.toString().replace('http://mock-hub.invalid', 'http://127.0.0.1:9200')})({theme:'light'});` });
@@ -50,8 +50,8 @@ try {
     ck('four status counters include zeros', await page.locator(`[data-testid^="dash-tag-count-${a}-"]`).count() === 4);
     ck('top10 default', await page.locator('[data-testid^="dash-tag-row-"]').count() === 10);
     await page.getByTestId('dash-tag-expand').click(); ck('expand all buckets', await page.locator('[data-testid^="dash-tag-row-"]').count() === 16);
-    ck('responsive chart orientation', await page.getByTestId(name === 'phone' ? 'dash-tag-horizontal' : 'dash-tag-columns').count() === 1);
-    if (name === 'desktop') {
+    ck('responsive chart container', await page.getByTestId(name === 'phone' ? 'dash-tag-horizontal' : 'dash-tag-columns').count() === 1);
+    if (name !== 'phone') {
       await page.evaluate(() => { window.__lateGlobal = true; });
       await page.getByTestId('dash-period').getByText('全部', { exact: true }).click();
       await page.getByTestId('task-side-project-p1').click();
@@ -75,10 +75,18 @@ try {
       await page.getByText('全部项目', { exact: true }).last().click();
       await page.waitForFunction(full => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes(full ? '516 个可见任务' : '部分数据 · 35'), mode === 'full');
     }
+    await page.getByTestId('dash-tag-status').evaluate(el => el.scrollIntoView({ block: 'start' }));
     await page.screenshot({ path: `${output}/${name}-${mode}-chart.png`, fullPage: true });
     const rowA = await indexOf(page, 'ANet');
     const segmentBox = await page.getByTestId(`dash-tag-bar-${rowA}-pool`).boundingBox();
-    ck('small nonzero segment remains visible', name === 'phone' ? segmentBox.width >= 6 : segmentBox.height >= 6);
+    ck('small nonzero horizontal segment remains visible and touchable', segmentBox.width >= 6 && segmentBox.height >= 44);
+    const fill = await page.getByTestId(`dash-tag-fill-${rowA}-doing`).boundingBox();
+    ck('colored fill is a restrained thin bar', fill.height <= 12);
+    const geometry = await page.getByTestId(`dash-tag-counts-${rowA}`).evaluate(el => {
+      const boxes = [...el.children].map(x => x.getBoundingClientRect());
+      return { widths: boxes.map(b => b.width), top: boxes.map(b => b.top), heights: boxes.map(b => b.height), right: Math.max(...boxes.map(b => b.right)), containerRight: el.getBoundingClientRect().right };
+    });
+    ck('four counters stay on one equal-width line with touch targets', Math.max(...geometry.widths) - Math.min(...geometry.widths) < 1 && Math.max(...geometry.top) - Math.min(...geometry.top) < 1 && geometry.heights.every(h => h >= 44) && geometry.right <= geometry.containerRight + 1);
     await page.getByTestId(`dash-tag-bar-${rowA}-pool`).click();
     await page.getByTestId('req-row-poolA').waitFor();
     ck('actual list drill-down filters tag and status', await page.locator('[data-testid^="req-row-"]').count() === 1);
@@ -96,6 +104,19 @@ try {
     ck('abandoned explicit drill-down visible', await page.locator('[data-testid^="req-row-"]').count() === 1);
     ck('no client page errors', errors.length === 0);
     await page.screenshot({ path: `${output}/${name}-${mode}-drilldown.png`, fullPage: true }); await ctx.close();
+  }
+  // Recreate the reported six-tag distribution for visual review. These are
+  // synthetic counts in the real exported UI, never a production-data claim.
+  for (const width of [390, 768, 1024, 1440]) for (const theme of ['light', 'dark']) {
+    const ctx = await browser.newContext({ locale: TEST_LOCALE, viewport: { width, height: width === 390 ? 844 : 900 } }), page = await ctx.newPage();
+    await page.addInitScript({ content: `(${initScript.toString().replace('http://mock-hub.invalid', 'http://127.0.0.1:9200')})({theme:'${theme}'});` });
+    await page.addInitScript(fixture, 'review'); await page.goto(`${web.url}?safeAreaSim=0,0,0,0`);
+    await page.waitForFunction(() => !!window.__anetLayoutSweep);
+    await page.evaluate(() => window.__anetLayoutSweep.setScreen({ name: 'tasks' }));
+    await page.getByTestId('tasks-view-dashboard').first().click(); await page.getByTestId('dash-tag-status').waitFor();
+    ck(`review ${width}/${theme} all six tags`, await page.locator('[data-testid^="dash-tag-row-"]').count() === 6);
+    await page.getByTestId('dash-tag-status').evaluate(el => el.scrollIntoView({ block: 'start' }));
+    await page.screenshot({ path: `${output}/review-${width}-${theme}.png`, fullPage: true }); await ctx.close();
   }
   console.log(`${checks}/${checks} checks passed`); writeFileSync(`${output}/result.json`, JSON.stringify({ checks, acceptance: 'synthetic Hub + actual exported UI; no native device/model claim' }, null, 2));
 } finally { await browser.close(); web.close(); }
