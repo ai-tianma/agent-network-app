@@ -183,6 +183,11 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.258:
+            - 仪表盘新增按标签的四状态任务数量图，桌面显示堆叠柱、手机显示横条，可展开全部标签。
+            - 点击图中的状态可打开对应任务列表；统计跟随项目筛选，多标签与无标签分别计数。
+            - 支持全量统计的 Hub 显示当前全部可见任务；旧 Hub 明确显示已加载的部分数据。
+
             What's new in 0.2.257:
             - 消息发送后区分 Hub 已收到、已提交运行时、运行时已开始等待回复；旧节点没有证据时明确显示开始状态未确认。
             - 任务详情显示 Hub 已知的等待或连接原因；节点任务列表按创建时间展示，不再把列表序号当成精确执行名次。
