@@ -1,0 +1,26 @@
+#730 / #1145 — client257 final source and public proof
+
+Final source PR920 main: f66359cc34c42c5b072add1f15a6c278b4ae2012 (2026-10-13T13:15:57Z).
+Candidate 7e3ff6499743f283a2ad55443269e7bdb5c0620a has identical full tree b18abd05efd932a0ac918212f16ae75805f63f6b.
+Source PR919 main f214a4fa was superseded before public promotion; no feature-branch package was published.
+
+Behavior: keep the delivered transport receipt, and separately show Hub receipt / runtime submission / start confirmed awaiting reply / unknown / terminal outcomes. Task detail reuses existing authenticated network-scoped diagnostic v1; unsupported legacy Hubs fall back with unknown evidence, while permission/server errors remain visible. Chat/node rows add no per-row network polls. Creation-order list indices no longer claim runtime execution rank; started_at is labeled as a Hub marker.
+
+Validation: local isolated tmux Docker build ~5s, exit0; 2 actual React component tests/8 assertions, model/API31, network scope82, node task15, node view29 checks. Final candidate PR920 has 27 successful checks, including Docker core and complete Windows/Linux typecheck/unit. Browser38403009084 Web+8/8 stub SUCCESS. Existing phone/desktop resend-image assertions unchanged: final64/64 PASS; original PR919 shard8 was56/64 with8 FAIL and is retained.
+
+Formal desktop38403581124 main/f663: attempt3 SUCCESS, all selected Mac/Windows builds and verify-draft SUCCESS. Original attempt1 FAIL was stale private target f214; attempt2 FAIL was temporary private tag label after partial target update. Native signed binaries were reused unchanged. The first cancelled builds38400912740/38401003730 are cancelled, not PASS. Existing verifier assertions were not weakened.
+Private release411684765 was created at13:06:15Z by the old build. A by-tag404 did not prove draft absence: authoritative release-list/by-ID reads showed it. All8 final primary asset IDs were uploaded after final run13:16:02Z (Mac13:28, Windows/manifest13:32), after exact-main guard and Tauri upload steps succeeded. Only unpublished metadata was corrected; explicitly providing tag_name,draft,target_commitish restored the private label. No public tag or file bytes were changed.
+
+Public desktop-v0.2.257 published 2026-10-13T13:51:37Z; tag resolves exactly to final main source, and source remains a main ancestor. https://github.com/sleep2agi/agent-network-app/releases/tag/desktop-v0.2.257
+Formal native gates cover CI-machine packaged startup, credential storage and retention; Mac signing/notarization uses existing user authorization. Windows updater signatures are verified. These are not the reporting user's original-device acceptance.
+Independent anonymous full native downloads (byte sizes and SHA256 match GitHub digests):
+38952063B sha256:118b42b698f08b53a693b53457c75bd4c433697439802e2eb07f16bb732f4ce9  ANet_0.2.257_aarch64.dmg
+38299335B sha256:cc073de9d54464e205fd625488a2b2ed83d01f44ec003fbd35bd6a6f479d2e81  ANet_0.2.257_aarch64.app.tar.gz
+37367471B sha256:edbe32c325000e29108eff4662e97a49c5e6f293832e4934a67af7ab150c8828  ANet_0.2.257_x64-setup.exe
+51175424B sha256:80dbbe1708e08595b20a735b7a475d2db0d90c2e65095172fab0d8d06616c4c6  ANet_0.2.257_x64_en-US.msi
+Five updater entries point at matching assets; attached signature bytes match generated latest.json. All selected-platform release checks remain unchanged.
+Android build38403584840 / officialpublisher38405048996 SUCCESS on same source. versionName0.2.257/versionCode2257; 83835965B sha256:ee512c2f52a7f5251a84c32de7b27d3b7ad0bd4b7027f510632360350bb30e12. Anonymous Android VERSION/checksum/notes verified 2026-10-13T13:33:40.604112+00:00; official publisher performs full APK verification. This probe did not do a second full mirror APK download.
+
+Parent730 remains doing3/5: active-owned-turn injection and original-device UI confirmation remain open. Node142/CLI176 publication does not prove adoption by the existing node; normal Owner windows and user feedback remain independent gates. No node restart, thread/model/provider/login reset, copied credentials, or manufactured activity evidence was used.
+
+Mirror / updater channel verified 2026-10-13T13:55:53.182981+00:00: {"checked_at": "2026-10-13T13:55:53.182981+00:00", "mirror_run": 38408439023, "drift_run": 38408885644, "desktop_VERSION": "0.2.257", "mirror_manifest_platforms_match": true, "mirror_manifest_signature_match": true, "SHA256SUMS_all_9_match": true, "anonymous_mirror_dmg_range_status": 206, "deployed_manifest_version": "0.2.257", "deployed_manifest_sha256": "75b9980054ba62b962d9f65426eca605016b6b9ed2d6644c128f999d6721a721", "deployed_manifest_matches_normalized_public_release": true, "full_anonymous_mirror_native_rehash": false}

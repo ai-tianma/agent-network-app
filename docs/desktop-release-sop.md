@@ -269,6 +269,18 @@ probe only.
 
 ## 5. Audit the draft before publishing
 
+For an unpublished draft, a by-tag API 404 does not establish that the draft is
+absent. Enumerate releases or read the known release ID, and check the draft's
+tag name, target commit and uploaded asset IDs. A cancelled build can leave a
+draft behind while a later build replaces its assets.
+
+If correcting this iteration's unpublished draft target after every selected
+main build succeeds, first prove that its assets came from those builds. Send
+`tag_name`, `draft: true` and `target_commitish` together: a target-only update
+can replace the private tag label with an `untagged-*` name. Re-run the existing
+draft verifier with unchanged checks. Keep the original failure records; never
+move an existing public tag or substitute file bytes to repair metadata.
+
 CI stops at a draft. Publishing is a human action, and it is the last point
 with a clean way back.
 
