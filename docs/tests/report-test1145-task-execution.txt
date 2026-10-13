@@ -27,3 +27,13 @@ Public release, native original-device acceptance, and existing-node adoption
 are pending at this source report. Source/CI alone does not prove those gates.
 Parent #730 also retains active-owned-turn steering and original-device UI
 confirmation. This patch provides no exact queue rank or guaranteed start time.
+
+Post-merge browser regression found before public release:
+PR919 drives38400378566/job115306646903 shard8 FAILED test-resend-image
+in eight phone/desktop retry/switch scenarios: failed > sending > ?.
+The execution notice had replaced the existing delivered transport receipt.
+Restore that receipt and keep execution confirmation alongside it; existing
+resend-image behavior assertions stay unchanged. The original failure remains
+recorded. Only own unpublished desktop38400912740 and Android38401003730
+builds were stopped; no public tag was moved and no existing node restarted.
+The corrected exact merged main source must be rebuilt before public promotion.

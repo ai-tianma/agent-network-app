@@ -52,7 +52,7 @@ function buildTimeline(task: HubTask): TimelineStep[] {
   return [
     { key: 'created',   label: tr('tasks.copy.122'),   at: task.created_at },
     { key: 'delivered', label: tr('tasks.copy.147'), at: task.delivered_at },
-    { key: 'started',   label: tr('tasks.copy.148'),   at: task.started_at },
+    { key: 'started',   label: tr('execution.lifecycleStarted'), at: task.started_at },
     { key: 'completed', label: tr('tasks.copy.149'),   at: task.completed_at },
   ];
 }

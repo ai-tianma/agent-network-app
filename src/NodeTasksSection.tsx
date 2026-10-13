@@ -32,7 +32,7 @@ type Load =
 type RowKind = 'running' | 'stale' | 'queue' | 'self' | 'done';
 
 // 时间后缀:进行中看「最后一次动静」,卡住的说清是「从那时起没动静」。
-const TIME_SUFFIX: Record<RowKind, string> = { running: '开始', stale: '起没有动静', queue: '入队', self: '', done: '结束' };
+const TIME_SUFFIX: Record<RowKind, string> = { running: '更新', stale: '起没有动静', queue: '入队', self: '', done: '结束' };
 
 function Pill({ label, tone }: { label: string; tone: PillTone }) {
   const color = tone === 'danger' ? colors.failed : tone === 'warn' ? colors.blocked : colors.textMuted;

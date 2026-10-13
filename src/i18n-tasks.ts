@@ -738,6 +738,7 @@ registerTranslations({
 
 registerTranslations({
   'execution.title': ['执行状态', 'Execution status'],
+  'execution.lifecycleStarted': ['Hub 标记开始', 'Hub start marker'],
   'execution.finished': ['已结束', 'Finished'],
   'execution.failed': ['任务失败或已超时', 'Task failed or timed out'],
   'execution.ended': ['任务已取消', 'Task cancelled'],
