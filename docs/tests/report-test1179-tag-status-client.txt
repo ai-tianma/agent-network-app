@@ -1,4 +1,4 @@
-#1091/#1179 client tag-by-status chart candidate
+#1091/#1179 client tag-by-status chart — main source complete
 
 Desktop stacked columns / phone horizontal bars show four current unarchived
 states, Top10 plus expansion, exact counts and a separate no-label bucket.
@@ -60,3 +60,33 @@ list lacked the new translation module; import it and add the chart to the
 guarded surfaces, leaving every original assertion. Pagination failed before
 functional tests on npm ECONNRESET; retry at the next final candidate without
 changing packages/locks or weakening checks. Metadata already PASS.
+
+Final source PR922 merged22:16:32Z to09652b43285cc11be5839c0e2bfa4978104131a8.
+Candidatef35011d208c186aecaaa826e9343a8a781127944, main and tested runtime
+inputs have identical full tree27dedcacbfc63f8a62304ceb326f3e14973e52b2.
+Final10 relevant source checks SUCCESS: all7 PR unit jobs38475901648
+(Linux/Windows413/413 test files each), metadata38475901669, pagination
+38475901556, staged tag/dashboard38475901609 attempt2. The last stages
+passed contract18/18, original dashboard model65/65, typecheck, exported
+new desktop/phone/full/old Hub52/52 and unchanged original dashboard/share
+30/30 checks. Both overview layouts retain their recent-completion placement.
+Attempt1 of the staged final layout failed at npm ci ECONNRESET/exit152 before
+functional tests; only that failed job was rerun on the same exact source,
+with unchanged packages, lock dependencies and assertions. The first failure
+remains in attempt1; it is not a proved product/native-device failure. Earlier
+version-pin/radius/registry/i18n fixture failures are retained above; no
+assertion or baseline was weakened. Own superseded/duplicate push and broad
+UI runs were cancelled, not PASS; no other owner's work was interrupted.
+
+Formal client258 desktop38476700909 and Android38476703767 were uniquely
+dispatched on main with exact09652b43285cc11be5839c0e2bfa4978104131a8 after
+fresh main-ancestor, full-tree and absence-of-version-tag/draft preflight.
+macOS-signing approved under the user's standing authorization. At this source
+checkpoint formal native builds, draft audit, public promotion and whole-file
+post-verification are pending, not claimed delivered. Linux stays excluded.
+Managed liveHub137 and original nodes/threads/model/login remain unchanged;
+source publication does not prove original-device adoption or full live Hub
+aggregation. Old Hubs explicitly show loaded partial counts; no chart uses
+a500-row page as complete. Drill-down reuses the existing loaded-list paging
+and its partial-data indication; this feature does not replace that cursor
+contract. No install, reset, account/credential/data or production mutation.
