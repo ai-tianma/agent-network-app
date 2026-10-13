@@ -428,11 +428,11 @@ function DashDesktop(props: ViewProps & { periodSeg: React.ReactNode; shareButto
         {props.shareButton}
       </View>
       <View style={c.heroRow}>{heroes(props)}</View>
-      <View style={c.card}><TaskTagStatusChart snapshot={props.tagSnapshot} phone={false} onPick={props.onTagStatus} /></View>
       <View style={[c.card, c.recentCard]} testID="dash-recent-card">
         <CardHead c={c} title={tr('dash.recent')} sub={tr(PERIOD_KEY[period])} right={tr('dash.total', { n: data.periodDone })} />
         <Timeline {...props} limit={8} testID="dash-recent" />
       </View>
+      <View style={c.card}><TaskTagStatusChart snapshot={props.tagSnapshot} phone={false} onPick={props.onTagStatus} /></View>
       <View style={c.row}>
         <View style={[c.card, { flex: 2 }]}>
           <CardHead c={c} title={tr('dash.daily')} sub={tr('dash.last30')} right={`${tr('dash.avg', { n: (sum30 / 30).toFixed(1) })} · ${tr('dash.total', { n: sum30 })}`} />
@@ -468,7 +468,6 @@ function DashPhone(props: ViewProps & { periodSeg: React.ReactNode; onShare: () 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={c.phoneBody} testID="dash-phone">
         {props.periodSeg}
         <DashboardProject {...props} />
-        <View style={c.card}><TaskTagStatusChart snapshot={props.tagSnapshot} phone onPick={props.onTagStatus} /></View>
         <View style={c.phoneHero} testID="dash-hero-today">
           <Text style={c.phoneHeroLabel}>{tr('dash.todayDone')}</Text>
           <Text style={c.phoneHeroValue} testID="dash-hero-today-value">{today}</Text>

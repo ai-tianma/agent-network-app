@@ -15,6 +15,7 @@ WORKDIR /app
 RUN npm install --prefix /qa-tools --no-save --no-audit --no-fund playwright@1.58.2
 COPY --from=web /web /web
 COPY tests/task-tag-status/drive.mjs /app/tests/task-tag-status/drive.mjs
+COPY tests/test-task-dashboard/drive.mjs /app/tests/test-task-dashboard/drive.mjs
 COPY tests/test-layout-sweep/harness.mjs /app/tests/test-layout-sweep/harness.mjs
 ENV WEB_DIR=/web PLAYWRIGHT_MODULE=/qa-tools/node_modules/playwright/index.mjs
-CMD ["node","tests/task-tag-status/drive.mjs"]
+CMD ["sh","-c","node tests/task-tag-status/drive.mjs && OUT=/output/existing-dashboard node tests/test-task-dashboard/drive.mjs"]
