@@ -110,3 +110,38 @@ Primary desktop and Android software delivery complete. Domestic mirror
 this checkpoint, not PASS. iOS is lower priority after both primary channels.
 Original-device adoption and live Hub137 aggregation upgrade remain separate.
 Old Hubs display partial loaded data, not full500-row assumptions.
+
+Deferred distribution checkpoint: 2026-10-13T22:53Z (#1181)
+Explicit main mirror38478741759 SUCCESS22:52:15Z, including exact-main source
+binding, upload and anonymous byte verification. Its workflow head9c6fe55b
+is docs-only main; release/tag/artifact source remains exactly
+09652b43285cc11be5839c0e2bfa4978104131a8. No release assets, tag or version
+were changed and no installer was rebuilt for the mirror.
+The own publication-triggered automatic38478697921 was waiting up to30min
+for a GitHub-attached Android APK under the legacy prepare path. All8 desktop
+assets were uploaded, and Android had already been published independently.
+Before upload began, cancel that own wait to let the existing explicit main
+mirror continue without APK waiting. Automatic run is CANCELLED, not PASS;
+no third dispatch and no other owner's run was interrupted.
+
+Independent anonymous observations22:52:45.936350Z/22:52:47.857300Z:
+desktop/latest/VERSION and mirror latest.json both0.2.258; all5 platform URLs
+point to desktop/0.2.258/ and original signatures match the public manifest.
+SHA256SUMS covers all8 public assets and matches their authoritative public
+digests. Anonymous mirror DMG range request returns206. The official mirror
+job verifies uploaded bytes; Root did not repeat a full anonymous mirror
+installer download/rehash in this checkpoint. Original complete GitHub
+installer downloads and checksums remain recorded above.
+https://www.anet.sh/desktop/update/latest.json exactly matches the public
+manifest normalized to browser download URLs, version0.2.258, sha256
+51e739f26af61728e9df8325802bea5dcbd7739a02f52df14f725f6474d2c055.
+This comparison was direct; no separate scheduled drift run is claimed.
+
+Only after Android2258 was published, desktop258 was published as Latest and
+anonymous domestic VERSION258 was observed, dispatch iOS38480716413 at
+22:53:05Z on main, with exact commit09652b43285cc11be5839c0e2bfa4978104131a8
+and upload_testflight=true. Workflow head30f7c31d is docs-only main; actual
+build source is the release commit input. Fresh ancestor check passed.
+macos-signing approved under the user's standing authorization. Signed IPA,
+TestFlight upload and Apple processing are pending, not claimed complete.
+Linux stays excluded; original devices and live Hub137 are not upgraded.
