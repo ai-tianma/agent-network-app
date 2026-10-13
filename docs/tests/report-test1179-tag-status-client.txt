@@ -90,3 +90,23 @@ aggregation. Old Hubs explicitly show loaded partial counts; no chart uses
 a500-row page as complete. Drill-down reuses the existing loaded-list paging
 and its partial-data indication; this feature does not replace that cursor
 contract. No install, reset, account/credential/data or production mutation.
+
+Public primary software checkpoint: 2026-10-13T22:34:28Z
+desktop-v0.2.258 tag exactly points at main 09652b43285cc11be5839c0e2bfa4978104131a8.
+Formal38476700909 all3 Mac/Windows/verify-draft jobs SUCCESS. Mac notarized;
+Windows updater signatures, packaged startup/storage/retention gates passed.
+Anonymous complete native files all match authoritative GitHub asset SHA256:
+ANet_0.2.258_aarch64.dmg 38952911B sha256:24f2048018548b44f251bb61cc8be8d8bf2ac49c4b87dd37a635fbd202d305d6
+ANet_0.2.258_aarch64.app.tar.gz 38303114B sha256:e7192688971653b4037fe2a218524184beeb4ea79b56525f258050a8187ea84c
+ANet_0.2.258_x64-setup.exe 37336949B sha256:2b7ef6868fcffb0110478353d63847e86f2b7ea12826293653728bd2543b4a50
+ANet_0.2.258_x64_en-US.msi 51179520B sha256:b9c86e4097ba238c9e4cc638570fa8a8da0f1efb973ecd3fd13e81271a00d6dc
+All5 updater platform entries and3 attached signature files match latest.json.
+Android build38476703767/publisher38477788785 SUCCESS, version0.2.258/code2258; 83847157B sha256:670897835354a4ce6e56fc4c8cf48525b33c0e3892df1aee61e2dd2373f1aabc. Anonymous VERSION/checksum/notes verified 2026-10-13T22:28:18.085060+00:00. Official publisher performs full APK verification; Root did not do a second full mirror APK download.
+Publisher workflow head9c6fe55b is docs-only main after096; the artifact
+source is still096, verified main ancestor. Runtime/locks/workflows unchanged.
+https://github.com/sleep2agi/agent-network-app/releases/tag/desktop-v0.2.258
+Primary desktop and Android software delivery complete. Domestic mirror
+38478697921 and explicit main mirror38478741759 are in progress/pending at
+this checkpoint, not PASS. iOS is lower priority after both primary channels.
+Original-device adoption and live Hub137 aggregation upgrade remain separate.
+Old Hubs display partial loaded data, not full500-row assumptions.
