@@ -24,8 +24,50 @@ mock.module('./src/TaskFieldPickers', () => ({ ParentLine: none, ProjectSelect: 
 mock.module('./src/TaskSearch', () => ({ ArchivedTag: none, ReadOnlyTag: none, highlight: (s: string) => s }));
 mock.module('./src/TaskListCellEditor', () => ({ CellEditor: none }));
 const { default: Table } = await import('./src/TaskListTable');
+const { enterTaskScope, patchTaskBoard, taskBoardState, updateTaskItems, useTaskBoard } = await import('./src/task-board-store');
+const { mergeListRows, applyChanges } = await import('./src/board-sync');
+
+test('idle poll: actual table subscriber renders zero rows across unchanged full and delta responses', async () => {
+  const scope = 'synthetic-mac1136';
+  enterTaskScope(scope);
+  const rows = Array.from({ length: 50 }, (_, i) => ({ id: `p${i}`, name: `Task ${i}`, column: 'pool', priority: 'normal', assignee: '', due: '', createdAt: new Date(Date.parse('2026-10-13T00:00:00Z') - i * 1000).toISOString(), updatedAt: '2026-10-13T00:00:00Z', owner: null, tags: ['ANet'], children: { total: 0, done: 0 } })) as any;
+  patchTaskBoard(scope, { items: rows });
+  let subscriptions = 0;
+  function PollTable() {
+    const items = useTaskBoard(st => st.items);
+    subscriptions++;
+    return <Table rows={items} people={[]} projects={null} sort={{ key: 'title', dir: 'asc' } as any} setSort={none} s={{} as any} today="2026-10-13" selectedId={null} onOpen={none} filtered={false} needsUpdateUpgrade={false} touch onMenu={none} />;
+  }
+  ownerRenders = [];
+  let tree: any;
+  await act(async () => { tree = create(<PollTable />); });
+  expect(ownerRenders.length).toBe(50);
+  const before = subscriptions;
+  ownerRenders = [];
+  // Freshly parsed wire objects, including inclusive >= replay of the newest
+  // row. A simple empty-delta shortcut alone cannot pass this test.
+  for (let i = 0; i < 12; i++) {
+    await act(async () => { updateTaskItems(scope, items => mergeListRows(items, JSON.parse(JSON.stringify(rows)))); });
+    await act(async () => { updateTaskItems(scope, items => applyChanges(items, JSON.parse(JSON.stringify([rows[0]])), [])); });
+    await act(async () => { updateTaskItems(scope, items => applyChanges(items, [], [])); });
+  }
+  console.log(`idle poll measured row renders: ${ownerRenders.length}`);
+  expect(ownerRenders).toHaveLength(0);
+  expect(subscriptions).toBe(before);
+  expect(taskBoardState().items).toBe(rows);
+  // Permissions can change without updatedAt. A real change must still reach
+  // the visible table rather than being suppressed by timestamp equality.
+  await act(async () => { updateTaskItems(scope, items => mergeListRows(items, rows.map((r: any, i: number) => i === 0 ? { ...r, readOnly: true } : r))); });
+  expect(subscriptions).toBe(before + 1);
+  expect(ownerRenders.length).toBe(50);
+  expect(taskBoardState().items[0].readOnly).toBe(true);
+  expect(taskBoardState().items[1]).toBe(rows[1]);
+  await act(async () => tree.unmount());
+  console.log('idle poll: 12 full + 12 replay + 12 empty = 0 table renders; unchanged updatedAt permission change reaches table');
+});
 
 test('1000 actual table rows: hover updates only affected rows, keeps actions and cleans listeners', async () => {
+  ownerRenders = [];
   const nodes = new Map<string, { listeners: Map<string, EventListener>; addEventListener: Function; removeEventListener: Function }>();
   const opened: string[] = [];
   const edits: unknown[] = [];

@@ -56,6 +56,32 @@ ck('打开精简行才需要补读全文', needsFullText(parsed) && !needsFullTe
   ck('完整行换进来照旧是完整行', mergeListRows([], [full])[0] === full);
 }
 
+// ── Poll identity and changes independent of updatedAt ──
+{
+  const rows = Array.from({ length: 500 }, (_, i) => card(`p${i}`, { createdAt: iso(T0 - i * 1000), tags: ['ANet'], owner: { kind: 'user', id: 'u1' }, participants: [], children: { total: 0, done: 0 } }));
+  const wire = JSON.parse(JSON.stringify(rows));
+  ck('500-row unchanged full read keeps the same list and all row identities', mergeListRows(rows, wire) === rows);
+  ck('empty delta keeps list identity', applyChanges(rows, [], []) === rows);
+  const optimistic = [card('child', { parentId: 'parent', column: 'done', createdAt: iso(T0 + 1) }), card('parent', { children: { total: 1, done: 0 } })];
+  ck('empty delta still reconciles child counts after a local optimistic status change', applyChanges(optimistic, [], []).find(row => row.id === 'parent')!.children!.done === 1);
+  const one = rows[0];
+  const changes: Partial<Requirement>[] = [
+    { readOnly: true, editFields: ['column'] }, { children: { total: 3, done: 2 } },
+    { tags: ['ANet', 'macOS'] }, { owner: { kind: 'user', id: 'u2' } },
+    { participants: [{ kind: 'node', id: 'n2' }] }, { completedAt: iso(T0 + 1000) },
+    { lastEvent: { type: 'comment', summary: 'new comment', at: iso(T0 + 1000) } as any },
+  ];
+  for (const patch of changes) {
+    const next = mergeListRows(rows, [{ ...one, ...patch }, ...wire.slice(1)]);
+    ck(`same updatedAt still delivers ${Object.keys(patch).join(',')}`, next !== rows && next[0] !== one && next[1] === rows[1] && JSON.stringify(next[0]) === JSON.stringify({ ...one, ...patch }));
+  }
+  const full = card('full', { description: 'cached text', checklist: [{ id: 'c', text: 'check', done: false }] });
+  const cached = [full];
+  ck('unchanged summary retains opened full-text object and list', mergeListRows(cached, [summaryOf(full)]) === cached);
+  ck('new order reaches subscribers', mergeListRows(rows, [...wire].reverse()) !== rows);
+  ck('removed optional field is not hidden', mergeListRows([{ ...one, readOnly: true }], [one])[0] === one);
+}
+
 // ── 增量并入 ──
 {
   const a = card('a', { createdAt: iso(T0 + 1) }), b = card('b', { createdAt: iso(T0 + 2) }), c = card('c', { createdAt: iso(T0 + 3), parentId: 'a' });

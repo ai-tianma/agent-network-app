@@ -74,13 +74,16 @@ export function enterTaskScope(scope: string): void {
 /** 只接受当前 scope 的写入:旧网络晚到的响应不会写进新网络的看板。 */
 export function patchTaskBoard(scope: string, patch: Partial<Omit<TaskBoardState, 'scope'>>): void {
   if (state.scope !== scope) return;
+  if (Object.keys(patch).every(key => Object.is(state[key as keyof TaskBoardState], patch[key as keyof typeof patch]))) return;
   state = { ...state, ...patch };
   emit();
 }
 
 export function updateTaskItems(scope: string, fn: (items: Requirement[]) => Requirement[]): void {
   if (state.scope !== scope) return;
-  state = { ...state, items: fn(state.items) };
+  const items = fn(state.items);
+  if (items === state.items) return;
+  state = { ...state, items };
   emit();
 }
 

@@ -4,4 +4,4 @@ COPY tests/task-list-performance/package.json tests/task-list-performance/bun.lo
 RUN bun install --frozen-lockfile
 COPY src ./src
 COPY tests/task-list-performance/table.test.tsx ./table.test.tsx
-CMD ["sh", "-c", "bun test table.test.tsx && bun src/task-list-edit-model.test.ts && bun src/task-list-widths.test.ts && bun src/task-list-tablet.test.ts"]
+CMD ["sh", "-c", "bun test table.test.tsx && bun src/board-sync.test.ts && bun src/task-list-edit-model.test.ts && bun src/task-list-widths.test.ts && bun src/task-list-tablet.test.ts"]

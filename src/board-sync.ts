@@ -59,10 +59,33 @@ function carryFullText(prev: Requirement | undefined, next: Requirement): Requir
   return { ...rest, description: prev.description, checklist: prev.checklist };
 }
 
+// Poll responses are fresh JSON objects even when nothing changed. Compare all
+// exposed data, not just updatedAt: permissions, comments and child counts may
+// change without advancing that timestamp. Retain unchanged rows and the array
+// so useSyncExternalStore subscribers do not redraw an idle board every poll.
+function sameData(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ak = Object.keys(a), bk = Object.keys(b);
+  if (ak.length !== bk.length) return false;
+  return ak.every(key => Object.prototype.hasOwnProperty.call(b, key)
+    && sameData((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
+}
+
+function retainRow(prev: Requirement | undefined, next: Requirement): Requirement {
+  const carried = carryFullText(prev, next);
+  return prev && sameData(prev, carried) ? prev : carried;
+}
+
+function retainList(prev: Requirement[], next: Requirement[]): Requirement[] {
+  return prev.length === next.length && next.every((row, i) => row === prev[i]) ? prev : next;
+}
+
 /** 一整张列表(精简或完整)换进来。 */
-export function mergeListRows(prev: readonly Requirement[], incoming: readonly Requirement[]): Requirement[] {
+export function mergeListRows(prev: Requirement[], incoming: readonly Requirement[]): Requirement[] {
   const byId = new Map(prev.map(item => [item.id, item]));
-  return incoming.map(next => carryFullText(byId.get(next.id), next));
+  return retainList(prev, incoming.map(next => retainRow(byId.get(next.id), next)));
 }
 
 /** Hub 列表的顺序:createdAt 新→旧,同刻按 id 降序。 */
@@ -91,15 +114,15 @@ export function recountChildren(items: readonly Requirement[]): Requirement[] {
 }
 
 /** 一次增量并进来。changed 里 archived 的卡 = 移出看板(平常的列表不含归档的卡)。 */
-export function applyChanges(prev: readonly Requirement[], changed: readonly Requirement[], deleted: readonly string[]): Requirement[] {
+export function applyChanges(prev: Requirement[], changed: readonly Requirement[], deleted: readonly string[]): Requirement[] {
   const gone = new Set(deleted);
   const byId = new Map(prev.map(item => [item.id, item]));
   for (const next of changed) {
     if (next.archived) { byId.delete(next.id); continue; }
-    byId.set(next.id, carryFullText(byId.get(next.id), next));
+    byId.set(next.id, retainRow(byId.get(next.id), next));
   }
   for (const id of gone) byId.delete(id);
-  return recountChildren([...byId.values()].sort(hubOrder));
+  return retainList(prev, recountChildren([...byId.values()].sort(hubOrder)));
 }
 
 /** 卡片上的子任务进度:有全文按条目算,精简行用 Hub 给的计数。 */

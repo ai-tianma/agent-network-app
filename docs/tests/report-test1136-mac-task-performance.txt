@@ -1,0 +1,16 @@
+CommHub #1136: Mac 0.2.255 reported severely laggy; native location/hardware/Hub scale are not yet known.
+Client255 source34ceea117aa8f5c26d42c2af2ce4436aa3479e2f delivered render pagination. Hover isolation was merged later through PR797/main39f2e17a and was not included in that public version. Reuse that work, not a duplicate hover implementation.
+
+This narrow slice reconciles full and delta task responses by all exposed data, including optional-field removal, permissions, comments and child counts independent of updatedAt. Identical rows retain their objects; identical ordered lists retain their array. Store no-op writes skip notifications. Full-text carry-forward and periodic resync semantics remain. Empty deltas still recount children after optimistic local changes.
+
+First candidate f65a79279af6eca061b2ec216530eb92216aeb65:
+Dedicated Docker38377404734 SUCCESS. Actual checkout PR merge b5655891111551b95ed64de0940b43aa4a5334fd.
+Actual TaskListTable with task-store useSyncExternalStore, 50 visible rows, 12 full +12 inclusive replay +12 empty polls: 0 row renders. Same-time permission change still reaches the table; unchanged rows retain identity.
+Frozen baseline b1ddd6d218fb97fc0737d2d3462dd7669245443f, same fixture: 1800 row renders. This expected assertion failure is a negative witness, not a normal test pass. Workflow requires the nonzero result and exact 1800 count.
+2 component tests/25 assertions, board-sync39/39 (including150-poll semantic simulation), inline edit54/54, widths28/28, tablet22/22 passed.
+One bounded local Docker run about15s (90s timeout), matching the first candidate, passed. No native Mac test or FPS measurement.
+
+Final adjustment keeps child recount on empty delta (e091b59829dcc7c9dc8d39b855a1baebd472db74) and adds its regression. The500-row idle fixture uses actual canonical Hub order; no-change identity is not asserted against an unsorted fixture. Short targeted local Docker board-sync40/40 passed after that fixture correction (<1s,30s timeout). Final exact-source CI must pass before merge or publication. Earlier superseded active runs were canceled without labeling them passed.
+
+Target0.2.256 includes prior hover isolation and this idle refresh improvement. Signed public desktop artifacts must be built from the exact merged main commit. Release status and final-source CI will be recorded separately after completion. At this point no256 native package has been built, published, installed or confirmed on the reporting user's Mac.
+No remote daemon/node restarts, runtime/provider/model switches, credential changes, Hub activation, global npm or production data mutations. No added chart library or dependencies. Existing desktop-release-sop.md remains the build/update/rollback procedure; previous255 public artifacts remain immutable. Native user data and credentials are outside Git and not covered by this source-only change or a clone-only disaster recovery promise.

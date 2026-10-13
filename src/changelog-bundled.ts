@@ -5,6 +5,11 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.256:",
+  "- 优化任务列表悬停：鼠标移入或移出只刷新对应行，减少大列表交互卡顿。",
+  "- 任务内容未变化时，后台刷新保留当前列表，避免重复重绘列表和侧栏；有变化的权限、评论和子任务进度仍正常更新。",
+  "- 保留每页 50 条分页、搜索、筛选、详情与编辑。",
+  "",
   "What's new in 0.2.255:",
   "- 任务列表新增每页 50 条分页、上一页/下一页和范围提示；桌面和手机不再一次渲染所有任务行。",
   "- 排序、筛选和搜索后再分页，条件变化回到第一页；详情和编辑仍对应原任务，已明确选择的任务不会被翻页扩选。",
@@ -1136,6 +1141,7 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.255": "2026-10-12T16:26:59Z",
   "0.2.254": "2026-10-12T15:34:28Z",
   "0.2.253": "2026-10-12T14:47:55Z",
   "0.2.252": "2026-10-12T10:40:25Z",
