@@ -6,6 +6,7 @@ import { taskListPage } from './task-list-pagination';
 import TaskGantt from './TaskGantt';
 import TaskCalendar from './TaskCalendar';
 import TaskDashboard from './TaskDashboard';
+import { statsProject, tagStatusFilter } from './task-tag-status';
 import TaskActivity from './TaskActivity';
 import { TaskTagFilter } from './TaskTags';
 import { useTranslation } from './i18n-react';
@@ -1347,7 +1348,7 @@ function ScopedRequirementBoard({ cfg, desktop, dispatch, onOpenVoiceSettings, s
         ) : section !== 'dashboard' && section !== 'activity' && terms.length && !visible.length && !searchBlockedByAbandoned ? <SearchEmpty q={search.q} s={s} filtered={filterActive(filter)} partial={truncated && !serverSearchCap} onClear={closeSearch} />
         : section === 'list' ? list()
           : section === 'calendar' ? <TaskCalendar items={visible} terms={terms} projects={projects} people={people} today={today} s={s} onOpen={openDetail} selectedId={selectedId} phone={narrow} onDue={pointer ? (id, due) => { void setDue(id, due); } : undefined} />
-          : section === 'dashboard' ? <TaskDashboard cfg={cfg} items={items} projects={projects} people={people} s={s} phone={narrow} statsCapable={statsCapable} onOpen={openFromDashboard} />
+          : section === 'dashboard' ? <TaskDashboard cfg={cfg} items={items} projects={projects} people={people} s={s} phone={narrow} statsCapable={statsCapable} projectFilter={statsProject(filter.project)} onProject={project => setTaskFilter({ ...filter, project: project === 'none' ? NO_PROJECT : project ?? '' })} onOpen={openFromDashboard} onTagStatus={(tag, status) => { clearSearch(); setTaskSearch({ ...EMPTY_SEARCH }); setTaskFilter(tagStatusFilter(tag, status, filter.project)); setTaskSection('list'); }} />
           : section === 'activity' && eventsCapable ? <TaskActivity cfg={cfg} items={items} projects={projects} people={people} meId={meId} s={s} phone={narrow} onOpen={openFromDashboard} />
           : section === 'gantt' ? <TaskGantt items={visible} terms={terms} projects={projects} people={people} today={today} s={s} onOpen={openDetail} selectedId={selectedId} phone={narrow} startCapable={startCapable} onDue={pointer ? (id, due) => { void setDue(id, due); } : undefined} />
             : kanban();

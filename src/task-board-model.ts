@@ -46,6 +46,8 @@ export const hasRoles = (item: Pick<Requirement, 'agentOwner'>): boolean => item
 
 export interface BoardFilter {
   tag?: string;
+  /** Chart drill-down into the distinct no-label bucket. */
+  untagged?: boolean;
   /** 负责人键(personKey 或 UNASSIGNED)。空 = 不按负责人筛。 */
   owners: string[];
   /** 参与人键(personKey):左栏「我参与的」。省略 / '' = 不按参与人筛。和负责人是两回事(我负责的 ≠ 我参与的)。 */
@@ -71,7 +73,7 @@ export const NO_PROJECT = '__none__';
 
 export const EMPTY_FILTER: BoardFilter = { owners: [], priorities: [] };
 
-export const filterActive = (f: BoardFilter): boolean => f.owners.length > 0 || f.priorities.length > 0 || !!f.project || !!f.statuses?.length || !!f.tag || !!f.participant || !!f.overdue;
+export const filterActive = (f: BoardFilter): boolean => f.owners.length > 0 || f.priorities.length > 0 || !!f.project || !!f.statuses?.length || !!f.tag || !!f.untagged || !!f.participant || !!f.overdue;
 
 /** 状态筛选里的「隐藏已完成」= 只选需求池 + 进行中(废弃本来就默认不显示)。 */
 export const HIDE_DONE: readonly ReqColumn[] = REQ_COLUMNS.filter(c => c !== 'done' && c !== 'abandoned');
@@ -87,6 +89,7 @@ export const toggleHideDone = (statuses: readonly ReqColumn[] | undefined): ReqC
 export function matchesFilter(item: Requirement, f: BoardFilter, at: DueAt = {}): boolean {
   if (f.overdue && !isOverdue(item, at)) return false;
   if (f.tag && !item.tags?.includes(f.tag)) return false;
+  if (f.untagged && item.tags?.some(t => !!t)) return false;
   if (f.owners.length && !roleKeysOf(item).some(k => f.owners.includes(k))) return false;
   if (f.participant && !item.participants?.some(r => personKey(r) === f.participant)) return false;
   if (f.priorities.length && !f.priorities.includes(item.priority)) return false;

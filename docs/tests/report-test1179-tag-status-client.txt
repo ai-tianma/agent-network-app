@@ -1,0 +1,62 @@
+#1091/#1179 client tag-by-status chart candidate
+
+Desktop stacked columns / phone horizontal bars show four current unarchived
+states, Top10 plus expansion, exact counts and a separate no-label bucket.
+Memberships count each distinct tag; summed memberships are not unique tasks.
+Complete Hub tag_status must match current project scope; malformed/old Hub
+data explicitly uses partial loaded cards without assuming a500-row limit is
+full. Request scope keys prevent late project responses from overwriting the
+current selection. Project_id/none is sent to stats; old Hubs ignoring scope
+fall back to project-filtered loaded history. Chart clicks clear unrelated
+search/role filters and select exactly tag/no-label + status + existing project
+in the existing paged list; abandoned is explicit. No chart dependency added.
+
+Validation pending: Docker pure contract/model plus existing dashboard and
+typecheck, then actual Expo web export in Chromium desktop/phone with synthetic
+Hub. Covers whole516 vs loaded35,501 doing beyond client page, duplicate tags,
+old completion, literal/no-label, four states, Top10/expand, project/none, late
+scope response, and actual list drill-down. This is software validation, not
+original native-device/model acceptance. No local application tests run.
+
+Recovery: unchanged desktop/mobile startup, ports, encrypted credential sources
+and locked packages. An exact merged-main client archive reproduces the chart;
+rollback uses the previous signed client. No schema/state migration or private
+data mutation. Git clone does not restore user history/private keys; existing
+backup sources remain necessary and whole private-key recovery NOT_COVERED.
+Hub software contract is already published; this patch does not adopt Hub139
+or alter any original node/daemon/provider/model/thread/login.
+
+Initial metadata CI38473722978 failed because the fixed version assertion still
+expected257 after the258 bump; update that assertion with unchanged checks.
+The first superseded source runs were cancelled to release shared runners;
+final source validation is pending on the current head.
+
+First e529e36a CI38473885707: model18/18, existing dashboard65/65 and
+typecheck PASS; desktop new/old Hub and drill-down PASS. Phone project scope
+passed, but a1/502 fraction was subpixel-wide and its neighbor intercepted
+an ordinary click. Keep exact counts, give nonzero segments a6px visual floor
+and44px count-button targets; retain the unforced actual click test. Initial
+avatar radius and people drive-registry gates also FAIL: use radius.inline and
+register the new drive as a stub in the existing complete registry, preserving
+all gate assertions. Bounded local radius30/30 PASS; final CI pending.
+
+Final chart/runtime inputs at5bf576aacad13eff517edf7852b8615e3aba8875:
+Docker38474479962/job115561679526 SUCCESS22:03:03Z, contract18/18, existing
+dashboard65/65, full typecheck PASS, actual exported Chromium desktop/phone
+full/old Hub52/52 checks PASS. The original ordinary thin-segment click now
+passes on phone;6px geometry verified. Project/none, late old scope, Top10/
+expand, exact/no-label/abandoned actual list drill-down and no page errors all
+passed. Screenshots/result are in TEST-ONLY-task-tag-status-ui artifact.
+Finalebb3039e full Linux/Windows413/413 test files and i18n guard83/83
+PASS38475149339; pagination38475149473 PASS after the network-only failure.
+Before release, source review found the existing browser dashboard contract
+requires recent completions directly below the heroes. Place the tag chart
+after that existing overview on both layouts and run the unchanged existing
+dashboard browser drive in the same staged Docker job. No old layout/share
+assertion is relaxed. Intermediate6aff layout omitted the phone insertion;
+restore it before validation/publication. Final layout validation pending.
+5bf global unit412/413 failed only i18n-copy-guard because its explicit import
+list lacked the new translation module; import it and add the chart to the
+guarded surfaces, leaving every original assertion. Pagination failed before
+functional tests on npm ECONNRESET; retry at the next final candidate without
+changing packages/locks or weakening checks. Metadata already PASS.

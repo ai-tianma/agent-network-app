@@ -143,7 +143,7 @@ export default function TaskFilterSidebar({ onNavigate }: { onNavigate?: () => v
         accessibilityRole="tab"
         accessibilityLabel={label}
         {...a11yState({ selected: on })}
-        onPress={() => { setTaskSection(section === 'dispatch' ? 'board' : section); setTaskFilter({ ...filter, tag }); onNavigate?.(); }}
+        onPress={() => { setTaskSection(section === 'dispatch' ? 'board' : section); setTaskFilter({ ...filter, tag, untagged: false }); onNavigate?.(); }}
         style={state => [styles.item, ((state as { hovered?: boolean }).hovered || state.pressed) && { backgroundColor: colors.rowHover }, on && { backgroundColor: colors.rowActive }]}
       >
         <View style={styles.icon}>{lead}</View>

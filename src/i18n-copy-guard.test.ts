@@ -9,6 +9,7 @@ import './i18n-settings';
 import './i18n-tasks';
 import './i18n-task-issues';
 import './i18n-task-tags';
+import './i18n-tag-status';
 import './i18n-task-fields';
 import './i18n-accounts';
 import './i18n-users';
@@ -35,6 +36,7 @@ migrated.push('src/TaskListFields.tsx', 'src/TaskListTable.tsx', 'src/TaskListCe
 migrated.push('src/TaskTimeCell.tsx');
 migrated.push('src/TaskGantt.tsx', 'src/TaskCalendar.tsx');
 migrated.push('src/TaskDashboard.tsx', 'src/ShareCardNative.tsx');
+migrated.push('src/TaskTagStatusChart.tsx');
 migrated.push('src/AccountSwitcher.tsx', 'src/AccountRowActions.tsx');
 migrated.push('src/UserManagementPanel.tsx', 'src/DmChatScreen.tsx');
 migrated.push('src/MemberEditor.tsx', 'src/MemberEditorKit.tsx', 'src/TaskAccessSection.tsx', 'src/RemoveSheet.tsx');
