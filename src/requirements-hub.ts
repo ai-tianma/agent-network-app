@@ -311,8 +311,8 @@ export async function fetchRequirementEvents(cfg: HubConfig, q: { since?: string
 }
 
 /** GET /api/requirements/stats(capability stats)。原样返回 JSON,由 task-dashboard-model.parseHubStats 校验。 */
-export async function fetchRequirementStats(cfg: HubConfig, q: { from: number | null; tz: string; days: number; recent: number }): Promise<unknown> {
-  const qs = `tz=${encodeURIComponent(q.tz)}&days=${q.days}&recent=${q.recent}${q.from !== null ? `&from=${encodeURIComponent(new Date(q.from).toISOString())}` : ''}`;
+export async function fetchRequirementStats(cfg: HubConfig, q: { from: number | null; tz: string; days: number; recent: number; projectId?: string | null }): Promise<unknown> {
+  const qs = `tz=${encodeURIComponent(q.tz)}&days=${q.days}&recent=${q.recent}${q.from !== null ? `&from=${encodeURIComponent(new Date(q.from).toISOString())}` : ''}${q.projectId ? `&project_id=${encodeURIComponent(q.projectId)}` : ''}`;
   return call(cfg, scoped(cfg, `/api/requirements/stats?${qs}`));
 }
 

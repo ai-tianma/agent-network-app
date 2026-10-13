@@ -1,0 +1,27 @@
+#1091/#1179 client tag-by-status chart candidate
+
+Desktop stacked columns / phone horizontal bars show four current unarchived
+states, Top10 plus expansion, exact counts and a separate no-label bucket.
+Memberships count each distinct tag; summed memberships are not unique tasks.
+Complete Hub tag_status must match current project scope; malformed/old Hub
+data explicitly uses partial loaded cards without assuming a500-row limit is
+full. Request scope keys prevent late project responses from overwriting the
+current selection. Project_id/none is sent to stats; old Hubs ignoring scope
+fall back to project-filtered loaded history. Chart clicks clear unrelated
+search/role filters and select exactly tag/no-label + status + existing project
+in the existing paged list; abandoned is explicit. No chart dependency added.
+
+Validation pending: Docker pure contract/model plus existing dashboard and
+typecheck, then actual Expo web export in Chromium desktop/phone with synthetic
+Hub. Covers whole516 vs loaded35,501 doing beyond client page, duplicate tags,
+old completion, literal/no-label, four states, Top10/expand, project/none, late
+scope response, and actual list drill-down. This is software validation, not
+original native-device/model acceptance. No local application tests run.
+
+Recovery: unchanged desktop/mobile startup, ports, encrypted credential sources
+and locked packages. An exact merged-main client archive reproduces the chart;
+rollback uses the previous signed client. No schema/state migration or private
+data mutation. Git clone does not restore user history/private keys; existing
+backup sources remain necessary and whole private-key recovery NOT_COVERED.
+Hub software contract is already published; this patch does not adopt Hub139
+or alter any original node/daemon/provider/model/thread/login.
