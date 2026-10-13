@@ -1,3 +1,4 @@
+Preparation record; final exact-source CI and publication receipt: report-test1136-client256-public.txt.
 CommHub #1136: Mac 0.2.255 reported severely laggy; native location/hardware/Hub scale are not yet known.
 Client255 source34ceea117aa8f5c26d42c2af2ce4436aa3479e2f delivered render pagination. Hover isolation was merged later through PR797/main39f2e17a and was not included in that public version. Reuse that work, not a duplicate hover implementation.
 
