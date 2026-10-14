@@ -50,3 +50,12 @@ three refinements: separate active/completed lightness, maintain left-to-right
 state order, and promote partial scope/multi-tag explanation. Apply reviewed
 light/dark palette,1px card-colored separators, title-row partial badge and
 note near the legend. Fresh actual responsive screenshots/CI pending.
+
+Secondf25 source core18/model65/typecheck and7 PR unit jobs PASS.
+UI run38482281795 failed after real poolA appeared because the legacy broad
+req-row prefix also counts hovered nested checkbox/open/project controls.
+Use outer task-row selector for all three exact-one task assertions, keeping
+ordinary clicks and exact filter outcomes. Add5s applied-state wait and a
+full unexpected-row/screenshot diagnostic; do not hide actual extra tasks.
+Linux unrelateddeb and broadstub7/8 also failed; stub is the same chart
+selector failure, not a second independent product defect. Preserve history.

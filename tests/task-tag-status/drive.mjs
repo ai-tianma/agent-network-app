@@ -5,6 +5,8 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const output = process.env.OUT || '/output';
 const web = await serveExport(process.env.WEB_DIR), browser = await chromium.launch({ headless: true, executablePath: findChromium() });
 let checks = 0;
+// Count task rows, excluding nested row controls with the same testID prefix.
+const TASK_ROWS = '[data-testid^="req-row-"]:not([data-testid^="req-row-"] [data-testid^="req-row-"])';
 const ck = (name, value) => { assert(value, name); checks++; console.log(`PASS ${name}`); };
 function fixture(mode) {
   const at = '1999-01-01T00:00:00Z';
@@ -89,12 +91,12 @@ try {
     ck('four counters stay on one equal-width line with touch targets', Math.max(...geometry.widths) - Math.min(...geometry.widths) < 1 && Math.max(...geometry.top) - Math.min(...geometry.top) < 1 && geometry.heights.every(h => h >= 44) && geometry.right <= geometry.containerRight + 1);
     await page.getByTestId(`dash-tag-bar-${rowA}-pool`).click();
     await page.getByTestId('req-row-poolA').waitFor();
-    await page.waitForFunction(() => document.querySelectorAll('[data-testid^="req-row-"]').length === 1, undefined, { timeout: 5000 }).catch(async error => {
-      console.log('drill-down rows', await page.locator('[data-testid^="req-row-"]').evaluateAll(els => els.map(e => ({ id: e.getAttribute('data-testid'), text: e.textContent?.slice(0, 150) }))));
+    await page.waitForFunction(selector => document.querySelectorAll(selector).length === 1, TASK_ROWS, { timeout: 5000 }).catch(async error => {
+      console.log('drill-down rows', await page.locator(TASK_ROWS).evaluateAll(els => els.map(e => ({ id: e.getAttribute('data-testid'), text: e.textContent?.slice(0, 150) }))));
       await page.screenshot({ path: `${output}/${name}-${mode}-filter-failure.png`, fullPage: true });
       throw error;
     });
-    ck('actual list drill-down filters tag and status', await page.locator('[data-testid^="req-row-"]').count() === 1);
+    ck('actual list drill-down filters tag and status', await page.locator(TASK_ROWS).count() === 1);
     await page.getByTestId('tasks-view-dashboard').first().click(); await page.getByTestId('dash-tag-status').waitFor(); await page.getByTestId('dash-tag-expand').click();
     const no = await indexOf(page, '未设置标签');
     // The first name match is the literal tagged abandoned task; select the no-label group by its done counter.
@@ -102,11 +104,11 @@ try {
     const id = await done.evaluateAll(els => els.find(e => e.textContent.trim().endsWith('1'))?.getAttribute('data-testid'));
     assert(id, `no-label completion absent; literal index ${no}`);
     await page.getByTestId(id).click(); await page.getByTestId('req-row-doneNone').waitFor();
-    ck('no-label drill-down excludes literal label', await page.locator('[data-testid^="req-row-"]').count() === 1);
+    ck('no-label drill-down excludes literal label', await page.locator(TASK_ROWS).count() === 1);
     await page.getByTestId('tasks-view-dashboard').first().click(); await page.getByTestId('dash-tag-status').waitFor(); await page.getByTestId('dash-tag-expand').click();
     const abandoned = await page.locator('[data-testid^="dash-tag-count-"][data-testid$="-abandoned"]').evaluateAll(els => els.find(e => e.textContent.trim().endsWith('1'))?.getAttribute('data-testid'));
     await page.getByTestId(abandoned).click(); await page.getByTestId('req-row-abandonedLabel').waitFor();
-    ck('abandoned explicit drill-down visible', await page.locator('[data-testid^="req-row-"]').count() === 1);
+    ck('abandoned explicit drill-down visible', await page.locator(TASK_ROWS).count() === 1);
     ck('no client page errors', errors.length === 0);
     await page.screenshot({ path: `${output}/${name}-${mode}-drilldown.png`, fullPage: true }); await ctx.close();
   }
