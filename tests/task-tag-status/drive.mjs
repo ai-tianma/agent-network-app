@@ -89,6 +89,11 @@ try {
     ck('four counters stay on one equal-width line with touch targets', Math.max(...geometry.widths) - Math.min(...geometry.widths) < 1 && Math.max(...geometry.top) - Math.min(...geometry.top) < 1 && geometry.heights.every(h => h >= 44) && geometry.right <= geometry.containerRight + 1);
     await page.getByTestId(`dash-tag-bar-${rowA}-pool`).click();
     await page.getByTestId('req-row-poolA').waitFor();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid^="req-row-"]').length === 1, undefined, { timeout: 5000 }).catch(async error => {
+      console.log('drill-down rows', await page.locator('[data-testid^="req-row-"]').evaluateAll(els => els.map(e => ({ id: e.getAttribute('data-testid'), text: e.textContent?.slice(0, 150) }))));
+      await page.screenshot({ path: `${output}/${name}-${mode}-filter-failure.png`, fullPage: true });
+      throw error;
+    });
     ck('actual list drill-down filters tag and status', await page.locator('[data-testid^="req-row-"]').count() === 1);
     await page.getByTestId('tasks-view-dashboard').first().click(); await page.getByTestId('dash-tag-status').waitFor(); await page.getByTestId('dash-tag-expand').click();
     const no = await indexOf(page, '未设置标签');
