@@ -1,0 +1,86 @@
+Task1184: client259 tag/status visual revision
+User supplied client258 landscape screenshot: saturated large columns, tall
+empty gray tracks and wrapping status text. Shenming provided a bounded visual
+review: horizontal thin stacks, restrained status fills with neutral text,
+aligned numeric columns/tabular figures and compact responsive rows.
+Its first review used the description because its local screenshot path was
+inaccessible; it did not claim to view the original image. CommunicationNiu
+viewed the actual supplied attachment and is the sole implementation owner.
+
+Replace desktop columns with horizontal rows. Measured card width selects
+single-line table or compact label/total + thin stack + four equal counters.
+All four real states remain pool/doing/done/abandoned; do not introduce a
+failure state, hide0 values or alter counters/filter semantics. Neutral text
+and Shenming's theme-aware amber/blue/light blue-gray/gray fills keep color confined
+to10px bars and6px dots. Each bar/count keeps44px touch height; nonzero bars
+keep6px width floor. Shared max uses all buckets, stable when expanding.
+No full-width horizontal chart scroll, huge vertical empty slot or arbitrary
+status wrapping. Existing sorting, Top10, expanded view, full/partial scope,
+project filters, four states and list paging are unchanged.
+
+Validation pending: existing contract18/model65/typecheck, actual exported
+Chromium desktop/landscape/phone, full and old Hub, whole vs loaded counts,
+project/none/late request, Top10, real thin-segment click and list drill-down;
+thin10px fill/four equal count columns/44px targets. Eight390/768/1024/1440
+light/dark screenshots use the user's six-tag distribution synthetically in
+the real UI; they are not production/native-device acceptance. Existing
+unchanged dashboard/share drive runs after the chart. No broad local testing.
+
+Release version259; lockfile changes only root package version, no dependency
+resolution change. Source must merge to main before exactSHA formal builds.
+Existing published258 assets/tag stay immutable. No liveHub137 or original
+node/provider/model/login/thread adoption is implied. Primary software build,
+signing, draft verification and public-byte postcheck remain pending.
+
+Recovery: native startup/storage paths, services/ports, private credential
+sources and backups unchanged. Exact merged-main client source reproduces UI;
+previous signed client supplies rollback. No schema/data/credential migration.
+Git clone alone does not restore private keys or history; whole private-data
+recovery remains outside this UI change. Release SOP remains authoritative.
+
+Initiale263 UI run38481825159: core18/model65/typecheck PASS; actual desktop
+full/old counts, thin-fill geometry,44px targets, project/none/late response,
+Top10/expand and real drill-down passed. New landscape test then looked for
+desktop-only sidebar project control, absent for touch landscape. Use the
+actual dashboard project picker on landscape as on phone, retaining original
+desktop late-response/sidebar checks. This is a test navigation failure,
+not a proved chart/data failure. Original failure remains in CI history.
+Shenming subsequently viewed the authenticated original attachment and gave
+three refinements: separate active/completed lightness, maintain left-to-right
+state order, and promote partial scope/multi-tag explanation. Apply reviewed
+light/dark palette,1px card-colored separators, title-row partial badge and
+note near the legend. Fresh actual responsive screenshots/CI pending.
+
+Secondf25 source core18/model65/typecheck and7 PR unit jobs PASS.
+UI run38482281795 failed after real poolA appeared because the legacy broad
+req-row prefix also counts hovered nested checkbox/open/project controls.
+Use outer task-row selector for all three exact-one task assertions, keeping
+ordinary clicks and exact filter outcomes. Add5s applied-state wait and a
+full unexpected-row/screenshot diagnostic; do not hide actual extra tasks.
+Linux unrelateddeb and broadstub7/8 also failed; stub is the same chart
+selector failure, not a second independent product defect. Preserve history.
+
+Latest e269 actual desktop/full passed all16 UI checks including exact list
+drill-down after counting outer rows, and desktop/old passed partial scope,
+counts, Top10 and late scoped request. The old no-project wait still expected
+the long partial caption's trailing unit, while the reviewed short badge ends
+in the count. Match the exact1 boundary in full/partial captions; retain the
+following exact no-project row count. No data or filter behavior was changed.
+
+Final4dee core18/model65/typecheck, all7 PR unit jobs, metadata and actual
+new UI96/96 + unchanged dashboard/share30/30 PASS. Root viewed exported
+review screenshots and found files named dark still rendered light: existing
+desktop cold start uses system theme, not the harness's legacy preference
+command. Set browser colorScheme explicitly and independently assert title
+foreground brightness for each light/dark screenshot. Dark proof pending
+fresh run; do not label the earlier light screenshots as dark acceptance.
+
+Shenming reviewed actual light screenshots as shippable, with completed fill
+needing clearer distinction from empty track: light completed becomesAEBBCB.
+Review previously used a synthetic full server snapshot500, correctly labeled
+full; this was not a product500-page inference. Recreate500 genuinely loaded
+synthetic cards with overlapping memberships matching the original six-tag
+counts and omit server tag_status, explicitly asserting partial500 badge in
+every review screenshot. Full/old original cases remain unchanged. Measured
+card threshold600 keeps the1024 desktop card in aligned row layout; narrower
+cards/phone still layer. Actual system light/dark brightness guard remains.
