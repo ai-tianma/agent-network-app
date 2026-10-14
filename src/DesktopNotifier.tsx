@@ -37,8 +37,7 @@ async function sendSystemNotification(alias: string, title: string, body: string
   if (isTauri()) {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('show_chat_notification', { alias, title, body });
-      return true;
+      return await invoke<boolean>('show_chat_notification', { alias, title, body });
     } catch {
       // 旧壳没有这条命令,退回插件。插件点了不会回报,只能靠下面的焦点推断。
     }

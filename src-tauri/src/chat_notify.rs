@@ -3,7 +3,9 @@
 // 窗口焦点推断也不可靠:人正开着别的会话时窗口本来就有焦点,点通知不会再触发 focus。
 // 这里自己发通知,点正文(default)就聚焦主窗口并走托盘那条 tray-open-chat。
 
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Runtime};
+#[cfg(not(target_os = "macos"))]
+use tauri::Emitter;
 
 // 0.2.173(Vincent:每次打开 mac 版都弹「Choose Application — Where is use_default?」):
 // macOS 上 notify-rust 发第一条通知前若没 set_application,mac-notification-sys 的
@@ -45,10 +47,12 @@ pub(crate) fn opens_chat(response: &notify_rust::NotificationResponse) -> bool {
 }
 
 /// 闭包推不出「对任意生命周期」的 FnOnce,改成 trait 实现。
+#[cfg(not(target_os = "macos"))]
 struct ClickReport {
     tx: std::sync::mpsc::Sender<bool>,
 }
 
+#[cfg(not(target_os = "macos"))]
 impl notify_rust::ResponseHandler for ClickReport {
     fn call(self, response: &notify_rust::NotificationResponse) {
         let _ = self.tx.send(opens_chat(response));
@@ -56,10 +60,10 @@ impl notify_rust::ResponseHandler for ClickReport {
 }
 
 #[tauri::command]
-pub fn show_chat_notification<R: Runtime>(app: AppHandle<R>, alias: String, title: String, body: String) {
+pub fn show_chat_notification<R: Runtime>(app: AppHandle<R>, alias: String, title: String, body: String) -> bool {
     let alias = alias.trim().to_string();
     if alias.is_empty() {
-        return;
+        return false;
     }
     std::thread::spawn(move || {
         let mut notification = new_notification(&app);
@@ -71,14 +75,22 @@ pub fn show_chat_notification<R: Runtime>(app: AppHandle<R>, alias: String, titl
         let Ok(handle) = notification.show() else {
             return;
         };
-        // 回调必须对任意生命周期都成立。先把「点中没有」收成 bool,再在外面打开会话。
-        let (tx, rx) = std::sync::mpsc::channel();
-        let _ = handle.wait_for_response(ClickReport { tx });
-        if rx.recv().unwrap_or(false) {
-            crate::tray::focus_main(&app);
-            let _ = app.emit("tray-open-chat", alias);
+        // mac-notification-sys polls deliveredNotifications on the main thread while
+        // waiting for a click. That synchronous XPC call can freeze the entire UI.
+        #[cfg(target_os = "macos")]
+        drop(handle);
+        #[cfg(not(target_os = "macos"))]
+        {
+            // 回调必须对任意生命周期都成立。先把「点中没有」收成 bool,再在外面打开会话。
+            let (tx, rx) = std::sync::mpsc::channel();
+            let _ = handle.wait_for_response(ClickReport { tx });
+            if rx.recv().unwrap_or(false) {
+                crate::tray::focus_main(&app);
+                let _ = app.emit("tray-open-chat", alias);
+            }
         }
     });
+    !cfg!(target_os = "macos")
 }
 
 #[cfg(windows)]
