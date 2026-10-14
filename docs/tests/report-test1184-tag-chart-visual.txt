@@ -66,3 +66,11 @@ counts, Top10 and late scoped request. The old no-project wait still expected
 the long partial caption's trailing unit, while the reviewed short badge ends
 in the count. Match the exact1 boundary in full/partial captions; retain the
 following exact no-project row count. No data or filter behavior was changed.
+
+Final4dee core18/model65/typecheck, all7 PR unit jobs, metadata and actual
+new UI96/96 + unchanged dashboard/share30/30 PASS. Root viewed exported
+review screenshots and found files named dark still rendered light: existing
+desktop cold start uses system theme, not the harness's legacy preference
+command. Set browser colorScheme explicitly and independently assert title
+foreground brightness for each light/dark screenshot. Dark proof pending
+fresh run; do not label the earlier light screenshots as dark acceptance.

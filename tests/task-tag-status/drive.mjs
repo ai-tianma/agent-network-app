@@ -115,13 +115,16 @@ try {
   // Recreate the reported six-tag distribution for visual review. These are
   // synthetic counts in the real exported UI, never a production-data claim.
   for (const width of [390, 768, 1024, 1440]) for (const theme of ['light', 'dark']) {
-    const ctx = await browser.newContext({ locale: TEST_LOCALE, viewport: { width, height: width === 390 ? 844 : 900 } }), page = await ctx.newPage();
+    const ctx = await browser.newContext({ locale: TEST_LOCALE, colorScheme: theme, viewport: { width, height: width === 390 ? 844 : 900 } }), page = await ctx.newPage();
     await page.addInitScript({ content: `(${initScript.toString().replace('http://mock-hub.invalid', 'http://127.0.0.1:9200')})({theme:'${theme}'});` });
     await page.addInitScript(fixture, 'review'); await page.goto(`${web.url}?safeAreaSim=0,0,0,0`);
     await page.waitForFunction(() => !!window.__anetLayoutSweep);
     await page.evaluate(() => window.__anetLayoutSweep.setScreen({ name: 'tasks' }));
     await page.getByTestId('tasks-view-dashboard').first().click(); await page.getByTestId('dash-tag-status').waitFor();
     ck(`review ${width}/${theme} all six tags`, await page.locator('[data-testid^="dash-tag-row-"]').count() === 6);
+    const textColor = await page.getByText('按标签的任务状态', { exact: true }).evaluate(el => getComputedStyle(el).color);
+    const brightness = textColor.match(/\d+/g).slice(0, 3).reduce((sum, n) => sum + Number(n), 0) / 3;
+    ck(`review ${width}/${theme} actual theme applied`, theme === 'dark' ? brightness > 150 : brightness < 100);
     await page.getByTestId('dash-tag-status').evaluate(el => el.scrollIntoView({ block: 'start' }));
     await page.screenshot({ path: `${output}/review-${width}-${theme}.png`, fullPage: true }); await ctx.close();
   }
