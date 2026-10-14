@@ -62,7 +62,7 @@ try {
       ck('late old scope cannot overwrite current project', (await page.getByTestId('dash-tag-scope').innerText()).includes(mode === 'full' ? '503 个可见任务' : '部分数据 · 22'));
       ck('project_id reaches Hub request', await page.evaluate(() => window.__statsQueries.some(q => q.includes('project_id=p1'))));
       await page.getByTestId('task-side-project-__none__').click();
-      await page.waitForFunction(() => document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes('1 个') || document.querySelector('[data-testid="dash-tag-scope"]')?.textContent.includes('· 1 '));
+      await page.waitForFunction(() => /· 1(?: 个|$)/.test(document.querySelector('[data-testid="dash-tag-scope"]')?.textContent ?? ''));
       ck('no-project scope', await page.locator('[data-testid^="dash-tag-row-"]').count() === 1);
       await page.evaluate(() => { window.__lateGlobal = false; });
       await page.getByTestId('task-side-project-all').click();

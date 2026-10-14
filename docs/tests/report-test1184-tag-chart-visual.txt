@@ -59,3 +59,10 @@ ordinary clicks and exact filter outcomes. Add5s applied-state wait and a
 full unexpected-row/screenshot diagnostic; do not hide actual extra tasks.
 Linux unrelateddeb and broadstub7/8 also failed; stub is the same chart
 selector failure, not a second independent product defect. Preserve history.
+
+Latest e269 actual desktop/full passed all16 UI checks including exact list
+drill-down after counting outer rows, and desktop/old passed partial scope,
+counts, Top10 and late scoped request. The old no-project wait still expected
+the long partial caption's trailing unit, while the reviewed short badge ends
+in the count. Match the exact1 boundary in full/partial captions; retain the
+following exact no-project row count. No data or filter behavior was changed.
