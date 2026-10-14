@@ -12,12 +12,12 @@ export default function TaskTagStatusChart({ snapshot, phone, onPick }: { snapsh
   useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [width, setWidth] = useState(0);
-  const compact = phone || width < 680;
+  const compact = phone || width < 600;
   const buckets = expanded ? snapshot.buckets : snapshot.buckets.slice(0, 10);
   // Shenming's reviewed chart palette: active work stands out, completed work
   // recedes. Status fills carry no text; neutral figures retain theme contrast.
   const dark = themeMode() === 'dark';
-  const tone = dark ? { pool: '#c9944a', doing: '#6f9bcb', done: '#4a5563', abandoned: '#8e96a1' } : { pool: '#d9a55b', doing: '#4f7cac', done: '#c3cdd8', abandoned: '#7c838d' };
+  const tone = dark ? { pool: '#c9944a', doing: '#6f9bcb', done: '#4a5563', abandoned: '#8e96a1' } : { pool: '#d9a55b', doing: '#4f7cac', done: '#aebbcb', abandoned: '#7c838d' };
   const max = Math.max(1, ...snapshot.buckets.map(r => r.total));
   const title = (tag: string | null) => tag ?? t('tagStats.untagged');
   const stateTitle = (k: ReqColumn) => t(`tagStats.${k}`);

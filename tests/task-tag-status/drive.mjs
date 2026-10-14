@@ -15,10 +15,22 @@ function fixture(mode) {
   loaded.push(card('poolA', 'pool', ['ANet', 'ANet', '知识库']), card('doneNone', 'done', [], null), card('abandonedLabel', 'abandoned', ['未设置标签']));
   for (let i = 0; i < 12; i++) loaded.push(card(`extra${i}`, 'pool', [`标签${String(i).padStart(2, '0')}`], 'p2'));
   const states = (tag, pool, doing, done, abandoned) => ({ tag, pool, doing, done, abandoned, total: pool + doing + done + abandoned });
+  const reviewBuckets = [states('TMWork', 2, 73, 76, 0), states('知识库', 10, 58, 100, 0), states('ANet', 25, 38, 217, 5), states('TM知识库', 2, 39, 27, 0), states('组织架构权限', 0, 18, 12, 5), states('界面体验', 1, 13, 12, 0)];
+  if (mode === 'review') {
+    // Exactly500 loaded cards, with overlapping memberships matching the
+    // supplied six-tag counts. Legacy Hub remains explicitly partial.
+    loaded.splice(0, loaded.length);
+    for (const [state, capacity] of [['pool', 40], ['doing', 160], ['done', 290], ['abandoned', 10]]) {
+      const cards = Array.from({ length: capacity }, (_, i) => card(`${state}-review${i}`, state, []));
+      let offset = 0;
+      for (const bucket of reviewBuckets) { for (let i = 0; i < bucket[state]; i++) cards[(offset + i) % capacity].tags.push(bucket.tag); offset += bucket[state]; }
+      loaded.push(...cards);
+    }
+  }
   window.__tasksFixture = { requirements: loaded, archived: [], hasMore: false, people: [], projects: [{ id: 'p1', name: '项目-A', color: '#2563eb', sort: 1 }, { id: 'p2', name: '项目-B', color: '#d97706', sort: 2 }], capabilities: ['description', 'checklist', 'tags', 'projects', 'requirement_seq', 'column_abandoned', 'stats'], stats: q => {
     const project = q.get('project_id'), none = project === 'none';
-    const buckets = mode === 'review' ? [states('TMWork', 2, 73, 76, 0), states('知识库', 10, 58, 100, 0), states('ANet', 25, 38, 217, 5), states('TM知识库', 2, 39, 27, 0), states('组织架构权限', 0, 18, 12, 5), states('界面体验', 1, 13, 12, 0)] : [states('ANet', 1, 501, 0, 0), states('知识库', 1, 0, 0, 0), states(null, 0, 0, 1, 0), states('未设置标签', 0, 0, 0, 1), ...Array.from({ length: 12 }, (_, i) => states(`标签${String(i).padStart(2, '0')}`, 1, 0, 0, 0))];
-    return { totals: { done: 0, done_approx: 0, created: 0, created_done: 0, completion_rate: null, doing: project ? none ? 0 : project === 'p1' ? 501 : 0 : 501, pool: 1 }, daily: [], by_project: [], by_completer: [], recent: [], unattributed: 0, ...(mode !== 'old' ? { tag_status: { basis: 'current', complete: true, includes_archived: false, project_filter: project, total: mode === 'review' ? 500 : none ? 1 : project === 'p1' ? 503 : project === 'p2' ? 12 : 516, by_tag: none ? [buckets[2]] : project === 'p1' ? [buckets[0], buckets[1], buckets[3]] : project === 'p2' ? buckets.slice(4) : buckets } } : {}) };
+    const buckets = mode === 'review' ? reviewBuckets : [states('ANet', 1, 501, 0, 0), states('知识库', 1, 0, 0, 0), states(null, 0, 0, 1, 0), states('未设置标签', 0, 0, 0, 1), ...Array.from({ length: 12 }, (_, i) => states(`标签${String(i).padStart(2, '0')}`, 1, 0, 0, 0))];
+    return { totals: { done: 0, done_approx: 0, created: 0, created_done: 0, completion_rate: null, doing: project ? none ? 0 : project === 'p1' ? 501 : 0 : 501, pool: 1 }, daily: [], by_project: [], by_completer: [], recent: [], unattributed: 0, ...(mode === 'full' ? { tag_status: { basis: 'current', complete: true, includes_archived: false, project_filter: project, total: none ? 1 : project === 'p1' ? 503 : project === 'p2' ? 12 : 516, by_tag: none ? [buckets[2]] : project === 'p1' ? [buckets[0], buckets[1], buckets[3]] : project === 'p2' ? buckets.slice(4) : buckets } } : {}) };
   } };
   // Delay only an old all-project stats request, then switch projects in the UI.
   const original = window.__TAURI_INTERNALS__.invoke, requests = new Map();
@@ -122,6 +134,7 @@ try {
     await page.evaluate(() => window.__anetLayoutSweep.setScreen({ name: 'tasks' }));
     await page.getByTestId('tasks-view-dashboard').first().click(); await page.getByTestId('dash-tag-status').waitFor();
     ck(`review ${width}/${theme} all six tags`, await page.locator('[data-testid^="dash-tag-row-"]').count() === 6);
+    ck(`review ${width}/${theme} partial500 badge`, (await page.getByTestId('dash-tag-scope').innerText()).includes('部分数据 · 500'));
     const textColor = await page.getByText('按标签的任务状态', { exact: true }).evaluate(el => getComputedStyle(el).color);
     const brightness = textColor.match(/\d+/g).slice(0, 3).reduce((sum, n) => sum + Number(n), 0) / 3;
     ck(`review ${width}/${theme} actual theme applied`, theme === 'dark' ? brightness > 150 : brightness < 100);

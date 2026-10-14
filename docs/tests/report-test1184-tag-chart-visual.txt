@@ -74,3 +74,13 @@ desktop cold start uses system theme, not the harness's legacy preference
 command. Set browser colorScheme explicitly and independently assert title
 foreground brightness for each light/dark screenshot. Dark proof pending
 fresh run; do not label the earlier light screenshots as dark acceptance.
+
+Shenming reviewed actual light screenshots as shippable, with completed fill
+needing clearer distinction from empty track: light completed becomesAEBBCB.
+Review previously used a synthetic full server snapshot500, correctly labeled
+full; this was not a product500-page inference. Recreate500 genuinely loaded
+synthetic cards with overlapping memberships matching the original six-tag
+counts and omit server tag_status, explicitly asserting partial500 badge in
+every review screenshot. Full/old original cases remain unchanged. Measured
+card threshold600 keeps the1024 desktop card in aligned row layout; narrower
+cards/phone still layer. Actual system light/dark brightness guard remains.
