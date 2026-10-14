@@ -128,3 +128,13 @@ maintained separately in1191. Primary1184 softwareDone4/4; P2 nonblocking
 visual observations separately1189. Linux remains excluded; originals and
 liveHub137 are not upgraded. User task was auto-finalized by child review
 messages; actual software delivery is documented here and in1184.
+
+Final deferred iOS checkpoint: 2026-10-14T02:59:17Z
+iOS38503233170 SUCCESS: exact merged-main source2e0f110ee22aabb92df34db574c59611d245db6e,
+archive signing gate, signed IPA export/artifact and TestFlight altool upload
+all succeeded. This followed verified Android2259, published desktopLatest259
+and anonymous domestic pointer259. Apple processing/public invitation and
+original-device installation remain unverified, not claimed complete.
+Public factsPR927 merged03:00:14Z to2390cdaf337bf626eba46612f54843e83a744624;
+only report44 lines, all7 PR unit jobs38503501730 and scrub SUCCESS. Exact
+release source2e0 remains main ancestor; tag/asset bytes were not changed.
