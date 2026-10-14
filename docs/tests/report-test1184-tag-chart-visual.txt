@@ -84,3 +84,47 @@ counts and omit server tag_status, explicitly asserting partial500 badge in
 every review screenshot. Full/old original cases remain unchanged. Measured
 card threshold600 keeps the1024 desktop card in aligned row layout; narrower
 cards/phone still layer. Actual system light/dark brightness guard remains.
+
+Final source and public primary checkpoint: 2026-10-14T02:47:41.840181+00:00
+PR926 candidateadbcef09ed502fe057475f07391da2c852e5d965 merged02:28:27Z
+into main2e0f110ee22aabb92df34db574c59611d245db6e; full trees identical
+d39596955ca30f4d07b0fa49ef9c02a72367d5fe. All10 selected source gates PASS:
+7 PR unit jobs38500663589,metadata38500663642,scrub38500663666,
+actual chart38500663742: contract18/model65/typecheck,new UI112/112,
+unchanged original dashboard/share30/30. Root viewed the eight real exported
+light/dark390/768/1024/1440 screenshots; Shenming independently downloaded
+artifact11865244561 and confirmed shippable, including genuine dark theme,
+completedAEBBCB distinction and partial500 badge. These counts are synthetic
+500 loaded cards matching the original distribution, not production/native
+acceptance. Optional/superseded/duplicate cancellations are not PASS.
+Formal exact-main desktop38501222710 and Android38501224596 uniquely
+dispatched after no-existing-version/tag/draft and fresh ancestor checks.
+Standing macos-signing approved; all3 Mac/Windows/verify-draft jobs SUCCESS.
+Signed/notarized Mac and signed Windows startup/retention gates passed.
+Desktop259 publishedLatest 2026-10-14T02:46:44Z, tagexact source2e0.
+ANet_0.2.259_aarch64.dmg 38954002B sha256:bc914e89d53cd17a380616f7040b70178795a6f2acb9b6649b1743c12510d778; complete anonymous GitHub file PASS.
+ANet_0.2.259_aarch64.app.tar.gz 38303489B sha256:3434360b75f716f9f2476e615bbaeef15aa200ed42181a601e289a3190a19607; complete anonymous GitHub file PASS.
+ANet_0.2.259_x64-setup.exe 37350932B sha256:a24f91936bcc1bfe2d655ca1cda36bdba0840d46cb5f733b524b48485f78bd31; complete anonymous GitHub file PASS.
+ANet_0.2.259_x64_en-US.msi 51179520B sha256:6f1692513f6d411d764980df048ac4efa5ec18a5b88afc65d3565b4244d89634; complete anonymous GitHub file PASS.
+All5 platform entries/3 detached sig files match the public manifest.
+Android2259 build38501224596/publisher38501925455 SUCCESS, source and
+publisher workflowhead2e0. APK83848117B sha256:0e4348c398b6157e8327883ae28d343b1856625d47a955b51ba8421f6e7511d1.
+Anonymous VERSION/checksum/notes verified 2026-10-14T02:39:00.690203+00:00.
+Official publisher verifies mirror bytes; no second full Root mirror APK
+download is claimed.
+Explicit main domestic mirror38502866296 SUCCESS; own auto38502811519
+legacy attached-APK wait was cancelled before upload to let existing main
+copy proceed, CANCELLED not PASS; no third dispatch/rebuild/tag or asset edit.
+Anonymous desktop/latest VERSION/manifest259,5 platform URLs/original sigs,
+all8 SHA256SUMS entries verified 2026-10-14T02:50:22.336378+00:00.
+DMG range206 available; official mirror verifies full uploaded bytes, Root
+did not repeat whole mirror installer rehash. Deployed www.anet.sh updater
+JSON matches normalized public manifest, sha256:654c59e81f60a2650eb612b505603cd0f0b410825f671aabf98a93f4506f4159.
+No separate drift run was used.
+After all primary and domestic pointers were verified, iOS38503233170
+main dispatch builds exact2e0, upload_testflight=true; standing signing
+approved. Formal signedIPA/TestFlight result pending at this checkpoint,
+maintained separately in1191. Primary1184 softwareDone4/4; P2 nonblocking
+visual observations separately1189. Linux remains excluded; originals and
+liveHub137 are not upgraded. User task was auto-finalized by child review
+messages; actual software delivery is documented here and in1184.
