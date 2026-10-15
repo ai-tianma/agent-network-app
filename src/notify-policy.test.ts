@@ -96,7 +96,8 @@ ck('Rust:tray_update 已注册,notification 插件已挂', lib.includes('tray::t
 ck('Cargo:tray-icon + image-png 特性,notification 插件', cargo.includes('"tray-icon", "image-png"') && cargo.includes('tauri-plugin-notification = "2"'));
 ck('capability:notification:default + 聚焦窗口权限', cap.includes('"notification:default"') && cap.includes('"core:window:allow-set-focus"'));
 const chatNotify = norm('../src-tauri/src/chat_notify.rs');
-ck('点通知走命令,成功就不再靠焦点猜', notifier.includes("invoke('show_chat_notification'") && notifier.includes('if (!routed) target.current = recordNotified'));
+ck('点通知走命令,macOS 无点击回调时回退焦点推断', notifier.includes("invoke<boolean>('show_chat_notification'") && notifier.includes('if (!routed) target.current = recordNotified'));
 ck('Rust:点正文打开托盘那条会话', chatNotify.includes('notification.action("default", "打开")') && chatNotify.includes('app.emit("tray-open-chat", alias)') && lib.includes('chat_notify::show_chat_notification'));
+ck('Rust:macOS 不在主线程轮询已送达通知', chatNotify.includes('#[cfg(target_os = "macos")]\n        drop(handle);') && chatNotify.includes('!cfg!(target_os = "macos")') && chatNotify.includes('#[cfg(not(target_os = "macos"))]\n        {\n            // 回调'));
 
 console.log(`\n${p}/${t} passed`); process.exit(p === t ? 0 : 1);
