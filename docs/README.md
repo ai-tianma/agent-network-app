@@ -18,6 +18,7 @@
 - [daemon-provider-create-client.md](daemon-provider-create-client.md) —— 用 Daemon 托管 Provider 新建 Codex 节点（#906）的向导两种模式。
 - [node-provider-switch.md](node-provider-switch.md) —— 节点详情页切换 Provider（#906），复用 daemon Provider 目录与回执。
 - [daemon-cli-download-fallback.md](daemon-cli-download-fallback.md) —— npm 拉不到钉住的 CLI 版本时的公共副本兜底下载（#906）。
+- [opencode-shared-server-reuse.md](opencode-shared-server-reuse.md) —— 客户端与「主机共享 OpenCode Server」的边界：客户端不发任何共享 Server 字段，复用是 daemon 侧行为（#1293）。
 
 ## 客户端设计与规范
 
