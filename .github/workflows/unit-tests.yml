@@ -27,6 +27,14 @@ on:
     branches: ['**']
 
 jobs:
+  ios-app-store-status:
+    name: iOS App Store status (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f tests/ios-app-store-status/Dockerfile -t ios-app-store-status .
+      - run: docker run --rm --network none ios-app-store-status
   tag-count-order:
     name: task tag count order (Docker)
     runs-on: ubuntu-latest
