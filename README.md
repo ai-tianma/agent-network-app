@@ -64,6 +64,11 @@ shutdown, and uninstall behavior are documented in the
 The CLI/API-only path from Expo prebuild through IPA, TestFlight, and App Store
 submission is documented in the [iOS release runbook](docs/ios-release-runbook.md).
 
+OpenCode nodes created through a daemon may share a **host-shared OpenCode
+server**. That decision is made on the daemon side, not by this app: see
+[opencode-shared-server-reuse.md](docs/opencode-shared-server-reuse.md) for what
+the client does (and deliberately does not) send.
+
 ### Visual verification without a device
 
 `react-native-web` export + playwright renders the same components at a phone viewport, proxying API calls to a live hub (sidesteps CORS, swaps auth):

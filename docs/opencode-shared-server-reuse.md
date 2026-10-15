@@ -1,5 +1,7 @@
 # 客户端与主机共享 OpenCode Server（现状）
 
+> **范围（限定）**：本文描述的是 **`agent-network` main 源码层已实现的事实**（本文写作时 main = `5d316e19`）。它**不**代表这些能力已 npm 发布，也**不**代表现役节点已生效；创建路径接线（`#1302`）尚未完成。
+
 面向客户端开发者：这份说明回答「app 要不要处理主机共享 OpenCode Server」。结论是 **不用，也不应该**——客户端不发送任何共享 Server 参数，复用完全发生在 daemon 侧。本文只描述**当前事实**，不代替运行时的验收。
 
 ## 客户端实际发送什么
@@ -27,8 +29,9 @@ OpenCode 节点的创建选项只有两项与代际/授权有关（`src/opencode
 
 - **不要**在 app 里新增「共享 Server」输入项或复用开关（daemon 侧已决定；客户端加一套会分散真相来源）；
 - 若 daemon 因共享 Server 自动建节点而失败/拒绝，客户端只需**原样展示 daemon 返回的错误**，不要改写为「请重试」或自动降级为 V1；
-- 代际/授权校验保持在 `opencodeCreateError()`：这条是客户端唯一的 OpenCode 创建判据，不要因为共享 Server 的存在放宽它。
+- 代际/授权校验保持在 `opencodeCreateError()`：这条是客户端唯一的 OpenCode 创建判据，不要因为共享 Server 的存在放宽它；
+- **保留现有的「错误升级提示」行为**：当 Hub/daemon 返回 `flag_key_unknown`（`opencodeGeneration` / `opencodeUnsafeTools`）时，`describeOpenCodeCreateError()` 给出的「目标 Hub 或 daemon 不支持 V2 创建协议，请先升级到已验收的兼容版本」**必须原样保留** —— 不要因为共享 Server 的引入把它改成自动重试或自动降级为 V1。
 
 ## 不声称
 
-本文件不声称该能力已 npm 发布或在现役节点生效，也不声称创建路径已接好（`#1302` 未完成）。
+本文件不声称该能力已 npm 发布或在现役节点生效，也不声称创建路径已接好（`#1302` 未完成）；范围见文首限定（main 源码层）。
