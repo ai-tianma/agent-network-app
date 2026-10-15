@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.260:",
+  "- 修复 macOS 聊天输入卡顿：新消息通知改用现代系统通知接口，避免旧通知轮询阻塞主线程。",
+  "",
   "What's new in 0.2.259:",
   "- 标签状态图表改为紧凑横向细条，降低色彩饱和度与灰色空槽面积，标签、总数和四状态计数统一对齐。",
   "- 桌面和横屏按行比较，手机保留清晰的分层排列；继续支持项目范围、部分数据提示与点击状态筛选。",
