@@ -33,7 +33,7 @@ base64 = "0.22"
 sha2 = "0.10"
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2" # 0.2.76: 新消息系统通知(飞书式)
-notify-rust = "4" # 点通知打开对话。插件 2.4 在桌面端不回点击。
+notify-rust = { version = "=4.18.0", default-features = false, features = ["preview-macos-un"] } # macOS 用 UNUserNotificationCenter,避开旧库主线程轮询。
 tauri-plugin-clipboard-manager = "2" # 2026-09-27: 图片预览窗口 Ctrl/⌘+C 复制图片本身(writeImage 吃 PNG 字节,靠上面 tauri 的 image-png)
 
 [target.'cfg(target_os = "macos")'.dependencies]
