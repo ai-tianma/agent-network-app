@@ -104,6 +104,17 @@ to both commands. Never print those secret values.
 
 ## TestFlight and App Store Connect API
 
+To inspect an existing upload, dispatch `ios-testflight-status.yml` from `main`
+with its numeric build number, `include_app_store_versions=true`, and all write
+options disabled (`enable_public_testing=false`,
+`set_export_compliance_only=false`, `distribute_to_groups=""`). The protected
+job reports App Store version/review states and linked build numbers separately
+from TestFlight status. Its App Store response uses a field allowlist, omitting
+review accounts and credentials. `complete=false` means more than one response
+page exists; do not infer the absence of a public version from that partial
+list. A TestFlight upload or Beta Review approval does not establish an App
+Store public release.
+
 After upload, use an ES256 JWT (`kid`, issuer, `aud=appstoreconnect-v1`) with
 the App Store Connect REST API to:
 

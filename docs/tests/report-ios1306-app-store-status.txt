@@ -1,0 +1,25 @@
+#1306 (parent #1305): optional read-only App Store version inspection
+
+Source base: main 39ed9f3107dd7110db7f399cd24f1bbcbe350323.
+Adds include_app_store_versions=false to ios-testflight-status.yml. When
+enabled, GET apps/{id}/appStoreVersions?filter[platform]=IOS&include=build
+reports allowlisted version/review and linked build fields. No ASC write is
+added. complete=false explicitly preserves the limit=200 pagination boundary.
+
+Docker: tests/ios-app-store-status/Dockerfile, Bun 1.3.14 pinned by digest,
+jq installed during build; run uses --network none and no credentials.
+The test executes the actual optional shell block with an ASC GET fixture:
+  disabled input makes no request;
+  version/review state and linked build are reported correctly;
+  injected review-account/private-build fields never reach stdout;
+  paginated and empty lists preserve their meaning.
+Result: PASS. Workflow YAML parses and full generated shell passes bash -n.
+This validates the query/projection contract, not live ASC permissions/state.
+
+Live observation before this change:
+  existing main read-only TestFlight run38749951793 for build128 dispatched;
+  macos-signing environment approved under standing iOS authorization;
+  runner queued at last observation; no ASC result claimed.
+  Anonymous Apple lookup for bundle top.vansin.agentnetwork returned zero
+  results in CN and US. This does not prove absence in every storefront or
+  establish the ASC version/review state. #1305 remains in progress.

@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      include_app_store_versions:
+        description: Read App Store version/review states and linked build numbers; never submits or changes a version
+        required: false
+        type: boolean
+        default: false
       distribute_to_groups:
         description: Comma-separated beta group names (or all-internal) to attach this build to once it is VALID. Empty = no change.
         required: false
@@ -45,6 +50,7 @@ jobs:
           ENABLE_PUBLIC_TESTING: ${{ inputs.enable_public_testing }}
           SET_EXPORT_COMPLIANCE_ONLY: ${{ inputs.set_export_compliance_only }}
           LIST_BETA_GROUPS: ${{ inputs.list_beta_groups }}
+          INCLUDE_APP_STORE_VERSIONS: ${{ inputs.include_app_store_versions }}
           DISTRIBUTE_TO_GROUPS: ${{ inputs.distribute_to_groups }}
           BUNDLE_ID: top.vansin.agentnetwork
           PUBLIC_LINK_ID: ZvqYnCA9
@@ -132,6 +138,32 @@ jobs:
           if [ -z "$app_id" ]; then
             echo "::error::no App Store Connect app found for $BUNDLE_ID"
             exit 1
+          fi
+
+          if [ "$INCLUDE_APP_STORE_VERSIONS" = 'true' ]; then
+            versions_json="$RUNNER_TEMP/app-store-versions.json"
+            asc_get "apps/$app_id/appStoreVersions" \
+              --data-urlencode 'filter[platform]=IOS' \
+              --data-urlencode 'include=build' \
+              --data-urlencode 'limit=200' > "$versions_json"
+            echo 'App Store versions (read-only; TestFlight Beta Review is separate):'
+            jq --arg appId "$app_id" '{
+              appId: $appId,
+              complete: (.links.next == null),
+              versions: [.data[] | {
+                id, version: .attributes.versionString,
+                state: .attributes.appStoreState,
+                appVersionState: .attributes.appVersionState,
+                downloadable: .attributes.downloadable,
+                createdDate: .attributes.createdDate,
+                buildId: (.relationships.build.data.id // null)
+              }],
+              builds: [.included[]? | select(.type == "builds") | {
+                id, version: .attributes.version,
+                processingState: .attributes.processingState,
+                expired: .attributes.expired
+              }]
+            }' "$versions_json"
           fi
 
           builds_json="$RUNNER_TEMP/builds.json"
