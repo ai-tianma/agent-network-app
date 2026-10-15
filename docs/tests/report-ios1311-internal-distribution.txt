@@ -1,0 +1,40 @@
+#1311 / parent #1305 — automatic internal TestFlight distribution
+
+Source base: main e9a6123b185e2498a64efcff3d88d0a8eaef5c7d.
+
+Existing-build recovery:
+  Internal tester run29 / 38763662335 / job116521192082 SUCCESS.
+  Approved existing macos-signing deployment under standing owner authorization.
+  Apple rejected changing the existing group's all-builds flag; the existing
+  workflow explicitly attached build128 and read back listed=yes, VALID,
+  IN_BETA_TESTING, available=yes. The group summary reports 6 testers.
+  This run changed no testers, and proves the legacy recovery path only.
+
+Recurrence fix:
+  ios-build invokes scripts/ios-distribute-internal.mjs after successful altool
+  upload inside the same approved job. It waits up to 15 minutes for that exact
+  numeric build to become VALID and nonexpired, attaches existing ordinary
+  internal groups, and verifies every internal group's build membership.
+  Automatic all-builds groups receive no manual write. External groups, group
+  access flags, testers and App Store versions are never written.
+  Upload success retains remote signing assets before distribution, so a later
+  distribution failure still cannot revoke assets Apple is validating.
+  Helper checkout uses dispatch main SHA separately from the IPA source SHA,
+  allowing distribution for an older exact main release source.
+  Recovery via status distribute_to_groups=all-internal uses this same helper.
+
+Docker validation (network disabled, read-only source mount, Bun1.3.14):
+  ios-internal-distribution.test.ts: 12/12 passed.
+  Covers delayed visibility/processing, pagination, explicit attachment and
+  automatic membership, idempotence, wrong build, expired/invalid build,
+  processing timeout, absent groups, POST failure and missing readback failure,
+  credential-safe errors, foreign URL rejection, and actual workflow wiring.
+  Existing ios-build-number:25 passed, ios-export-compliance:8/8 passed,
+  ios-signing-workflow passed. Both workflow YAML files parse; all embedded
+  shell blocks pass bash -n. No local iOS build or production credentials used.
+
+Limits at commit time:
+  Real execution of the new helper follows merge through protected main status
+  recovery on existing build128. A new IPA/upload is not created just to test a
+  distribution hook. Mocked ASC does not stand in for Apple delivery, real
+  device installation, adding testers or any App Store review acceptance.

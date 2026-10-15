@@ -356,6 +356,25 @@ jobs:
           # soon as altool returns turns the accepted upload into ITMS-90035.
           echo 'IOS_RETAIN_REMOTE_SIGNING_ASSETS=true' >> "$GITHUB_ENV"
 
+      # An older exact release checkout may predate the distribution helper.
+      # Load the automation from this workflow's main SHA without changing the IPA source.
+      - name: Checkout internal distribution automation
+        if: ${{ inputs.upload_testflight }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: ios-distribution-tools
+          sparse-checkout: scripts/ios-distribute-internal.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Distribute uploaded build to all internal TestFlight groups
+        if: ${{ inputs.upload_testflight }}
+        timeout-minutes: 16
+        env:
+          ASC_KEY_ID: ${{ secrets.APPLE_API_KEY }}
+          ASC_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER }}
+        run: node ios-distribution-tools/scripts/ios-distribute-internal.mjs "$IOS_BUILD_NUMBER"
+
       - name: Remove local signing material; revoke remote assets only after an unsuccessful upload
         if: ${{ always() }}
         env:

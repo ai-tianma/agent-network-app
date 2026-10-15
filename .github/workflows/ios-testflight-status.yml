@@ -41,6 +41,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: macos-signing
     steps:
+      - name: Checkout internal distribution automation
+        if: ${{ inputs.distribute_to_groups == 'all-internal' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: ios-distribution-tools
+          sparse-checkout: scripts/ios-distribute-internal.mjs
+          sparse-checkout-cone-mode: false
       - name: Query App Store Connect without exposing credentials
         env:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
@@ -282,6 +290,12 @@ jobs:
           # Groups with hasAccessToAllBuilds already receive every build and
           # Apple rejects a manual attach there, so they are only reported.
           # An external group still needs Beta App Review before testers see it.
+          if [ "$DISTRIBUTE_TO_GROUPS" = 'all-internal' ]; then
+            ASC_KEY_ID="$APPLE_API_KEY" ASC_ISSUER_ID="$APPLE_API_ISSUER" \
+              ASC_KEY_BASE64="$APPLE_API_KEY_BASE64" \
+              node ios-distribution-tools/scripts/ios-distribute-internal.mjs "$BUILD_NUMBER"
+            DISTRIBUTE_TO_GROUPS=""
+          fi
           if [ -n "$DISTRIBUTE_TO_GROUPS" ]; then
             processing=$(jq -r '.data[0].attributes.processingState // "UNKNOWN"' "$builds_json")
             if [ "$processing" != 'VALID' ]; then

@@ -42,6 +42,21 @@ Use `.github/workflows/ios-build.yml`.
    team-qualified application identifier.
 6. Export creates an App Store IPA and uploads it as an artifact before the
    optional TestFlight step.
+7. After a successful TestFlight upload, the same approved job waits up to
+   15 minutes for that exact build number to become `VALID`, attaches it to
+   every existing ordinary internal group, and reads back membership. Groups
+   with `hasAccessToAllBuilds=true` receive no manual attachment; their automatic
+   membership is also confirmed. No testers or public groups are changed.
+   Failure leaves the IPA/upload evidence intact and reports distribution as
+   failed. After correcting the reported cause, dispatch `ios-testflight-status`
+   with the same build number and `distribute_to_groups=all-internal` to retry
+   distribution without rebuilding or uploading again.
+
+The shared `scripts/ios-distribute-internal.mjs` helper is checked out separately
+from the workflow dispatch's exact main SHA. The IPA still uses the requested
+release SHA; this lets a current workflow distribute an older main build whose
+source predates the helper. Both paths use the existing protected ASC key, with
+no additional environment approval between upload and automatic distribution.
 
 First run with `upload_testflight=false`. Inspect and retain the IPA artifact.
 Only after that gate succeeds should a maintainer run the same workflow with
