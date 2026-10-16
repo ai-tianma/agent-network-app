@@ -2830,7 +2830,7 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
           <ComposerSuggest
             rows={suggestRows}
             active={suggestIndex}
-            empty={slashMenuOpen(draft) ? (slashSkillNote || '没有匹配的命令或技能') : '没有匹配的 Agent'}
+            empty={slashMenuOpen(draft) ? (slashSkillNote || t("chat.slash.empty")) : t("chat.mention.empty")}
             onPick={pickSuggest}
           />
         ) : null}
