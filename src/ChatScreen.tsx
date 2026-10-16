@@ -340,16 +340,16 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
 
   const slashRows = useMemo(() => slashMenuOpen(draft) ? slashCandidates(draft, slashSkills).map(item => ({
     id: item.id,
-    group: slashGroupLabel(item.group),
+    group: item.group === "command" ? t("chat.slash.commands") : t("chat.slash.skills"),
     label: item.label,
     description: item.description,
     insert: item.insert,
   })) : [], [draft, slashSkills]);
   const mentionRows = useMemo(() => mentionMenuOpen(draft) ? mentionCandidates(draft, mentionAgents).map(item => ({
     id: `agent:${item.alias}`,
-    group: 'Agent',
+    group: t("chat.mention.agents"),
     label: `@${item.alias}`,
-    description: item.online ? '在线' : '离线',
+    description: item.online ? t("chat.mention.online") : t("chat.mention.offline"),
     insert: item.insert,
   })) : [], [draft, mentionAgents]);
   const suggestRows = slashRows.length || slashMenuOpen(draft) ? slashRows : mentionRows;
@@ -358,33 +358,33 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
   useEffect(() => {
     if (!slashMenuOpen(draft)) return;
     let live = true;
-    setSlashSkillNote('正在读取节点技能…');
+    setSlashSkillNote(t("chat.slash.loading"));
     (async () => {
       try {
         const status = await fetchStatus(cfg);
         const session = (status.sessions ?? []).find(item => item.alias === alias);
         const target = skillsTarget({ node: session?.node_id ? { node_id: session.node_id, alias, runtime: session.runtime } : null, session: session ? { alias, skills_capable: session.skills_capable } : null });
         if (!target) {
-          if (live) { setSlashSkills([]); setSlashSkillNote('这个节点没有上报技能列表'); }
+          if (live) { setSlashSkills([]); setSlashSkillNote(t("chat.slash.unsupported")); }
           return;
         }
         const enq = await listNodeSkills(cfg, target);
         const follow = requestIdToFollow(enq);
         if (!follow) {
-          if (live) setSlashSkillNote(enq.ok ? '技能列表读取失败' : enq.error);
+          if (live) setSlashSkillNote(enq.ok ? t("chat.slash.failed") : enq.error);
           return;
         }
         const result = await waitForRulesFileResult(cfg, follow, { nextDelayMs: nextPollDelayMs, isTerminal, isCancelled: () => !live });
         if (!live) return;
         const problem = resultProblem(result);
         if (problem !== null || !result.ok || result.status !== 'done') {
-          setSlashSkillNote(problem || (!result.ok ? result.error : '技能列表读取失败'));
+          setSlashSkillNote(problem || (!result.ok ? result.error : t("chat.slash.failed")));
           return;
         }
         setSlashSkills(parseSkillsPayload(result.content).skills);
         setSlashSkillNote('');
       } catch (error) {
-        if (live) setSlashSkillNote(error instanceof Error ? error.message : '技能列表读取失败');
+        if (live) setSlashSkillNote(error instanceof Error ? error.message : t("chat.slash.failed"));
       }
     })();
     return () => { live = false; };
@@ -2729,7 +2729,7 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
           <ComposerSuggest
             rows={suggestRows}
             active={suggestIndex}
-            empty={slashMenuOpen(draft) ? (slashSkillNote || '没有匹配的命令或技能') : '没有匹配的 Agent'}
+            empty={slashMenuOpen(draft) ? (slashSkillNote || t("chat.slash.empty")) : t("chat.mention.empty")}
             onPick={pickSuggest}
           />
         ) : null}

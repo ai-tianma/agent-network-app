@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "./ui-text";
-import { colors, radius, spacing } from "./theme";
+import { colors, onThemeChange, radius, spacing } from "./theme";
 
 export type SuggestRow = {
   id: string;
@@ -41,7 +41,7 @@ export function ComposerSuggest(props: {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   box: {
     marginHorizontal: spacing.md,
     marginBottom: spacing.xs,
@@ -55,8 +55,10 @@ const styles = StyleSheet.create({
   scroll: { maxHeight: 240 },
   group: { color: colors.textMuted, fontSize: 12, paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   row: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  rowActive: { backgroundColor: "rgba(255,255,255,0.06)" },
+  rowActive: { backgroundColor: "rgba(127,127,127,0.12)" },
   label: { color: colors.text, fontSize: 15 },
   desc: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   empty: { color: colors.textMuted, padding: spacing.md },
 });
+let styles = makeStyles();
+onThemeChange(() => { styles = makeStyles(); });
