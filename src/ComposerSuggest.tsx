@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "./ui-text";
-import { colors, radii, spacing } from "./theme";
+import { colors, radius, spacing } from "./theme";
 
 export type SuggestRow = {
   id: string;
@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginBottom: spacing.xs,
     maxHeight: 240,
-    borderRadius: radii.surface,
-    backgroundColor: colors.surface,
+    borderRadius: radius.surface,
+    backgroundColor: colors.card,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     overflow: "hidden",
