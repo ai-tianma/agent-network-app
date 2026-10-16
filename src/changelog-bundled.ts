@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.261:",
+  "- 聊天输入 / 时显示命令和当前节点技能，输入 @ 时列出 Agent，点选只填入草稿，不自动发送。",
+  "",
   "What's new in 0.2.260:",
   "- 修复 macOS 聊天输入卡顿：新消息通知改用现代系统通知接口，避免旧通知轮询阻塞主线程。",
   "",
