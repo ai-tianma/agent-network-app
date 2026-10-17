@@ -379,7 +379,7 @@ jobs:
           dmg="release/lequdao-mac.dmg"
           test -f "$dmg"
           # electron-builder notarizes and staples the .app. The DMG still
-          # needs its own ticket before stapler validate and spctl accept it.
+          # needs its own ticket before stapler validate accepts it.
           # Submit the DMG when that ticket is missing, which is also the
           # path taken when electron-builder notarization is not configured.
           if xcrun stapler validate "$dmg" >/dev/null 2>&1; then
@@ -428,8 +428,12 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$app"
           codesign -dv --verbose=4 "$app" 2>&1 | tee "$RUNNER_TEMP/codesign.txt"
           grep -F 'Authority=Developer ID Application: wenxing hu (446BLT75JZ)' "$RUNNER_TEMP/codesign.txt"
+          xcrun stapler validate "$app"
           xcrun stapler validate "$dmg"
-          spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
+          # `spctl --assess --type open` rejects a stapled Electron DMG
+          # (source=no usable signature) even when the app inside is accepted.
+          # Assess the mounted .app with --type execute, as release-macos.yml does.
+          spctl --assess --type execute --verbose=2 "$app"
 
       - name: Stage signed DMG and SHA256
         shell: bash
