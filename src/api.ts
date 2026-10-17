@@ -150,6 +150,23 @@ export function bodyBytes(res: { headers?: { get?: (k: string) => string | null 
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
+/** #911 —— Hub 返回非 JSON(HTML/纯文本)时,把底层 JSON Parse error 换成可读提示。 */
+export function parseJsonOrFriendly<T>(text: string, status: number, contentType: string | null): T {
+  try { return JSON.parse(text) as T; } catch { /* fallthrough */ }
+  const ct = (contentType ?? '').toLowerCase();
+  const prefix = text.slice(0, 120).replace(/\s+/g, ' ').trim();
+  let cause: string;
+  if (ct.includes('text/html') || prefix.startsWith('<')) cause = 'HTML';
+  else if (ct.includes('text/plain') || !ct) cause = '纯文本';
+  else cause = ct;
+  // Preserve JSON.parse's error type: legacy Hub route fallbacks identify SyntaxError.
+  throw new SyntaxError(
+    `Hub 返回了非 JSON 响应 / Non-JSON Hub response（HTTP ${status}, Content-Type: ${contentType ?? '无'}）。\n` +
+    `正文前缀 / Response prefix:「${prefix.slice(0, 60)}」（${cause}）。\n` +
+    `请检查 Hub 地址、登录是否过期及 Hub 版本 / Check Hub URL, sign-in expiry and Hub version（commhub-server ≥ 0.9.0-preview.126）。`,
+  );
+}
+
 async function get<T>(cfg: HubConfig, path: string): Promise<T> {
   const started = Date.now();
   const epoch = readEpoch();
@@ -164,7 +181,7 @@ async function get<T>(cfg: HubConfig, path: string): Promise<T> {
         const expired = res.status === 401 && isTokenExpiredBody(await res.json().catch(() => null));
         reportProfileAuthResponse(res.status, authProfileId(cfg), expired ? 'token_expired' : undefined, cfg.token);
         const text = res.ok || res.status === 304 ? await readConditionalText(cfg, path, res) : null;
-        return { res, ok: text !== null, data: text !== null ? (JSON.parse(text) as T) : undefined };
+        return { res, ok: text !== null, data: text !== null ? parseJsonOrFriendly<T>(text, res.status, res.headers?.get?.('content-type') ?? null) : undefined };
       })(),
       readDeadlineMs,
       () => null,
