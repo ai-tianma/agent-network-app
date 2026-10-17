@@ -158,7 +158,8 @@ export function parseJsonOrFriendly<T>(text: string, status: number, contentType
   if (ct.includes('text/html') || prefix.startsWith('<')) cause = 'HTML';
   else if (ct.includes('text/plain') || !ct) cause = '纯文本';
   else cause = ct;
-  throw new Error(
+  // Preserve JSON.parse's error type: legacy Hub route fallbacks identify SyntaxError.
+  throw new SyntaxError(
     `Hub 返回了非 JSON 响应 / Non-JSON Hub response（HTTP ${status}, Content-Type: ${contentType ?? '无'}）。\n` +
     `正文前缀 / Response prefix:「${prefix.slice(0, 60)}」（${cause}）。\n` +
     `请检查 Hub 地址、登录是否过期及 Hub 版本 / Check Hub URL, sign-in expiry and Hub version（commhub-server ≥ 0.9.0-preview.126）。`,
