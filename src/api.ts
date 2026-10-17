@@ -159,9 +159,9 @@ export function parseJsonOrFriendly<T>(text: string, status: number, contentType
   else if (ct.includes('text/plain') || !ct) cause = '纯文本';
   else cause = ct;
   throw new Error(
-    `Hub 返回了非 JSON 响应（HTTP ${status}, Content-Type: ${contentType ?? '无'}）。\n` +
-    `实际内容以「${prefix.slice(0, 60)}」开头（${cause}）。\n` +
-    `请检查：Hub 地址是否正确、登录是否过期、Hub 版本是否过旧（建议 commhub-server ≥ 0.9.0-preview.126）。`,
+    `Hub 返回了非 JSON 响应 / Non-JSON Hub response（HTTP ${status}, Content-Type: ${contentType ?? '无'}）。\n` +
+    `正文前缀 / Response prefix:「${prefix.slice(0, 60)}」（${cause}）。\n` +
+    `请检查 Hub 地址、登录是否过期及 Hub 版本 / Check Hub URL, sign-in expiry and Hub version（commhub-server ≥ 0.9.0-preview.126）。`,
   );
 }
 
