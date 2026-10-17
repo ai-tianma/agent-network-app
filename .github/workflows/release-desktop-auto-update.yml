@@ -183,6 +183,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.262:
+            - Hub 返回非 JSON 内容（如网关错误页）时显示友好的中英文提示，不再直接弹出 JSON Parse error。
+
             What's new in 0.2.261:
             - 聊天输入 / 时显示命令和当前节点技能，输入 @ 时列出 Agent，点选只填入草稿，不自动发送。
 
