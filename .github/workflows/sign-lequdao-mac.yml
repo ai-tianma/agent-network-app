@@ -1,0 +1,479 @@
+# Developer ID sign, Apple-notarize, and staple a universal DMG of
+# sleep2agi/music-learning-app (乐趣岛, artifact lequdao-mac.dmg).
+#
+# The Apple signing secrets exist only in this repository's macos-signing
+# environment (deployment branch main, required reviewer). This job checks
+# out that public repository at a tag or a 40-character commit. It does not
+# check out this repository, so pull-request code from here never runs, and
+# it does not create a GitHub Release.
+
+name: sign-lequdao-mac
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag or 40-character commit of sleep2agi/music-learning-app
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sign-lequdao-mac
+  cancel-in-progress: false
+
+jobs:
+  sign-notarize:
+    runs-on: macos-14
+    environment: macos-signing
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Require workflow_dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]]; then
+            echo "::error::this workflow only runs from workflow_dispatch"
+            exit 1
+          fi
+
+      - name: Resolve tag or commit
+        id: resolve
+        shell: bash
+        env:
+          REQUESTED_REF: ${{ inputs.ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "$REQUESTED_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            sha="$(gh api "repos/sleep2agi/music-learning-app/commits/${REQUESTED_REF}" --jq .sha)"
+            if [[ "$sha" != "$REQUESTED_REF" ]]; then
+              echo "::error::commit was not found in sleep2agi/music-learning-app"
+              exit 1
+            fi
+          else
+            tag="${REQUESTED_REF#refs/tags/}"
+            if [[ ! "$tag" =~ ^[A-Za-z0-9._/-]{1,128}$ ]] \
+              || [[ "$tag" == *..* ]] \
+              || [[ "$tag" == -* ]] \
+              || [[ "$tag" == /* ]] \
+              || [[ "$tag" == */ ]] \
+              || [[ "$tag" == *//* ]]; then
+              echo "::error::ref must be a tag or a 40-character commit of sleep2agi/music-learning-app"
+              exit 1
+            fi
+            if ! meta="$(gh api "repos/sleep2agi/music-learning-app/git/ref/tags/${tag}" --jq '.object.type + " " + .object.sha')"; then
+              echo "::error::tag ${tag} was not found in sleep2agi/music-learning-app"
+              exit 1
+            fi
+            kind="${meta%% *}"
+            sha="${meta##* }"
+            # Annotated tags point at a tag object. Peel until the commit.
+            for _ in 1 2 3; do
+              if [[ "$kind" == "commit" ]]; then
+                break
+              fi
+              if [[ "$kind" != "tag" ]]; then
+                echo "::error::tag ${tag} does not point at a commit"
+                exit 1
+              fi
+              meta="$(gh api "repos/sleep2agi/music-learning-app/git/tags/${sha}" --jq '.object.type + " " + .object.sha')"
+              kind="${meta%% *}"
+              sha="${meta##* }"
+            done
+            if [[ "$kind" != "commit" || ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::tag ${tag} was not found in sleep2agi/music-learning-app"
+              exit 1
+            fi
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "Resolved sleep2agi/music-learning-app@${sha}"
+
+      - name: Check out music-learning-app
+        uses: actions/checkout@v4
+        with:
+          repository: sleep2agi/music-learning-app
+          ref: ${{ steps.resolve.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Confirm checked-out commit
+        shell: bash
+        env:
+          RESOLVED_SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RESOLVED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::resolved ref is not a 40-character commit"
+            exit 1
+          fi
+          head="$(git rev-parse HEAD)"
+          if [[ "$head" != "$RESOLVED_SHA" ]]; then
+            echo "::error::checkout HEAD does not match the resolved commit"
+            exit 1
+          fi
+          echo "Checked out sleep2agi/music-learning-app@${head}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        shell: bash
+        run: npm ci
+
+      - name: Build web bundle
+        shell: bash
+        run: npm run build
+
+      - name: Decode App Store Connect API key
+        shell: bash
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_API_KEY_BASE64" || -z "$APPLE_API_KEY" ]]; then
+            echo "::error::APPLE_API_KEY_BASE64 and APPLE_API_KEY are required"
+            exit 1
+          fi
+          key_dir="$RUNNER_TEMP/apple-api-key"
+          mkdir -p "$key_dir"
+          chmod 700 "$key_dir"
+          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$key_dir/AuthKey_${APPLE_API_KEY}.p8"
+          chmod 600 "$key_dir/AuthKey_${APPLE_API_KEY}.p8"
+          grep -q 'BEGIN PRIVATE KEY' "$key_dir/AuthKey_${APPLE_API_KEY}.p8" \
+            || { echo "::error::APPLE_API_KEY_BASE64 did not decode to a PEM .p8"; exit 1; }
+          echo "APPLE_API_KEY_PATH=$key_dir/AuthKey_${APPLE_API_KEY}.p8" >> "$GITHUB_ENV"
+
+      - name: Decode Developer ID certificate
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_CERTIFICATE" ]]; then
+            echo "::error::APPLE_CERTIFICATE is required"
+            exit 1
+          fi
+          cert_dir="$RUNNER_TEMP/apple-certificate"
+          mkdir -p "$cert_dir"
+          chmod 700 "$cert_dir"
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$cert_dir/developer-id.p12"
+          chmod 600 "$cert_dir/developer-id.p12"
+          test -s "$cert_dir/developer-id.p12"
+          echo "CSC_LINK=$cert_dir/developer-id.p12" >> "$GITHUB_ENV"
+
+      - name: Record temporary keychain path
+        shell: bash
+        run: |
+          set -euo pipefail
+          # electron-builder names its temp keychain sha256(projectDir + "app-builder").
+          keychain="$(node -e '
+            const crypto = require("crypto");
+            const os = require("os");
+            const path = require("path");
+            const name = crypto.createHash("sha256").update(process.cwd()).update("app-builder").digest("hex") + ".keychain";
+            process.stdout.write(path.join(process.env.APP_BUILDER_TMP_DIR || os.tmpdir(), name));
+          ')"
+          case "$keychain" in
+            *.keychain) ;;
+            *) echo "::error::unexpected keychain path"; exit 1 ;;
+          esac
+          {
+            echo "SIGNING_KEYCHAIN_PATH<<EOF"
+            echo "$keychain"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Build, Developer ID sign, and notarize
+        shell: bash
+        env:
+          CSC_LINK: ${{ env.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY: ${{ env.APPLE_API_KEY_PATH }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "true"
+        run: |
+          set -euo pipefail
+          test -n "$CSC_LINK"
+          test -f "$CSC_LINK"
+          test -n "$CSC_KEY_PASSWORD"
+          test -n "$APPLE_API_KEY"
+          test -f "$APPLE_API_KEY"
+          test -n "$APPLE_API_KEY_ID"
+          test -n "$APPLE_API_ISSUER"
+          test -n "$APPLE_TEAM_ID"
+          unset CSC_NAME
+
+          python3 - <<'PY' > "$RUNNER_TEMP/lequdao-sign-mode.txt"
+          import json, pathlib, re
+
+          def strip_comment(value):
+              out = []
+              quote = None
+              for ch in value:
+                  if quote:
+                      out.append(ch)
+                      if ch == quote:
+                          quote = None
+                      continue
+                  if ch in ("'", '"'):
+                      quote = ch
+                      out.append(ch)
+                      continue
+                  if ch == "#":
+                      break
+                  out.append(ch)
+              return "".join(out).strip()
+
+          def unquote(value):
+              if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                  return value[1:-1].strip()
+              return value.strip()
+
+          def is_null(value):
+              return unquote(value).lower() in ("", "null", "~", "none")
+
+          def is_false(value):
+              return unquote(value).lower() in ("false", "no", "off", "0")
+
+          def parse_yaml_mac(text):
+              lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+              mac_lines = []
+              in_mac = False
+              for raw in lines:
+                  raw = raw.replace("\t", "  ")
+                  if not raw.strip() or raw.lstrip().startswith("#"):
+                      continue
+                  indent = len(raw) - len(raw.lstrip(" "))
+                  if not in_mac:
+                      if indent == 0 and re.match(r"^mac:\s*(#.*)?$", raw):
+                          in_mac = True
+                      continue
+                  if indent == 0:
+                      break
+                  mac_lines.append((indent, raw))
+              if not mac_lines:
+                  return False, False
+              child_indent = min(indent for indent, _line in mac_lines)
+              identity_null = False
+              notarize_configured = False
+              saw_identity = False
+              saw_notarize = False
+              for index, (indent, raw) in enumerate(mac_lines):
+                  if indent != child_indent:
+                      continue
+                  match = re.match(r"^[ ]*([A-Za-z0-9_]+):(.*)$", raw)
+                  if not match:
+                      continue
+                  key = match.group(1)
+                  rest = strip_comment(match.group(2))
+                  if key == "identity":
+                      saw_identity = True
+                      identity_null = is_null(rest)
+                  elif key == "notarize":
+                      saw_notarize = True
+                      nested = False
+                      if rest == "":
+                          for next_indent, _next in mac_lines[index + 1:]:
+                              if next_indent <= indent:
+                                  break
+                              nested = True
+                              break
+                      notarize_configured = nested or not (is_null(rest) or is_false(rest))
+              if not saw_identity:
+                  identity_null = False
+              if not saw_notarize:
+                  notarize_configured = False
+              return identity_null, notarize_configured
+
+          yml = None
+          for name in ("electron-builder.yml", "electron-builder.yaml"):
+              path = pathlib.Path(name)
+              if path.is_file():
+                  yml = path
+                  break
+          if yml is not None:
+              identity_null, notarize_configured = parse_yaml_mac(yml.read_text())
+          else:
+              package = pathlib.Path("package.json")
+              identity_null = False
+              notarize_configured = False
+              if package.is_file():
+                  build = json.loads(package.read_text()).get("build") or {}
+                  mac = build.get("mac") if isinstance(build, dict) else None
+                  if isinstance(mac, dict):
+                      if "identity" in mac and mac.get("identity") is None:
+                          identity_null = True
+                      notarize_configured = mac.get("notarize", None) not in (None, False)
+          print("true" if identity_null else "false", "true" if notarize_configured else "false")
+          PY
+          read -r identity_null notarize_configured < "$RUNNER_TEMP/lequdao-sign-mode.txt"
+          case "$identity_null" in
+            true|false) ;;
+            *) echo "::error::could not read mac.identity"; exit 1 ;;
+          esac
+          case "$notarize_configured" in
+            true|false) ;;
+            *) echo "::error::could not read mac.notarize"; exit 1 ;;
+          esac
+
+          # Current refs ship scripts/desktop-mac-signed.mjs, which runs
+          # electron-builder --mac --universal --publish never with real
+          # booleans (forceCodeSigning and mac.notarize). electron-builder 26
+          # rejects the CLI form -c.mac.notarize=true because the value stays
+          # a string. Older refs still set mac.identity to null, which skips
+          # signing even when CSC_LINK is set; those get the same booleans
+          # plus the Developer ID common name. The common name has no
+          # "Developer ID Application:" prefix; electron-builder adds it.
+          if [[ -f scripts/desktop-mac-signed.mjs && "$identity_null" != "true" ]]; then
+            # That script always passes mac.notarize=true to electron-builder.
+            echo "Using npm run desktop:mac:signed"
+            echo "EB_NOTARIZE_CONFIGURED=true" >> "$GITHUB_ENV"
+            npm run desktop:mac:signed
+          else
+            if [[ "$identity_null" == "true" ]]; then
+              echo "mac.identity is null; signing with Developer ID, hardened runtime, and notarization enabled"
+            else
+              echo "This ref has no desktop:mac:signed script; signing with electron-builder directly"
+            fi
+            echo "EB_NOTARIZE_CONFIGURED=true" >> "$GITHUB_ENV"
+            export LEQUDAO_IDENTITY_NULL="$identity_null"
+            node --input-type=module <<'JS'
+          import { build } from "electron-builder";
+
+          const mac = {
+            hardenedRuntime: true,
+            notarize: true,
+          };
+          if (process.env.LEQUDAO_IDENTITY_NULL === "true") {
+            mac.identity = "wenxing hu (446BLT75JZ)";
+          }
+          await build({
+            mac: [],
+            universal: true,
+            publish: "never",
+            config: {
+              forceCodeSigning: true,
+              mac,
+            },
+          });
+          JS
+          fi
+
+      - name: Notarize and staple the DMG
+        shell: bash
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          dmg="release/lequdao-mac.dmg"
+          test -f "$dmg"
+          # electron-builder notarizes and staples the .app. The DMG still
+          # needs its own ticket before stapler validate and spctl accept it.
+          # Submit the DMG when that ticket is missing, which is also the
+          # path taken when electron-builder notarization is not configured.
+          if xcrun stapler validate "$dmg" >/dev/null 2>&1; then
+            echo "DMG already has a stapled notarization ticket"
+          else
+            if [[ "${EB_NOTARIZE_CONFIGURED:-false}" != "true" ]]; then
+              echo "electron-builder notarization is not configured; submitting the DMG"
+            else
+              echo "DMG has no stapled ticket; submitting the DMG"
+            fi
+            test -n "${APPLE_API_KEY_PATH:-}"
+            test -f "$APPLE_API_KEY_PATH"
+            test -n "$APPLE_API_KEY_ID"
+            test -n "$APPLE_API_ISSUER"
+            xcrun notarytool submit "$dmg" \
+              --key "$APPLE_API_KEY_PATH" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER" \
+              --wait
+            xcrun stapler staple "$dmg"
+          fi
+
+      - name: Verify signed and notarized DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+          dmg="release/lequdao-mac.dmg"
+          test -f "$dmg"
+          mount="$(mktemp -d)"
+          detach() {
+            hdiutil detach "$mount" >/dev/null 2>&1 || hdiutil detach -force "$mount" >/dev/null 2>&1 || true
+            rm -rf "$mount"
+          }
+          trap detach EXIT
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount"
+          app=""
+          count=0
+          while IFS= read -r found; do
+            app="$found"
+            count=$((count + 1))
+          done < <(find "$mount" -maxdepth 2 -type d -name '*.app' -print)
+          if [[ "$count" -ne 1 ]]; then
+            echo "::error::expected one .app in the DMG, found ${count}"
+            exit 1
+          fi
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv --verbose=4 "$app" 2>&1 | tee "$RUNNER_TEMP/codesign.txt"
+          grep -F 'Authority=Developer ID Application: wenxing hu (446BLT75JZ)' "$RUNNER_TEMP/codesign.txt"
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
+
+      - name: Stage signed DMG and SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p signed
+          cp release/lequdao-mac.dmg signed/lequdao-mac.dmg
+          (cd signed && shasum -a 256 lequdao-mac.dmg) | tee signed/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lequdao-mac-signed
+          path: |
+            signed/lequdao-mac.dmg
+            signed/SHA256SUMS.txt
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Clean temporary keychain and signing material
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [[ -n "${SIGNING_KEYCHAIN_PATH:-}" ]]; then
+            case "$SIGNING_KEYCHAIN_PATH" in
+              *.keychain)
+                security delete-keychain "$SIGNING_KEYCHAIN_PATH"
+                security delete-keychain "${SIGNING_KEYCHAIN_PATH}-db"
+                rm -f "$SIGNING_KEYCHAIN_PATH" "${SIGNING_KEYCHAIN_PATH}-db"
+                ;;
+            esac
+          fi
+          tmp="$(node -e 'process.stdout.write(require("os").tmpdir())' 2>/dev/null || true)"
+          if [[ -n "$tmp" && "$tmp" != "/" ]]; then
+            for kc in "$tmp"/*.keychain "$tmp"/*.keychain-db; do
+              [[ -e "$kc" ]] || continue
+              base="$(basename "$kc")"
+              if [[ "$base" =~ ^[0-9a-f]{64}\.keychain(-db)?$ ]]; then
+                security delete-keychain "$kc"
+                rm -f "$kc"
+              fi
+            done
+          fi
+          if [[ -n "${RUNNER_TEMP:-}" && "$RUNNER_TEMP" != "/" ]]; then
+            rm -rf "$RUNNER_TEMP/apple-api-key" "$RUNNER_TEMP/apple-certificate"
+          fi
+          exit 0
