@@ -51,6 +51,10 @@ export interface Session {
   health_observed_ms_ago?: number | null;
   /** Node skills view — hub `/api/status`: this session answers skills_list /
    *  skill_read on the rules-file doorbell. Absent ⇒ false (no fallback). */
+  /** #1491 — hub ≥ that lane: this node answers the `node_secrets` doorbell and
+   *  can apply env changes to its own secrets.env at the next start. Absent ⇒ an
+   *  older node/hub; the section hides instead of offering a button that expires. */
+  node_secrets_capable?: boolean;
   /** #1474 — hub ≥ #1474: JSON array of the env key NAMES this node has, from
    *  its own `secrets.env`. **NAMES ONLY** — the node-side collector parses and
    *  drops values, and the hub rejects anything that is not a name. Absent ⇒ the
@@ -1683,6 +1687,70 @@ export type HubSkillRow = {
 export type HubSkillsResult =
   | { ok: true; reviewer: boolean; skills: HubSkillRow[] }
   | { ok: false; error: string; unsupported?: boolean; forbidden?: boolean };
+
+// ── 节点密钥的排队/轮询（#1491 E2）──────────────────────────────────────
+//
+// Hub 的节点密钥是一条「排队 + 节点 ack」的 lane：POST 入队，GET 轮询。
+// 值只在 POST 请求体里出现一次；响应里只有 key 名与 revision。
+export type NodeSecretSnapshot = {
+  network_id?: string;
+  node_id?: string;
+  revision: number;
+  activation?: string;
+  keys: Array<{ key: string; source?: string }>;
+};
+export type NodeSecretOpResult =
+  | { ok: true; request_id: string; expires_at?: number }
+  | { ok: false; error: string; message?: string };
+
+export type NodeSecretPollResult =
+  | { ok: true; status: 'pending' | 'succeeded' | 'failed'; snapshot?: NodeSecretSnapshot; error?: string }
+  | { ok: false; error: string };
+
+export const requestNodeSecretOp = async (
+  cfg: HubConfig,
+  nodeId: string,
+  body: { action: 'list' | 'put' | 'delete'; key?: string; value?: string; revision?: number },
+): Promise<NodeSecretOpResult> => {
+  const qs = cfg.networkId ? `?network_id=${encodeURIComponent(cfg.networkId)}` : '';
+  try {
+    const res = await withTimeout(signal =>
+      appFetch(`${cfg.serverUrl}/api/nodes/${encodeURIComponent(nodeId)}/secrets${qs}`, {
+        method: 'POST',
+        headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+      }),
+    );
+    const data = await res.json().catch(() => null) as any;
+    if (res.status === 404 || res.status === 501) {
+      return { ok: false, error: '当前 Hub 版本还没有节点密钥接口，请先升级 Hub' };
+    }
+    if (!res.ok || !data || data.ok !== true) {
+      return { ok: false, error: String(data?.error ?? `HTTP ${res.status}`), message: data?.message };
+    }
+    return { ok: true, request_id: String(data.request_id), expires_at: data.expires_at };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) };
+  }
+};
+
+export const pollNodeSecretOp = async (cfg: HubConfig, nodeId: string, requestId: string): Promise<NodeSecretPollResult> => {
+  const qs = cfg.networkId ? `?network_id=${encodeURIComponent(cfg.networkId)}` : '';
+  try {
+    const res = await withTimeout(signal =>
+      appFetch(`${cfg.serverUrl}/api/nodes/${encodeURIComponent(nodeId)}/secrets/${encodeURIComponent(requestId)}${qs}`, {
+        headers: headers(cfg), signal,
+      }),
+    );
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const data = await res.json() as any;
+    if (!data || data.ok !== true) return { ok: false, error: String(data?.error ?? 'Hub 返回空响应') };
+    return { ok: true, status: data.status, snapshot: data.snapshot, error: data.error };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) };
+  }
+};
 
 // ── Hub 级环境密钥「名字」（#1479 / #909）──────────────────────────────
 //

@@ -86,6 +86,7 @@ import NodeDaemonProviderSection from './NodeDaemonProviderSection';
 import { daemonProviderNodeRuntime } from './node-provider-target';
 import { isCodexRuntime } from './provider-create-options';
 import NodeSkillsSection from './NodeSkillsSection';
+import NodeSecretsSection from './NodeSecretsSection';
 import { parseSecretKeys } from './node-secret-keys';
 import ScopedSecretsSection from './ScopedSecretsSection';
 import NodeFilesSection from './NodeFilesSection';
@@ -712,6 +713,11 @@ export default function NodeDetailScreen({
       <View>
         <SectionTitle title="技能" />
         <NodeSkillsSection cfg={cfg} alias={alias} node={rulesTarget} session={s} readOnly={readOnly} />
+        {/* #1491 E2 — 节点密钥。只有节点上报了 node_secrets_capable 才显示：
+            没升级的节点没有这条 lane，显示一个永远失败的按钮比不显示更糟。 */}
+        {!readOnly && s.node_secrets_capable && s.node_id ? (
+          <NodeSecretsSection cfg={cfg} nodeId={s.node_id} alias={alias} />
+        ) : null}
       </View>
     );
     if (section === 'files') return (
