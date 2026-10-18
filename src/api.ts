@@ -51,6 +51,10 @@ export interface Session {
   health_observed_ms_ago?: number | null;
   /** Node skills view — hub `/api/status`: this session answers skills_list /
    *  skill_read on the rules-file doorbell. Absent ⇒ false (no fallback). */
+  /** #1510 — how this node reaches the hub, as the NODE itself reports it:
+   *  `loopback` (nothing leaves the machine), `https`, or `plain` (weakest; also
+   *  what an unparseable hub URL reports). Absent ⇒ older node/hub. */
+  env_transport?: 'loopback' | 'https' | 'plain' | string;
   /** #1491 — hub ≥ that lane: this node answers the `node_secrets` doorbell and
    *  can apply env changes to its own secrets.env at the next start. Absent ⇒ an
    *  older node/hub; the section hides instead of offering a button that expires. */

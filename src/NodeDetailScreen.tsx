@@ -87,6 +87,7 @@ import { daemonProviderNodeRuntime } from './node-provider-target';
 import { isCodexRuntime } from './provider-create-options';
 import NodeSkillsSection from './NodeSkillsSection';
 import NodeSecretsSection from './NodeSecretsSection';
+import { envTransportHint } from './env-transport-hint';
 import { parseSecretKeys } from './node-secret-keys';
 import ScopedSecretsSection from './ScopedSecretsSection';
 import NodeFilesSection from './NodeFilesSection';
@@ -628,6 +629,19 @@ export default function NodeDetailScreen({
             </View>
           </View>
         ) : null}
+        {/* #1510 — 节点自己上报的 Hub 链路形态。只提示，不拦截。 */}
+        {(() => {
+          const hint = envTransportHint(s.env_transport);
+          if (hint.kind === 'unknown') return null;
+          return (
+            <Text
+              testID={`node-env-transport-${hint.kind}`}
+              style={{ color: hint.kind === 'warn' ? colors.blocked : colors.textSecondary, fontSize: typeScale.small, lineHeight: 18 }}
+            >
+              {hint.text}
+            </Text>
+          );
+        })()}
         {/* #1474 — env key NAMES only. `undefined` means this hub/node predates
             the field: render nothing rather than claiming "no secrets". */}
         {(() => {
