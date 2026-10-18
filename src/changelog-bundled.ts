@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.263:",
+  "- Codex 节点概览在工作路径旁显示 codex_home，路径只使用节点上报的值，没有上报时显示未上报。",
+  "",
   "What's new in 0.2.262:",
   "- Hub 返回非 JSON 内容（如网关错误页）时显示友好的中英文提示，不再直接弹出 JSON Parse error。",
   "",
@@ -1163,6 +1166,7 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.262": "2026-10-18T00:40:21Z",
   "0.2.261": "2026-10-16T03:13:14Z",
   "0.2.260": "2026-10-15T22:57:52Z",
   "0.2.259": "2026-10-14T02:46:44Z",

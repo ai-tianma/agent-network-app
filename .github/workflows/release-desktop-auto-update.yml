@@ -183,6 +183,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.263:
+            - Codex 节点概览在工作路径旁显示 codex_home，路径只使用节点上报的值，没有上报时显示未上报。
+
             What's new in 0.2.262:
             - Hub 返回非 JSON 内容（如网关错误页）时显示友好的中英文提示，不再直接弹出 JSON Parse error。
 
