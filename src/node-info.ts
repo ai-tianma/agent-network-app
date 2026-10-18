@@ -17,6 +17,21 @@ export function resumeSessionId(value: unknown): string | undefined {
 }
 
 const TOKEN_SHAPE = /^(?:[aun]tok(?:[_\-.\s]|[A-Za-z0-9]{8})|bearer(?:\s|[_\-.])|sk[-_])\S*/i;
+const CODEX_HOME_TOKEN = /(?:ntok_|atok_|sk-|bearer\s)/i;
+
+export function isCodexNode(session: { agent?: string | null; runtime?: string | null }, node: { runtime?: string | null } | null): boolean {
+  return [session.runtime, session.agent, node?.runtime].some(value => typeof value === "string" && value.toLowerCase().includes("codex"));
+}
+
+/** 只展示节点上报的绝对路径。推不出来就不编一个。 */
+export function visibleCodexHome(raw?: string | null): string | null {
+  if (typeof raw !== "string") return null;
+  const value = raw.trim();
+  if (value.length === 0 || value.length > 1024) return null;
+  if (/[\u0000-\u001f\u007f]/.test(value) || CODEX_HOME_TOKEN.test(value)) return null;
+  if (!(value.startsWith("/") || /^[A-Za-z]:[\\/]/.test(value))) return null;
+  return value;
+}
 const SAFE_HOSTNAME = /^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$/;
 const SAFE_IP_LITERAL = /^\[[0-9A-Fa-f:]+\]$/;
 
@@ -77,6 +92,8 @@ export function nodeInfoFacts(session: Session, node: HubNode | null, serverUrl:
     // never parse `/home/alice/...` or `C:\\Users\\alice` from project_dir.
     { label: '系统用户', value: session.os_user ?? session.system_user ?? '未上报' },
     { label: '工作路径', value: session.project_dir },
+    // Codex 节点才有这一行。值只来自会话上报的 codex_home，没有就写「未上报」。
+    ...(isCodexNode(session, node) ? [{ label: 'codex_home', value: visibleCodexHome(session.codex_home) ?? '未上报' }] : []),
     { label: '节点类型', value: node?.role ?? node?.config_snapshot?.role },
     { label: 'Runtime', value: session.runtime ?? node?.runtime ?? session.agent },
     { label: 'Agent', value: session.agent },

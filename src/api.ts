@@ -25,6 +25,8 @@ export interface Session {
   hostname?: string | null;
   ip?: string | null;
   project_dir?: string | null;
+  /** Codex 节点上报的 CODEX_HOME。不是工作路径，也不是从 project_dir 推出来的。 */
+  codex_home?: string | null;
   version?: string | null;
   /**
    * Resumeable runtime session id on the full `/api/status` row (Claude Code

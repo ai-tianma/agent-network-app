@@ -56,6 +56,8 @@ const facts = [
 ];
 const split = splitOverviewFacts(facts);
 ck('主要字段按固定顺序', split.primary.map(f => f.label).join(',') === '节点 ID,服务器,Hostname,工作路径,所属 team,最后更新');
+const withCodexHome = splitOverviewFacts([...facts, { label: 'codex_home', value: '/srv/codex-home' }]);
+ck('codex_home 紧跟工作路径，没有这条时不占位', withCodexHome.primary.map(f => f.label).join(',') === '节点 ID,服务器,Hostname,工作路径,codex_home,所属 team,最后更新');
 ck('其余字段进「更多信息」且不重复', split.secondary.length === facts.length - split.primary.length && !split.secondary.some(f => split.primary.includes(f)));
 ck('头部标签:运行时 · 模型 · 版本 · 主机', JSON.stringify(headerChips(facts)) === JSON.stringify(['codex-sdk', 'gpt-5.5', 'v2.5.0-preview.83', 'devbox']));
 ck('头部标签:缺的不显示,版本不重复加 v', JSON.stringify(headerChips([{ label: '版本', value: 'v1.2' }])) === JSON.stringify(['v1.2']));
