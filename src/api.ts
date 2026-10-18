@@ -1655,6 +1655,55 @@ const enqueueSkills = async (
   return { ok: true, request_id: p.request_id, op: 'read' };
 };
 
+// ── Hub 级技能目录（#1473 / #909）───────────────────────────────────────
+//
+// 服务端 GET /api/skills 与 MCP list_skills 同源，只回元数据、**不回 SKILL.md
+// 正文**；pending 仅 owner/admin 可见（服务端已把关，客户端不再自己判断）。
+// 三态必须分清：不支持(404/501) ≠ 没权限(403) ≠ 真的空目录。
+export type HubSkillRow = {
+  skill_id: string;
+  slug: string;
+  name: string;
+  description: string;
+  version: string;
+  status: 'published' | 'pending' | 'rejected' | string;
+  source_type?: string | null;
+  source_alias?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  reviewed_at?: string | null;
+  review_note?: string | null;
+};
+export type HubSkillsResult =
+  | { ok: true; reviewer: boolean; skills: HubSkillRow[] }
+  | { ok: false; error: string; unsupported?: boolean; forbidden?: boolean };
+
+export const fetchHubSkills = async (
+  cfg: HubConfig,
+  opts?: { includePending?: boolean; limit?: number },
+): Promise<HubSkillsResult> => {
+  const qs = new URLSearchParams();
+  if (cfg.networkId) qs.set('network_id', cfg.networkId);
+  if (opts?.includePending) qs.set('include_pending', '1');
+  if (opts?.limit) qs.set('limit', String(opts.limit));
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  try {
+    const res = await withTimeout(signal =>
+      appFetch(`${cfg.serverUrl}/api/skills${suffix}`, { headers: headers(cfg), signal }),
+    );
+    if (res.status === 404 || res.status === 501) {
+      return { ok: false, unsupported: true, error: '当前 Hub 版本还没有技能目录接口，请先升级 Hub' };
+    }
+    if (res.status === 403) return { ok: false, forbidden: true, error: '没有权限查看这个网络的技能目录' };
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const body = await res.json() as any;
+    if (!body || body.ok !== true || !Array.isArray(body.skills)) return { ok: false, error: 'Hub 返回空响应' };
+    return { ok: true, reviewer: body.reviewer === true, skills: body.skills as HubSkillRow[] };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) };
+  }
+};
+
 export const listNodeSkills = (cfg: HubConfig, node: RulesTarget): Promise<RulesFileEnqueueResult> =>
   enqueueSkills(cfg, 'list_node_skills', node);
 

@@ -10,6 +10,7 @@ import { BackendPendingIntegration } from './BackendPendingDemo';
 import { type PendingTab } from './backend-pending-ui';
 import RuntimeSupportPane from './RuntimeSupportScreen';
 import HubProviderManagementScreen from './HubProviderManagementScreen';
+import HubSkillsPane from './HubSkillsPane';
 import HubTokenManagementScreen from './HubTokenManagementScreen';
 import { hostContextFromSupervisorList, type RuntimeHostContext } from './runtime-support';
 import { colors, onThemeChange, spacing, type, weight } from './theme';
@@ -39,6 +40,7 @@ function HubRuntimeSupport({ cfg }: { cfg: HubConfig }) {
 
 export default function HubPendingScreen({ tab, cfg }: { tab: PendingTab; cfg: HubConfig }) {
   const { t } = useTranslation();
+  if (tab === 'skills') return <HubSkillsPane cfg={cfg} />;
   if (tab === 'provider') return <HubProviderManagementScreen cfg={cfg} />;
   if (tab === 'tokens') return <HubTokenManagementScreen cfg={cfg} />;
   if (tab === 'runtime') {
