@@ -1,3 +1,4 @@
+import { describeAllowedSecretKeys } from './daemon-secret-keys';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from './ui-text';
@@ -387,6 +388,15 @@ function DaemonCard({
       {/* #623 —— daemon 报了 runtime_readiness:每个 runtime 一颗 ✓/✗/? 胶囊,替掉「可建节点 ✓」那一行。
           机器级闸门(can_create_nodes)不变:建不了 / 未知时那一行照旧在。没报 ⇒ 和以前一模一样。 */}
       {readiness ? <ReadinessChips chips={readiness} /> : <RuntimeChips runtimes={daemon.runtimes_supported} />}
+      {/* #1475 —— daemon 能拿哪些密钥。现网 7 个 daemon 全是 []，以前界面上完全看不出来。
+          没上报（旧 Hub/daemon）就整行不显示，不替它说「未授权」。 */}
+      {(() => {
+        const v = describeAllowedSecretKeys(daemon.allowed_secret_keys);
+        if (v.kind === 'unknown') return null;
+        return (
+          <Text testID={`daemon-secret-keys-${v.kind}`} style={styles.cardSubtitle} numberOfLines={2}>{v.text}</Text>
+        );
+      })()}
       {readiness && describeDaemonCapability(daemon, Date.now()).kind === 'ready' ? null : <CapabilityRow daemon={daemon} />}
       {(daemon.host_telemetry?.cpu_cores != null || daemon.host_telemetry?.mem_gb != null) ? (
         <Text style={styles.telemetry}>
