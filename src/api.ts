@@ -1684,6 +1684,34 @@ export type HubSkillsResult =
   | { ok: true; reviewer: boolean; skills: HubSkillRow[] }
   | { ok: false; error: string; unsupported?: boolean; forbidden?: boolean };
 
+// ── Hub 级环境密钥「名字」（#1479 / #909）──────────────────────────────
+//
+// 服务端 GET /api/secrets 只回 `{key, updated_at}`；ciphertext/iv/tag 三列根本
+// 没有进 SELECT。客户端这边再守一道：只渲染看起来像 key 名的字符串。
+export type HubSecretKey = { key: string; updated_at: number | string | null };
+export type HubSecretsResult =
+  | { ok: true; keys: HubSecretKey[] }
+  | { ok: false; error: string; unsupported?: boolean; forbidden?: boolean };
+
+export const fetchHubSecrets = async (cfg: HubConfig): Promise<HubSecretsResult> => {
+  const qs = cfg.networkId ? `?network_id=${encodeURIComponent(cfg.networkId)}` : '';
+  try {
+    const res = await withTimeout(signal =>
+      appFetch(`${cfg.serverUrl}/api/secrets${qs}`, { headers: headers(cfg), signal }),
+    );
+    if (res.status === 404 || res.status === 501) {
+      return { ok: false, unsupported: true, error: '当前 Hub 版本还没有密钥目录接口，请先升级 Hub' };
+    }
+    if (res.status === 403) return { ok: false, forbidden: true, error: '没有权限查看这个网络的密钥' };
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const body = await res.json() as any;
+    if (!body || body.ok !== true || !Array.isArray(body.keys)) return { ok: false, error: 'Hub 返回空响应' };
+    return { ok: true, keys: body.keys as HubSecretKey[] };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) };
+  }
+};
+
 export const fetchHubSkills = async (
   cfg: HubConfig,
   opts?: { includePending?: boolean; limit?: number },
