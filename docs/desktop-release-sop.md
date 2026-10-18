@@ -226,7 +226,15 @@ probe only.
 6. `tauri-apps/tauri-action` (pinned by commit SHA, not a floating tag) builds,
    signs, notarizes, and creates the **draft** release
    (`releaseDraft: true`, `prerelease: false`, `updaterJsonPreferNsis: true`).
-   With `publish=false` this step is skipped and `tauri build` runs instead;
+   On macOS the action's build command is a wrapper in this workflow file.
+   `bundle_dmg.sh` (`hdiutil` / create-dmg) can exit in a few seconds on
+   `macos-14` after the `.app` is already notarized and stapled, leaving
+   `diskimages-helper` behind. The wrapper runs the build once with
+   `--verbose`, then retries only `bundle_dmg.sh` (10s, then 20s) and
+   codesigns the DMG. It does not notarize again. A re-dispatch still checks
+   out `inputs.commit`, so the wrapper is written from this workflow rather
+   than from that commit. With `publish=false` this step is skipped and the
+   same wrapper (or `tauri build` on Windows and Linux) runs instead;
    the bundles are Actions artifacts, not a Release. Linux signing is the
    Tauri updater minisign key over the `.deb` bytes. There is no separate
    Linux GPG key. The in-app updater installs that `.deb` with `dpkg` and
