@@ -67,7 +67,7 @@ function run(options: {
   writeFileSync(calls, '');
   writeFileSync(join(cwd, 'src-tauri/tauri.conf.json'), JSON.stringify({
     productName: 'ANet',
-    version: '0.2.263',
+    version: '0.2.264',
     bundle: { macOS: { entitlements: './Entitlements.plist' } },
   }));
   writeFileSync(join(cwd, 'src-tauri/Entitlements.plist'), '<plist/>');
@@ -128,7 +128,7 @@ printf 'dmg-bytes' > "$dmg"
     stdout: result.stdout,
     stderr: result.stderr,
     calls: log.trim().split('\n').filter(Boolean),
-    dmg: join(bundle, 'dmg', `ANet_0.2.263_${arch}.dmg`),
+    dmg: join(bundle, 'dmg', `ANet_0.2.264_${arch}.dmg`),
     cwd,
   };
 }
@@ -193,7 +193,7 @@ check('retry uses the Tauri 2.11.2 default DMG layout and volume icon',
   && dmgCalls[0]?.includes('--app-drop-link 480 170') === true
   && dmgCalls[0]?.includes('--window-size 660 400') === true
   && dmgCalls[0]?.includes('--volicon ') === true
-  && dmgCalls[0]?.includes('ANet_0.2.263_' + arch + '.dmg ANet.app') === true,
+  && dmgCalls[0]?.includes('ANet_0.2.264_' + arch + '.dmg ANet.app') === true,
   dmgCalls.join('\n'));
 check('backoff is 10s then 20s', recovered.calls.includes('sleep 10') && recovered.calls.includes('sleep 20'));
 check('leftover disk images are detached and diskimages-helper is stopped',
