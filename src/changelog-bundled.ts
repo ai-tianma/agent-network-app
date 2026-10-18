@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.262:",
+  "- Hub 返回非 JSON 内容（如网关错误页）时显示友好的中英文提示，不再直接弹出 JSON Parse error。",
+  "",
   "What's new in 0.2.261:",
   "- 聊天输入 / 时显示命令和当前节点技能，输入 @ 时列出 Agent，点选只填入草稿，不自动发送。",
   "",
@@ -1160,6 +1163,11 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.261": "2026-10-16T03:13:14Z",
+  "0.2.260": "2026-10-15T22:57:52Z",
+  "0.2.259": "2026-10-14T02:46:44Z",
+  "0.2.258": "2026-10-13T22:34:28Z",
+  "0.2.257": "2026-10-13T13:51:37Z",
   "0.2.256": "2026-10-13T10:06:25Z",
   "0.2.255": "2026-10-12T16:26:59Z",
   "0.2.254": "2026-10-12T15:34:28Z",
