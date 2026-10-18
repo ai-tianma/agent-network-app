@@ -3,7 +3,7 @@
 // which does not contain files added after that commit.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -58,7 +58,13 @@ function run(options: {
   certificate?: string;
   withIcon?: boolean;
 }) {
-  const cwd = mkdtempSync(join(tmpdir(), 'anet-dmg-retry-'));
+  // macOS: os.tmpdir() is /var/folders/... while the script canonicalises to
+  // /private/var/folders/... (the wrapper resolves the bundle path). The fake
+  // hdiutil prints the un-canonical path, so the script's "does this image-path
+  // contain my bundle dir" test compared /var/... against /private/var/... and
+  // never matched -> no detach line -> this file failed ONLY on macOS runners.
+  // realpathSync makes the fixture agree with what the script sees.
+  const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'anet-dmg-retry-')));
   const bin = join(cwd, 'bin');
   const calls = join(cwd, 'calls');
   const state = join(cwd, 'dmg-fails');
