@@ -463,6 +463,12 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.264:
+            - 节点详情可以直接管理密钥：列出 key 名、设置、删除；值只在输入时出现一次，保存后不再回显，改动在节点下次启动生效。
+            - 节点详情显示「到 Hub 的链路」：本机 / TLS / 明文（明文会明确警告密钥传输没有加密保护）。
+            - daemon 卡片显示密钥授权范围；现网大多显示「未授权任何密钥」，以前完全看不出来。
+            - 服务器管理的 SKILLS 与「环境变量/密钥」页改为真实数据（此前是演示数据）。
+            - 账号页头像提示在暗色下更清楚（按可读性对比度判定，而不是写死颜色）。
             What's new in 0.2.263:
             - Codex 节点概览在工作路径旁显示 codex_home，路径只使用节点上报的值，没有上报时显示未上报。
 
