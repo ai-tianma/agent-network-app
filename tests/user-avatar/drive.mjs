@@ -43,7 +43,15 @@ try {
    const style = id => getComputedStyle(document.querySelector(`[data-testid="${id}"]`));
    const rgb = hex => `rgb(${hex.slice(1).match(/../g).map(v=>parseInt(v,16)).join(', ')})`;
    const c = window.avatarTheme;
-   return style('user-avatar-hint').color === rgb(c.textSecondary)
+   // #924: the hint is body text on a card, so it must use the body token and
+   // actually clear a readable contrast — pin the READABILITY, not the token
+   // name (the token name was the thing that regressed silently in dark mode).
+   const lum = hex => { const [r,g,b] = hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255)
+     .map(v => v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4)); return 0.2126*r+0.7152*g+0.0722*b; };
+   const ratio = (a,b) => { const [hi,lo] = [lum(a),lum(b)].sort((x,y)=>y-x); return (hi+0.05)/(lo+0.05); };
+   return style('user-avatar-hint').color === rgb(c.text)
+    && style('user-avatar-hint').color !== rgb(c.textSecondary)
+    && ratio(c.text, c.card) >= 7
     && style('user-avatar-url').backgroundColor === rgb(c.inputBg)
     && style('user-avatar-url').borderTopColor === rgb(c.border)
     && style('user-avatar-reset').backgroundColor === rgb(c.groupedRow)

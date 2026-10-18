@@ -59,7 +59,7 @@ function Editor({ cfg }: { cfg: HubConfig }) {
     : user ? sourceForFile(poolFileNameForAlias(user.id)) : null;
   return <SettingsGroup title={t('userAvatar.title')} testID="user-avatar-editor">
     <SettingsCardContent>
-      <Text testID="user-avatar-hint" style={{ color: colors.textSecondary, lineHeight: 20 }}>{t('userAvatar.hint')}</Text>
+      <Text testID="user-avatar-hint" style={{ color: colors.text, lineHeight: 20 }}>{t('userAvatar.hint')}</Text>
       {source && !imageError ? <Image testID="user-avatar-preview" source={source} onError={() => setImageError(true)} style={{ width: 56, height: 56, borderRadius: avatarRadius(56), marginVertical: 12 }} /> : <Text style={{ color: colors.text }} testID="user-avatar-fallback">{cfg.username || '·'}</Text>}
       {loading ? <Text style={{ color: colors.textSecondary }}>{t('userAvatar.loading')}</Text> : null}
       {user ? <>
