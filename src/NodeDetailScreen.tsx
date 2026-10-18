@@ -86,6 +86,7 @@ import NodeDaemonProviderSection from './NodeDaemonProviderSection';
 import { daemonProviderNodeRuntime } from './node-provider-target';
 import { isCodexRuntime } from './provider-create-options';
 import NodeSkillsSection from './NodeSkillsSection';
+import { parseSecretKeys } from './node-secret-keys';
 import ScopedSecretsSection from './ScopedSecretsSection';
 import NodeFilesSection from './NodeFilesSection';
 import NodeSchedulesSection from './NodeSchedulesSection';
@@ -626,6 +627,28 @@ export default function NodeDetailScreen({
             </View>
           </View>
         ) : null}
+        {/* #1474 — env key NAMES only. `undefined` means this hub/node predates
+            the field: render nothing rather than claiming "no secrets". */}
+        {(() => {
+          const v = parseSecretKeys(s.secret_keys);
+          if (v.kind === 'unknown') return null;
+          return (
+            <View>
+              <SectionTitle title="密钥（仅名字）" hint="节点本机 secrets.env 里的 key 名。**值永远不显示**，这里只用于确认「这台机器有没有配」。 Hub 不持有这些值。" />
+              <View testID="node-secret-keys-card" style={[card, { paddingVertical: spacing.md, gap: spacing.xs }]}>
+                {v.kind === 'none' ? (
+                  <Text testID="node-secret-keys-none" style={{ color: colors.textMuted, fontSize: typeScale.small }}>该节点没有配置密钥。</Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+                    {v.keys.map(k => (
+                      <Text key={k} testID={`node-secret-key-${k}`} style={{ color: colors.text, fontSize: typeScale.small, backgroundColor: colors.groupedRow, borderRadius: radius.mark, paddingHorizontal: spacing.sm, paddingVertical: 2 }}>{k}</Text>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          );
+        })()}
         <View>
           <SectionTitle title={taskSectionTitle(s.status)} />
           <View style={[card, { paddingVertical: spacing.md }]}>

@@ -51,6 +51,12 @@ export interface Session {
   health_observed_ms_ago?: number | null;
   /** Node skills view — hub `/api/status`: this session answers skills_list /
    *  skill_read on the rules-file doorbell. Absent ⇒ false (no fallback). */
+  /** #1474 — hub ≥ #1474: JSON array of the env key NAMES this node has, from
+   *  its own `secrets.env`. **NAMES ONLY** — the node-side collector parses and
+   *  drops values, and the hub rejects anything that is not a name. Absent ⇒ the
+   *  hub/node predates #1474 (`node-secret-keys.ts` keeps that distinct from an
+   *  empty list). */
+  secret_keys?: string | null;
   skills_capable?: boolean;
   /** Project folder view — hub `/api/status`: this session answers files_list /
    *  file_read. A hub that predates it omits the key entirely (node-files.ts
