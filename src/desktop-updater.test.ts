@@ -17,6 +17,10 @@ const checks: Array<[string, boolean]> = [
   // 说明区在有高度上限的卡片里收缩滚动,不再固定 240 高。
   ['prompt shows the versions newer than the installed one, in a shrinking scroll view inside a bounded card', prompt.includes('parseReleaseNotes(notes, { currentVersion: current, targetVersion: next })') && prompt.includes('<ScrollView style={[styles.notesScroll, styles.noFocusRing]}') && /notesScroll: \{ flexGrow: 0, flexShrink: 1 \}/.test(prompt) && /card: \{[^}]*maxHeight: '88%'/.test(prompt)],
   ['install button stays outside the scroll view', prompt.indexOf('</ScrollView>') < prompt.indexOf('installDesktopUpdate()')],
+  ['install button has a loading state: installing flag disables the button', prompt.includes('const [installing, setInstalling] = useState(false)') && prompt.includes('disabled={installing}')],
+  ['loading state swaps the label and shows a spinner', prompt.includes("installing ? '更新中…' : '立即更新并重启'") && prompt.includes('installing ? <ActivityIndicator')],
+  ['loading state sets accessibility busy and dims the button', prompt.includes('accessibilityState={{ disabled: installing, busy: installing }}') && prompt.includes('installing && { opacity: 0.6 }')],
+  ['install click sets installing before the async call and clears it on settle', prompt.includes('setInstalling(true)') && prompt.includes('installDesktopUpdate().finally(() => setInstalling(false))')],
   ['startup check is delayed and non-blocking', prompt.includes('setTimeout') && prompt.includes('checkDesktopUpdate')],
   ['manual settings check exists', settings.includes('checkDesktopUpdate')],
   ['download and install reports progress', source.includes('downloadAndInstall') && source.includes("kind: 'downloading'")],

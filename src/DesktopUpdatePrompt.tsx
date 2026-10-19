@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from './ui-text';
 import { Ionicons } from './icons';
@@ -27,6 +27,7 @@ subscribeDesktopUpdates(() => {
  * `manualOnly`:设置窗用 —— 不跑启动自动检查,只为本窗口里手动点出来的结果弹(见 desktopPromptMode)。
  */
 export default function DesktopUpdatePrompt({ manualOnly = false }: { manualOnly?: boolean }) {
+  const [installing, setInstalling] = useState(false);
   const update = useSyncExternalStore(subscribeDesktopUpdates, desktopUpdateSnapshot, desktopUpdateSnapshot);
   // 挂在 AppRoot 的 key={theme} 重挂树外面:弹窗开着时系统配色一变(跟随系统),模块级 styles
   // 已重建,但不订阅就不重画 —— 半边新主题半边旧主题。
@@ -79,8 +80,20 @@ export default function DesktopUpdatePrompt({ manualOnly = false }: { manualOnly
                 </View>
               </View>
             ) : (
-              <Pressable style={styles.button} testID="desktop-update-install" onPress={() => { void installDesktopUpdate(); }}>
-                <Text style={styles.buttonText}>立即更新并重启</Text>
+              <Pressable
+                style={[styles.button, installing && { opacity: 0.6 }]}
+                testID="desktop-update-install"
+                disabled={installing}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: installing, busy: installing }}
+                onPress={() => {
+                  if (installing) return;
+                  setInstalling(true);
+                  void installDesktopUpdate().finally(() => setInstalling(false));
+                }}
+              >
+                {installing ? <ActivityIndicator size="small" color={colors.onAccent} /> : null}
+                <Text style={styles.buttonText}>{installing ? '更新中…' : '立即更新并重启'}</Text>
               </Pressable>
             )}
           </View>
@@ -106,7 +119,7 @@ const makeStyles = () =>
     footer: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingHorizontal: 20, paddingVertical: spacing.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
     trust: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
     trustText: { flexShrink: 1, color: colors.textMuted, fontSize: 12, lineHeight: 17 },
-    button: { ...buttonStyle('primary'), height: 40, paddingHorizontal: 22 },
+    button: { ...buttonStyle('primary'), flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 22 },
     buttonText: { ...buttonTextStyle('primary') },
     progress: { width: 240, height: 40, borderRadius: radius.control, backgroundColor: colors.tonalBg, overflow: 'hidden', justifyContent: 'center' },
     progressFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: tint(colors.accent, themeMode() === 'dark' ? 0.34 : 0.22) },
