@@ -315,6 +315,13 @@ Publish only when all of these hold:
 - asset sizes match the build log. The Linux job summary prints `sha256sum`
   lines for the `.deb` and `.sig`. GitHub asset digests are the checksums the
   mirror copies; do not upload a release asset named `SHA256SUMS`.
+- the Android APK, when this commit has a successful `android-build` run, is
+  attached as **`Agent.Network_<version>_android-universal.apk`** by the
+  `attach-android-apk` job (the name the updater computes in
+  `src/android-update-core.ts`). The job verifies `versionName` with `aapt2`
+  before uploading; if it logged `no successful android-build`, publish as
+  usual and attach the APK by hand with that exact name (a wrong name silently
+  breaks the versioned download path).
 
 **Do not look for a tag here.** GitHub creates the tag when the release is
 published, not when the draft is created, so `git/ref/tags/desktop-v<version>`
@@ -500,8 +507,10 @@ publish step (section 6) dispatches the mirror by hand; the triggers below are
 the safety net, not the primary path.
 
 **When it runs.** On `release: published` it starts at once and waits up to
-30 minutes for the Android APK, which is attached after publishing (GitHub fires
-no event for an asset upload). A cron run every 30 minutes reconciles the newest
+30 minutes for the Android APK. The release workflow's `attach-android-apk`
+job normally uploads it to the draft before publishing, so this wait is a
+fallback for a hand-attached or missing APK (GitHub fires no event for an
+asset upload). A cron run every 30 minutes reconciles the newest
 published release by sha256 — GitHub asset digests against the ModelScope
 listing — and uploads only what differs, so a late APK, a failed run or a
 ModelScope outage heals itself. In sync, it downloads and commits nothing.
