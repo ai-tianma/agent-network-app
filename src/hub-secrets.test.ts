@@ -1,4 +1,5 @@
 // run: bun src/hub-secrets.test.ts
+import { readFileSync } from 'node:fs';
 import { fetchHubSecrets, type HubConfig } from './api';
 import { hubSecretUpdatedAt, hubSecretsView, HUB_SECRETS_EMPTY } from './hub-secrets';
 
@@ -71,3 +72,18 @@ const withFetch = async (fn: (url: string) => Response | Promise<Response>) => {
 
 console.log(`\n${pass}/${total} passed`);
 if (pass !== total) process.exit(1);
+
+// ── admin 2026-10-19：环境变量页「只读」得像只读页，并且要能一步走到能写的地方 ──
+{
+  const read = (f: string) => readFileSync(new URL(`./${f}`, import.meta.url), 'utf8');
+  const pane = read('HubSecretsPane.tsx');
+  const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
+  ck('环境变量页写明「只读」并指向令牌页',
+    pane.includes('这一页**只读**') && pane.includes('Hub 令牌 · API 密钥库'));
+  ck('环境变量页有跳到令牌页的入口（testID 固定）',
+    pane.includes('testID="hub-secrets-open-tokens"') && pane.includes('onOpenTokens'));
+  ck('入口文案说明写入在哪、需要什么权限',
+    pane.includes('添加 / 替换密钥') && pane.includes('网络所有者或管理员权限'));
+  ck('App 把 hubEnv 的入口接到 hubTokens（不是死链）',
+    /screen\.name === 'hubEnv' \? <HubSecretsPane cfg=\{cfg\} onOpenTokens=\{\(\) => setScreen\(\{ name: 'hubTokens' \}\)\} \/>/.test(app));
+}

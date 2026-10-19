@@ -1394,7 +1394,7 @@ function DesktopWorkspace({ cfg, screen, setScreen, onLogout, onLocalDataDeleted
   : screen.name === 'picker' ? <HostSupervisorPickerScreen cfg={cfg} onBack={() => setScreen({ name: 'server' })} onPicked={d => setScreen({ name: 'wizard', daemon: d })} desktop />
   : screen.name === 'wizard' ? <CreateNodeWizardScreen cfg={cfg} daemon={screen.daemon} onBack={() => setScreen(screen.back ?? { name: 'picker' })} onExit={() => setScreen(screen.back ?? { name: 'serverNodes' })} desktop />
   : screen.name === 'hubSkills' ? <HubSkillsPane cfg={cfg} />
-  : screen.name === 'hubEnv' ? <HubSecretsPane cfg={cfg} />
+  : screen.name === 'hubEnv' ? <HubSecretsPane cfg={cfg} onOpenTokens={() => setScreen({ name: 'hubTokens' })} />
   : screen.name === 'hubProviders' ? <HubProviderManagementScreen cfg={cfg} />
   : screen.name === 'hubTokens' ? <HubTokenManagementScreen cfg={cfg} />
   : hubSectionForScreen(screen.name) ? <HubScopeScreen key={screen.name} section={hubSectionForScreen(screen.name)!} />
