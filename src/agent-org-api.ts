@@ -23,7 +23,11 @@ function agentOf(value: unknown): OrgAgent | null {
   const row = value as Record<string, unknown>;
   if (typeof row.node_id !== 'string' || !row.node_id.trim()) return null;
   const alias = typeof row.alias === 'string' && row.alias.trim() ? row.alias : row.node_id;
-  return { nodeId: row.node_id, alias };
+  // 只在 Hub 显式给出 department_id 时带上;没有这个键 = 仍按负责人部门推断(旧 Hub 形状)。
+  let departmentId: string | null | undefined;
+  if (row.department_id === null) departmentId = null;
+  else if (typeof row.department_id === 'string' && row.department_id.trim()) departmentId = row.department_id.trim();
+  return departmentId === undefined ? { nodeId: row.node_id, alias } : { nodeId: row.node_id, alias, departmentId };
 }
 
 function agentsOf(value: unknown): OrgAgent[] {
@@ -135,6 +139,49 @@ function flatDepartments(names: Map<string, string>, owners: readonly OrgOwner[]
       sort,
       member_count: owners.filter(o => o.departmentId === id).length,
     }));
+}
+
+/** 把 Agent 显式移到某个部门(departmentId=null 表示清空,回到按负责人推断)。
+ *  写接口:PUT /api/networks/:net/nodes/:nodeId/department,需要网络 owner/admin 或该部门负责人。 */
+export type MoveAgentResult =
+  | { ok: true }
+  | { ok: false; reason: 'forbidden' | 'node' | 'department' | 'error' };
+
+export async function moveAgentDepartment(
+  cfg: HubConfig,
+  networkId: string,
+  nodeId: string,
+  departmentId: string | null,
+): Promise<MoveAgentResult> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await appFetch(
+      `${cfg.serverUrl}/api/networks/${encodeURIComponent(networkId)}/nodes/${encodeURIComponent(nodeId)}/department`,
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${cfg.token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ department_id: departmentId }),
+        signal: ctrl.signal,
+      },
+    );
+    if (res.status === 403) return { ok: false, reason: 'forbidden' };
+    if (res.status === 404) return { ok: false, reason: 'node' };
+    const text = await res.text().catch(() => '');
+    let body: unknown = null;
+    try { body = text ? JSON.parse(text) : null; } catch { body = null; }
+    if (res.status === 400) {
+      const code = body && typeof body === 'object' ? (body as { code?: unknown }).code : undefined;
+      return { ok: false, reason: code === 'department_not_found' ? 'department' : 'error' };
+    }
+    if (res.status < 200 || res.status >= 300) return { ok: false, reason: 'error' };
+    if (body && typeof body === 'object' && (body as { ok?: unknown }).ok === false) return { ok: false, reason: 'error' };
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: 'error' };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** null = 部门接口和通讯录都没有(旧 Hub)。其它 HTTP 错误抛出去,让页面重试。 */

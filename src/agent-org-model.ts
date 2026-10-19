@@ -1,9 +1,11 @@
 // Agent 组织架构页的纯数据:部门树来自 Hub departments,Agent 挂在负责人(人)所在的部门上。
-// 演示调整只改内存里的归属,不改负责人。不 import react-native。
+// Hub 支持显式给 Agent 设部门(department_id)时优先于负责人部门;未设置才按负责人推断。
+// 调整写入 Hub,内存里的 moves 只用于乐观更新与失败回滚。不 import react-native。
 import type { Department, OrgData } from './org-model';
 import { subtreeIds } from './org-model';
 
-export type OrgAgent = { nodeId: string; alias: string };
+/** departmentId: Hub 显式设置的部门;undefined = 没设置,沿用负责人部门(旧形状)。 */
+export type OrgAgent = { nodeId: string; alias: string; departmentId?: string | null };
 export type OrgOwner = {
   userId: string;
   username: string;
@@ -45,13 +47,17 @@ function sourceDepartment(data: AgentOrgData, departmentId: string | null): stri
   return known(data, departmentId) ? departmentId : null;
 }
 
-/** 负责人名下的 Agent 优先于「没有负责人」名单;同一节点只留第一次。演示移动只改 departmentId。 */
+/** 负责人名下的 Agent 优先于「没有负责人」名单;同一节点只留第一次。
+ *  部门优先级:Hub 显式 department_id > 负责人部门 > 未归属;moves 是内存里的乐观覆盖。 */
 export function placeAgents(data: AgentOrgData, moves: readonly DemoMove[]): PlacedAgent[] {
   const byNode = new Map<string, PlacedAgent>();
   const add = (agent: OrgAgent, owner: OrgOwner | null) => {
     const nodeId = agent.nodeId.trim();
     if (!nodeId || byNode.has(nodeId)) return;
-    const source = owner ? sourceDepartment(data, owner.departmentId) : null;
+    const explicit = agent.departmentId !== undefined ? sourceDepartment(data, agent.departmentId) : null;
+    const source = agent.departmentId !== undefined
+      ? explicit
+      : (owner ? sourceDepartment(data, owner.departmentId) : null);
     byNode.set(nodeId, {
       nodeId,
       alias: agent.alias.trim() || nodeId,
