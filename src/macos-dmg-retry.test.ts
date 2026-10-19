@@ -163,7 +163,7 @@ check('wrapper passes bash -n', syntax.status === 0, syntax.stderr);
 const conf = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 // 这条只是把「当前版本」抄了一遍，与 version-consistency 重复；bump 时必须跟着改。
-check('release version matches the bump', conf.version === '0.2.268' && pkg.version === '0.2.268');
+check('release version matches the bump', conf.version === '0.2.269' && pkg.version === '0.2.269');
 check('include_linux still defaults to false', /include_linux:[\s\S]*?default:\s*false/.test(workflow));
 check('macOS matrix still builds app and dmg', workflow.includes('{"platform":"macos-14","args":"--bundles app,dmg"}'));
 check('tauri-action runs the wrapper from the workflow temp dir on macOS only',

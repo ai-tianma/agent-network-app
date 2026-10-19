@@ -5,6 +5,10 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.269:",
+  "- 「环境变量 / 密钥」页标明只读，并新增一步跳转到「Hub 令牌 · API 密钥库」；添加或替换密钥不再需要自己找入口。",
+  "- Hub 老版本返回 HTML 时提示「当前 Hub 版本还没有密钥目录接口，请先升级 Hub」，不再显示成设置失败。",
+  "",
   "What's new in 0.2.268:",
   "- 任务评论正文按 Markdown 显示：标题、粗体、行内代码、列表和表格不再露出原字符；「评论」区与「动态」区行为一致。",
   "- 评论可复制 Markdown 原文：触屏长按正文，鼠标设备点「复制」；「动态」里的长评论保留 8 行折叠，可展开/收起。",
