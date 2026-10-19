@@ -80,7 +80,11 @@ for (const [name, V] of Object.entries(VIEWPORTS)) {
         await page.waitForTimeout(1200); // the section loads after the detail opens
         if (comments) {
           await page.locator(tid('req-comments')).first().scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
-          const ids = await page.locator('[data-testid^="req-comment-text-"]').evaluateAll(els => els.map(e => e.getAttribute('data-testid')));
+          // 评论正文现在由共用 CommentBody 渲染(#1831):鼠标设备的「复制」按钮 testID 是
+          // `req-comment-text-<id>-copy`,它同样以 `req-comment-text-` 开头。这里要的是**正文**
+          // 节点的顺序,所以按「精确是 req-comment-text-<数字>」过滤,别把操作按钮算进评论列表。
+          const ids = await page.locator('[data-testid^="req-comment-text-"]').evaluateAll(
+            els => els.map(e => e.getAttribute('data-testid')).filter(id => /^req-comment-text-\d+$/.test(id || '')));
           const agent = await paintedText(page, tid('req-comment-text-105'));
           const human = await paintedText(page, tid('req-comment-text-102'));
           const agentBox = await box(page, tid('req-comment-text-105'));

@@ -10,6 +10,7 @@ import { useTranslation } from './i18n-react';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from './ui-text';
+import CommentBody from './comment-body';
 import { timeTextFloor } from './chat-time-layout';
 import { uiScale } from './ui-scale';
 import { Ionicons } from './icons';
@@ -211,7 +212,12 @@ function PartView({ part, v }: { part: Part; v: ViewCtx }) {
     case 'check': return <Ionicons name={part.done ? 'checkbox' : 'square-outline'} size={16} color={part.done ? colors.accent : colors.textMuted} />;
     case 'arrow': return <Text style={c.arrow}>→</Text>;
     // 评论整段换行显示(最多 8 行),不是一个小引号块:Agent 的进展说明往往有好几行。
-    case 'comment': return <Text style={[c.text, c.comment]} numberOfLines={8} selectable testID="activity-comment">{part.v}</Text>;
+    // #1831:正文按 Markdown 渲染;MarkdownMessage 不吃 numberOfLines,折叠交给 CommentBody 的 maxHeight + 展开。
+    case 'comment': return (
+      <View style={{ flexBasis: '100%', paddingLeft: spacing.sm, borderLeftWidth: 2, borderLeftColor: colors.border }}>
+        <CommentBody text={part.v} clampLines={8} testID="activity-comment" />
+      </View>
+    );
   }
 }
 

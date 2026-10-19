@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './ui-text';
+import CommentBody from './comment-body';
 import { t as tr } from './i18n';
 import { useTranslation } from './i18n-react';
 import './i18n-tasks';
@@ -55,7 +56,7 @@ export default function TaskComments({ cfg, requirementId, people, onLoadPeople 
             <Text style={{ color: colors.textSecondary, fontSize: typeScale.small }} numberOfLines={1}>
               {who}{c.actor?.kind === 'node' ? ` · ${tr('act.agent')}` : ''} · {c.at}
             </Text>
-            <Text style={{ color: colors.text, fontSize: typeScale.body, lineHeight: 20 }} selectable testID={`req-comment-text-${c.id}`}>{c.text}</Text>
+            <CommentBody text={c.text} testID={`req-comment-text-${c.id}`} />
           </View>
         );
       })}

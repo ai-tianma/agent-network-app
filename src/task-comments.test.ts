@@ -42,7 +42,7 @@ const i18n = readFileSync(join(import.meta.dir, 'i18n-tasks.ts'), 'utf8');
 ck('i18n: zh + en for the new strings', ['act.commented', 'act.t.comment', 'comments.title', 'comments.earlier'].every(k => new RegExp(`'${k.replace('.', '\\.')}': \\['[^']+', '[^']+'\\]`).test(i18n)));
 
 const src = (f: string) => readFileSync(join(import.meta.dir, f), 'utf8');
-ck('动态 renders a comment part as a multi-line block', /case 'comment': return <Text style=\{\[c\.text, c\.comment\]\} numberOfLines=\{8\}/.test(src('TaskActivity.tsx')));
+ck('动态 renders a comment part as a multi-line block', /case 'comment': return \(\s*<View style=\{\{ flexBasis: '100%'/.test(src('TaskActivity.tsx')) && src('TaskActivity.tsx').includes('<CommentBody text={part.v} clampLines={8}'));
 const detail = src('TaskDetailPanel.tsx');
 ck('task detail shows the comments section', detail.includes("<TaskComments key={`comments:${item.id}`} cfg={cfg} requirementId={item.id}"));
 const comp = src('TaskComments.tsx');
