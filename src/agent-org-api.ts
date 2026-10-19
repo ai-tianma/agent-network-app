@@ -145,7 +145,7 @@ function flatDepartments(names: Map<string, string>, owners: readonly OrgOwner[]
  *  写接口:PUT /api/networks/:net/nodes/:nodeId/department,需要网络 owner/admin 或该部门负责人。 */
 export type MoveAgentResult =
   | { ok: true }
-  | { ok: false; reason: 'forbidden' | 'node' | 'department' | 'error' };
+  | { ok: false; reason: 'forbidden' | 'node' | 'department' | 'unsupported' | 'error' };
 
 export async function moveAgentDepartment(
   cfg: HubConfig,
@@ -165,15 +165,17 @@ export async function moveAgentDepartment(
         signal: ctrl.signal,
       },
     );
-    if (res.status === 403) return { ok: false, reason: 'forbidden' };
-    if (res.status === 404) return { ok: false, reason: 'node' };
     const text = await res.text().catch(() => '');
     let body: unknown = null;
     try { body = text ? JSON.parse(text) : null; } catch { body = null; }
-    if (res.status === 400) {
-      const code = body && typeof body === 'object' ? (body as { code?: unknown }).code : undefined;
-      return { ok: false, reason: code === 'department_not_found' ? 'department' : 'error' };
+    const code = body && typeof body === 'object' ? (body as { code?: unknown }).code : undefined;
+    if (res.status === 403) return { ok: false, reason: 'forbidden' };
+    if (res.status === 405 || res.status === 501) return { ok: false, reason: 'unsupported' };
+    if (res.status === 404) {
+      // 契约里的 404 带 node_not_found;旧 Hub 的路由不存在时是 404 + HTML/空正文。
+      return { ok: false, reason: code === 'node_not_found' ? 'node' : 'unsupported' };
     }
+    if (res.status === 400) return { ok: false, reason: code === 'department_not_found' ? 'department' : 'error' };
     if (res.status < 200 || res.status >= 300) return { ok: false, reason: 'error' };
     if (body && typeof body === 'object' && (body as { ok?: unknown }).ok === false) return { ok: false, reason: 'error' };
     return { ok: true };

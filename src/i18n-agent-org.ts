@@ -27,6 +27,7 @@ export const agentOrgTranslations = {
   'agentOrg.saveForbidden': ['只有管理员或部门负责人能调整', 'Only an admin or department head can change this'],
   'agentOrg.saveNoDepartment': ['目标部门不存在或不属于这个网络', 'The target department does not exist in this network'],
   'agentOrg.saveNoNode': ['这个 Agent 不在当前网络', 'This agent is not in this network'],
+  'agentOrg.saveUnsupported': ['当前 Hub 版本还不支持调整部门，请先升级 Hub', 'This Hub version cannot move agents yet. Upgrade the Hub.'],
   'agentOrg.demoNoAgents': ['通讯录里还没有可调整的 Agent', 'The directory has no agents to move'],
   'agentOrg.demoNeedPick': ['先选一个 Agent 和目标部门', 'Choose an agent and a target department first'],
 } as const;
