@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.266:",
+  "- 老 Hub 返回 200 但内容是 HTML 时，技能与密钥页显示可读提示，不再弹 JSON 解析错误。",
+  "",
   "What's new in 0.2.265:",
   "- 聊天头部显示该 Agent 正在使用的模型名（数据来自 /api/status，不新增请求；未上报时保持原样）。",
   "",
