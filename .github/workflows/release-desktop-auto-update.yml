@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release-desktop-auto-update
@@ -159,6 +160,13 @@ jobs:
       # updater signatures, and latest.json. Publishing the draft makes it
       # visible to installed clients. Linux signs ANet_<version>_amd64.deb;
       # tauri-action merges linux-x86_64 and linux-x86_64-deb into latest.json.
+      #
+      # The Android universal APK is attached by `attach-android-apk` below with
+      # the updater's required file name (Agent.Network_<version>_android-universal.apk,
+      # src/android-update-core.ts). It used to be a hand upload, and a wrong name
+      # (ANet_<version>_android-universal.apk) silently broke the versioned path for
+      # 0.2.265/0.2.266; doing it here also lets modelscope-mirror see the APK
+      # immediately instead of waiting up to 30 minutes for a hand upload.
       #
       # 🔴 `releaseBody` is USER-FACING, not a note to ourselves: tauri-action
       # copies it verbatim into latest.json `notes`, and the in-app updater
@@ -1957,3 +1965,80 @@ jobs:
           EXPECTED_COMMIT: ${{ inputs.commit }}
           INCLUDE_LINUX: ${{ inputs.include_linux }}
         run: node scripts/verify-desktop-release-draft.mjs
+
+  # 0.2.265/0.2.266 的教训:`ANet_<ver>_android-universal.apk` 也能当 release 资产,但安卓更新器找的是
+  # `Agent.Network_<ver>_android-universal.apk`(src/android-update-core.ts apkCacheFileName),版本化路径
+  # 因此 404,只能靠 android 通道兜底。这里在 draft 发布前把 APK 按更新器的名字挂上去:
+  #   * 只认 head_sha == inputs.commit 且 success 的 android-build run;
+  #   * 用 aapt2 再核一次 versionName,避免「同 commit 但版本号不对」的包被挂上去;
+  #   * 找不到 android-build 就 warning 跳过,不拖住桌面发布(镜像会等 30 分钟后照常同步)。
+  attach-android-apk:
+    needs: [build-release, verify-draft]
+    if: inputs.publish == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Find the successful android-build for this commit
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          set -euo pipefail
+          # android-build is triggered by the push that produced the bump commit and
+          # usually finishes after the desktop release starts. Wait for THIS commit's
+          # run instead of silently skipping the attach.
+          for attempt in $(seq 1 40); do
+            line=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/android-build.yml/runs?head_sha=$COMMIT&per_page=1" --jq '.workflow_runs[0] | "\(.id // "") \(.status // "") \(.conclusion // "")"')
+            read -r run_id status conclusion <<<"$line"
+            if [ -z "$run_id" ]; then
+              echo "::warning::no android-build run for $COMMIT; attach the APK to desktop-v<version> by hand"
+              exit 0
+            fi
+            if [ "$status" = "completed" ]; then
+              if [ "$conclusion" != "success" ]; then
+                echo "::warning::android-build $run_id for $COMMIT concluded '$conclusion'; attach the APK by hand"
+                exit 0
+              fi
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              echo "using android-build $run_id"
+              exit 0
+            fi
+            echo "android-build $run_id is $status; waiting ($attempt/40)"
+            sleep 30
+          done
+          echo "::warning::android-build for $COMMIT did not finish in 20 minutes; attach the APK by hand"
+          exit 0
+      - name: Attach the APK with the updater's file name
+        if: steps.find.outputs.run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.find.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          name="Agent.Network_${version}_android-universal.apk"
+          tmp="$RUNNER_TEMP/apk"; mkdir -p "$tmp"
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" -n agent-network-android-apk -D "$tmp"
+          apk=$(find "$tmp" -name '*.apk' -print -quit)
+          [[ -n "$apk" ]] || { echo "::error::android-build artifact has no APK"; exit 1; }
+          aapt2=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name aapt2 -type f 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$aapt2" ]; then
+            apk_version=$(sed -n "s/^package: .*versionName='\([^']*\)'.*/\1/p" <<<"$("$aapt2" dump badging "$apk")")
+            if [ "$apk_version" != "$version" ]; then
+              echo "::error::APK versionName '$apk_version' does not match release $version"
+              exit 1
+            fi
+          else
+            echo "::warning::aapt2 not found; skipping the APK versionName assertion"
+          fi
+          cp "$apk" "$tmp/$name"
+          gh release upload "desktop-v$version" "$tmp/$name" --clobber --repo "$GITHUB_REPOSITORY"
+          echo "attached $name to desktop-v$version"
