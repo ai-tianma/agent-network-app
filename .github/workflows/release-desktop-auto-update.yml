@@ -463,6 +463,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.265:
+            - 聊天头部显示该 Agent 正在使用的模型名（数据来自 /api/status，不新增请求；未上报时保持原样）。
+
             What's new in 0.2.264:
             - 节点详情可以直接管理密钥：列出 key 名、设置、删除；值只在输入时出现一次，保存后不再回显，改动在节点下次启动生效。
             - 节点详情显示「到 Hub 的链路」：本机 / TLS / 明文（明文会明确警告密钥传输没有加密保护）。
