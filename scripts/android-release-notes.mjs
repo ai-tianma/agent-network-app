@@ -7,6 +7,8 @@
 // .github/workflows/release-desktop-auto-update.yml, which tauri-action copies into the GitHub release body
 // and latest.json `notes` (the version bump PR adds "What's new in <ver>:" there). The publish workflow reads
 // that file AT THE COMMIT THE APK WAS BUILT FROM, so the notes always match the APK.
+// The desktop packaging paragraph ("Signed and notarized update for macOS ...") is dropped for Android:
+// phone users don't install a macOS/Windows bundle (stripDesktopPackagingHeader).
 //
 // Exits 1 (and prints nothing on stdout) when the block is missing, still has the __VERSION__ placeholder
 // unexpanded in a heading, or has no "What's new in <version>:" section with at least one "- " item:
@@ -53,7 +55,22 @@ export function androidReleaseNotes(workflowText, version) {
   const body = extractReleaseBody(workflowText);
   if (!body) return new Error('no releaseBody block in the release workflow');
   if (!versionItems(body, version).length) return new Error(`releaseBody has no "What's new in ${version}:" section with items`);
-  return `${body}\n`;
+  return `${stripDesktopPackagingHeader(body)}\n`;
+}
+
+/**
+ * Android users don't install a macOS/Windows bundle, so the desktop packaging
+ * paragraph that opens the shared releaseBody ("Signed and notarized update for
+ * macOS ... Windows ... Ubuntu ...") is noise in the phone's update page. Drop
+ * only that exact leading paragraph; any other intro text is kept.
+ */
+export function stripDesktopPackagingHeader(body) {
+  const text = String(body ?? '').trim();
+  const paragraphs = text.split(/\n\s*\n/);
+  if (paragraphs.length > 1 && /^Signed and notarized update for macOS\b/i.test(paragraphs[0].trim())) {
+    return paragraphs.slice(1).join('\n\n').trim();
+  }
+  return text;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

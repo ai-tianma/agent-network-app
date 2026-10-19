@@ -9,7 +9,7 @@ import {
   selectNewestDesktopRelease,
   sha256sums,
 } from '../scripts/modelscope-mirror.mjs';
-import { androidReleaseNotes, extractReleaseBody, versionItems } from '../scripts/android-release-notes.mjs';
+import { androidReleaseNotes, extractReleaseBody, stripDesktopPackagingHeader, versionItems } from '../scripts/android-release-notes.mjs';
 
 let passed = 0;
 const check = (name: string, condition: boolean) => {
@@ -202,7 +202,8 @@ check('notes: releaseBody extracted from the real release workflow, indentation 
   bodyOf.startsWith('Signed and notarized') && bodyOf.includes(`What's new in ${pkgVersion}:`) && !/^\s/.test(bodyOf.split('\n')[2] ?? ''));
 check('notes: the current version has items (the bump PR wrote them)', versionItems(bodyOf, pkgVersion).length > 0);
 const notes = androidReleaseNotes(releaseWorkflow, pkgVersion);
-check('notes: notes.md = the release body + trailing newline', typeof notes === 'string' && notes === `${bodyOf}\n`);
+check('notes: notes.md = release body without the desktop packaging paragraph + trailing newline', typeof notes === 'string' && notes === `${stripDesktopPackagingHeader(bodyOf)}\n` && !notes.startsWith('Signed and notarized'));
+check('notes: a body without the desktop header is left intact', stripDesktopPackagingHeader("Intro.\n\nWhat's new in 1.2.3:\n- x") === "Intro.\n\nWhat's new in 1.2.3:\n- x");
 check('notes: a version with no section → error (publish refuses)', androidReleaseNotes(releaseWorkflow, '99.0.0') instanceof Error);
 check('notes: no releaseBody block → error', androidReleaseNotes('jobs: {}\n', pkgVersion) instanceof Error);
 const synthetic = [
