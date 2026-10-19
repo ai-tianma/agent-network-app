@@ -113,6 +113,7 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
               setAdjustNote(t(result.reason === 'forbidden' ? 'agentOrg.saveForbidden'
                 : result.reason === 'department' ? 'agentOrg.saveNoDepartment'
                 : result.reason === 'node' ? 'agentOrg.saveNoNode'
+                : result.reason === 'unsupported' ? 'agentOrg.saveUnsupported'
                 : 'agentOrg.saveFailed'));
             });
           }}

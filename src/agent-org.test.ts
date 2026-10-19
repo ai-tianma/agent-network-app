@@ -180,9 +180,17 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
     const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
     ck('400 department_not_found = department', r.ok === false && r.reason === 'department');
   });
-  await withFetch(() => json(404, {}), async () => {
+  await withFetch(() => json(404, { code: 'node_not_found' }), async () => {
     const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
-    ck('404 = node', r.ok === false && r.reason === 'node');
+    ck('404 node_not_found = node', r.ok === false && r.reason === 'node');
+  });
+  await withFetch(() => new Response('<html>not found</html>', { status: 404 }), async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
+    ck('旧 Hub 无此路由(404 非 JSON) = unsupported', r.ok === false && r.reason === 'unsupported');
+  });
+  await withFetch(() => json(501, {}), async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
+    ck('501 = unsupported', r.ok === false && r.reason === 'unsupported');
   });
   await withFetch(() => { throw new Error('offline'); }, async () => {
     const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', null);
@@ -202,7 +210,7 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
   ck('设置里不再挂会点空的团队入口', !settings.includes('AgentTeamsEntry') && !phone.includes('renderAgentTeams') && !existsSync(new URL('./AgentTeamsEntry.tsx', import.meta.url)));
   ck('手机列表行会进入子页', settings.includes('onPress={() => openPage(cat.key)}'));
   ck('不再有演示文案,标题/hint 指向真实保存', !('agentOrg.demoBanner' in agentOrgTranslations) && agentOrgTranslations['agentOrg.demoTitle'][0] === '调整结构' && agentOrgTranslations['agentOrg.demoHint'][0].includes('写入 Hub'));
-  ck('失败态有 403/400/404 可读文案', ['agentOrg.saveForbidden', 'agentOrg.saveNoDepartment', 'agentOrg.saveNoNode'].every(k => (agentOrgTranslations as Record<string, readonly string[]>)[k]?.length === 2));
+  ck('失败态有 403/400/404/旧Hub 可读文案', ['agentOrg.saveForbidden', 'agentOrg.saveNoDepartment', 'agentOrg.saveNoNode', 'agentOrg.saveUnsupported'].every(k => (agentOrgTranslations as Record<string, readonly string[]>)[k]?.length === 2));
 }
 
 console.log(`${p}/${t} passed`);
