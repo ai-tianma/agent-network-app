@@ -253,14 +253,14 @@ for (const phone of [false, true]) for (const role of ['member', 'viewer', 'team
       await screen.getByRole('button', { name: '设置分类 Agent 组织架构', exact: true }).click();
       await screen.locator(tid('agent-org-page')).waitFor({ timeout: 10000 });
     }
-    const banner = (await screen.locator(tid('agent-org-demo-banner')).innerText()).replace(/\s+/g, ' ');
+    const bannerCount = await screen.locator(tid('agent-org-demo-banner')).count();
     record(where, 'org page opens and does not write', {
       page: await screen.locator(tid('agent-org-page')).count() === 1,
-      banner: banner.includes('演示数据 · 后端开发中，敬请期待'),
+      noDemoBanner: bannerCount === 0,
       noTeamEditor: (await screen.locator(tid('team-open')).count()) === 0 && (await screen.locator(tid('team-desktop')).count()) === 0,
       noAdminReads: await screen.evaluate(() => window.__memberReads === 0),
       noWritesOnOpen: (await calls(screen)).length === 0,
-    }, { banner });
+    }, { bannerCount });
     const layout = await screen.evaluate(() => ({ width: innerWidth, overflow: document.documentElement.scrollWidth > innerWidth + 1 }));
     record(where, 'org page stays in the viewport', { noOverflow: !layout.overflow }, { measured: layout });
     if (OUT) await screen.screenshot({ path: `${OUT}/${phone ? 'phone-390x844' : 'desktop-1200x800'}-${role}.png` });

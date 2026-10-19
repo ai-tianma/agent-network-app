@@ -1,8 +1,7 @@
-// Agent 组织架构:点设置入口必须打开页面;部门树和负责人是 Hub 只读数据;调整结构只在内存里演示。
+// Agent 组织架构:点设置入口必须打开页面;部门树和负责人是 Hub 数据;调整结构写 Hub(PUT),失败回滚。
 import { existsSync, readFileSync } from 'node:fs';
 import { agentCount, agentsDirectlyIn, placeAgents, type AgentOrgData, type OrgOwner } from './agent-org-model';
-import { DIRECTORY_MAX_PAGES, loadAgentOrg, parseDirectoryPage } from './agent-org-api';
-import { simulateStructureMove } from './agent-org-demo';
+import { DIRECTORY_MAX_PAGES, loadAgentOrg, moveAgentDepartment, parseDirectoryPage } from './agent-org-api';
 import { agentOrgTranslations } from './i18n-agent-org';
 import type { Department } from './org-model';
 
@@ -144,20 +143,51 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
 }
 
 {
-  let fetches = 0;
-  const prev = globalThis.fetch;
-  globalThis.fetch = (() => { fetches++; return json(200, {}); }) as typeof fetch;
-  let hits = 0;
-  const moved = simulateStructureMove({ nodeId: ' n1 ', departmentId: ' d1 ' }, () => { hits++; });
-  const unassigned = simulateStructureMove({ nodeId: 'n1', departmentId: null }, () => { hits++; });
-  const noNode = simulateStructureMove({ nodeId: '  ', departmentId: 'd1' });
-  const noDept = simulateStructureMove({ nodeId: 'n1', departmentId: '  ' });
-  globalThis.fetch = prev;
-  ck('演示调整不发请求', fetches === 0 && hits === 0 && moved.ok === true && moved.network === false && moved.persisted === false && moved.nodeId === 'n1' && moved.departmentId === 'd1');
-  ck('未归属是合法目标', unassigned.ok === true && unassigned.departmentId === null && unassigned.persisted === false);
-  ck('空节点 / 空部门失败且仍不落库', noNode.ok === false && noNode.reason === 'node' && noDept.ok === false && noDept.reason === 'department' && noNode.network === false);
-  const demo = code(read('./agent-org-demo.ts'));
-  ck('演示模块不引用 Hub 客户端', !/from '\.\/(api|app-fetch|org-api)'/.test(demo) && !demo.includes('appFetch') && !demo.includes('fetch('));
+  // 显式 department_id 优先于负责人部门,未设置才推断;null = 明确清空(未归属)。
+  const explicit = data({ owners: [owner('u1', 'eng', [{ nodeId: 'n1', alias: '阿尔法', departmentId: 'fe' }], '爱丽丝')] });
+  const explicitPlaced = placeAgents(explicit, []).find(a => a.nodeId === 'n1')!;
+  ck('显式部门优先于负责人部门', explicitPlaced.departmentId === 'fe' && explicitPlaced.sourceDepartmentId === 'fe' && explicitPlaced.ownerName === '爱丽丝');
+  const cleared = data({ owners: [owner('u1', 'eng', [{ nodeId: 'n1', alias: '阿尔法', departmentId: null }])] });
+  ck('显式 null 覆盖负责人部门(未归属)', placeAgents(cleared, []).find(a => a.nodeId === 'n1')?.departmentId === null);
+  const unknown = data({ owners: [owner('u1', 'eng', [{ nodeId: 'n1', alias: '阿尔法', departmentId: 'gone' }])] });
+  ck('显式部门不在树里按未归属', placeAgents(unknown, []).find(a => a.nodeId === 'n1')?.departmentId === null);
+}
+
+{
+  const d = parseDirectoryPage({ people: [{ user_id: 'u', username: 'alice', agents: [
+    { node_id: 'a', alias: 'A', department_id: 'fe' },
+    { node_id: 'b', alias: 'B', department_id: null },
+    { node_id: 'c', alias: 'C' },
+  ] }] });
+  const byId = new Map(d.people[0].agents.map(a => [a.nodeId, a]));
+  ck('通讯录保留显式 department_id', byId.get('a')?.departmentId === 'fe' && byId.get('b')?.departmentId === null && byId.get('c')?.departmentId === undefined);
+}
+
+{
+  const cfgMove = { serverUrl: 'https://hub.example', token: 'tok', networkId: 'net 1' };
+  const okCalls = await withFetch(() => json(200, { ok: true, node_id: 'n1', department_id: 'd1' }), async () => {
+    ck('保存部门 200 = ok', (await moveAgentDepartment(cfgMove, 'net 1', 'n 1', 'd1')).ok === true);
+  });
+  ck('PUT 到节点部门接口并编码路径', okCalls.length === 1 && okCalls[0].method === 'PUT' && okCalls[0].url === 'https://hub.example/api/networks/net%201/nodes/n%201/department');
+  await withFetch(() => json(200, { ok: false }), async () => {
+    ck('200 但 ok:false 不算成功', (await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1')).ok === false);
+  });
+  await withFetch(() => json(403, {}), async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
+    ck('403 = forbidden', r.ok === false && r.reason === 'forbidden');
+  });
+  await withFetch(() => json(400, { code: 'department_not_found' }), async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
+    ck('400 department_not_found = department', r.ok === false && r.reason === 'department');
+  });
+  await withFetch(() => json(404, {}), async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
+    ck('404 = node', r.ok === false && r.reason === 'node');
+  });
+  await withFetch(() => { throw new Error('offline'); }, async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', null);
+    ck('网络错误 = error,且 null 目标合法', r.ok === false && r.reason === 'error');
+  });
 }
 
 {
@@ -166,13 +196,13 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
   const phone = code(read('./SettingsPhonePages.tsx'));
   const forbidden = ['createDepartment', 'setMemberDepartment', 'updateDepartment', 'deleteDepartment', 'appFetch', 'fetchOrg', 'listRequirementPeople', "method: 'POST'", "method: 'PUT'", "method: 'PATCH'", "method: 'DELETE'", 'AgentTeamsEntry'];
   ck('页面不写 Hub、不走团队接口', forbidden.every(s => !screen.includes(s)));
-  ck('调整按钮只调用演示', screen.includes('simulateStructureMove({ nodeId: pickAgent, departmentId: pickDept }, refuseDemoNetwork)'));
-  ck('页面根始终在', screen.includes('testID="agent-org-page"') && !screen.includes('return null') && screen.includes('testID="agent-org-demo-banner"'));
+  ck('调整按钮调用真实写接口,失败回滚', screen.includes('moveAgentDepartment(p.cfg, p.networkId, nodeId, pickDept)') && screen.includes('previous ? [...rest, previous] : rest'));
+  ck('页面根始终在,且不再有演示条', screen.includes('testID="agent-org-page"') && !screen.includes('return null') && !screen.includes('agent-org-demo-banner'));
   ck('桌面和手机都挂这页,并带上已保存的网络', settings.includes('<AgentOrgScreen cfg={cfg} networkId={me.networkId || cfg.networkId} phone={false} />') && settings.includes('renderAgentOrg: () => <AgentOrgScreen cfg={cfg} networkId={me.networkId || cfg.networkId} phone />') && phone.includes("case 'agentTeams': return <>{ctx.renderAgentOrg()}</>"));
   ck('设置里不再挂会点空的团队入口', !settings.includes('AgentTeamsEntry') && !phone.includes('renderAgentTeams') && !existsSync(new URL('./AgentTeamsEntry.tsx', import.meta.url)));
   ck('手机列表行会进入子页', settings.includes('onPress={() => openPage(cat.key)}'));
-  const banner = agentOrgTranslations['agentOrg.demoBanner'];
-  ck('演示条中英原文', banner[0] === '演示数据 · 后端开发中，敬请期待' && banner[1] === 'Demo data — backend in development, coming soon');
+  ck('不再有演示文案,标题/hint 指向真实保存', !('agentOrg.demoBanner' in agentOrgTranslations) && agentOrgTranslations['agentOrg.demoTitle'][0] === '调整结构' && agentOrgTranslations['agentOrg.demoHint'][0].includes('写入 Hub'));
+  ck('失败态有 403/400/404 可读文案', ['agentOrg.saveForbidden', 'agentOrg.saveNoDepartment', 'agentOrg.saveNoNode'].every(k => (agentOrgTranslations as Record<string, readonly string[]>)[k]?.length === 2));
 }
 
 console.log(`${p}/${t} passed`);

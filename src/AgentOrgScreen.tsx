@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import type { HubConfig } from './api';
-import { loadAgentOrg } from './agent-org-api';
-import { simulateStructureMove } from './agent-org-demo';
+import { loadAgentOrg, moveAgentDepartment } from './agent-org-api';
 import { agentCount, agentsDirectlyIn, orgTree, placeAgents, type AgentOrgData, type DemoMove, type PlacedAgent } from './agent-org-model';
 import { childrenOf, flattenTree } from './org-model';
 import { SettingsButton, SettingsChoiceRow, SettingsGroup, SettingsRow } from './settings-kit';
@@ -10,10 +9,6 @@ import { useTranslation } from './i18n-react';
 import './i18n-agent-org';
 
 type Props = { cfg: HubConfig; networkId?: string; phone: boolean };
-
-function refuseDemoNetwork(): void {
-  throw new Error('demo must not touch the network');
-}
 
 export default function AgentOrgScreen(p: Props) {
   return (
@@ -38,7 +33,8 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
   const [moves, setMoves] = useState<DemoMove[]>([]);
   const [pickAgent, setPickAgent] = useState<string | null>(null);
   const [pickDept, setPickDept] = useState<string | null | undefined>(undefined);
-  const [demoNote, setDemoNote] = useState('');
+  const [adjustNote, setAdjustNote] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -46,7 +42,7 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
     setMoves([]);
     setPickAgent(null);
     setPickDept(undefined);
-    setDemoNote('');
+    setAdjustNote('');
     void loadAgentOrg(p.cfg, p.networkId).then(data => {
       if (!live) return;
       setPhase({ kind: 'ready', data });
@@ -94,17 +90,32 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
           moves={moves}
           pickAgent={pickAgent}
           pickDept={pickDept}
-          note={demoNote}
+          note={adjustNote}
+          saving={saving}
           onPickAgent={setPickAgent}
           onPickDept={setPickDept}
           onApply={() => {
-            if (!pickAgent || pickDept === undefined) { setDemoNote(t('agentOrg.demoNeedPick')); return; }
-            const result = simulateStructureMove({ nodeId: pickAgent, departmentId: pickDept }, refuseDemoNetwork);
-            if (!result.ok) { setDemoNote(t('agentOrg.demoFailed')); return; }
-            setMoves(prev => [...prev.filter(m => m.nodeId !== result.nodeId), { nodeId: result.nodeId, departmentId: result.departmentId }]);
-            setDemoNote(t('agentOrg.demoResult'));
+            if (saving) return;
+            if (!pickAgent || pickDept === undefined) { setAdjustNote(t('agentOrg.demoNeedPick')); return; }
+            const nodeId = pickAgent;
+            const previous = moves.find(m => m.nodeId === nodeId);
+            setMoves(prev => [...prev.filter(m => m.nodeId !== nodeId), { nodeId, departmentId: pickDept }]);
+            setAdjustNote('');
+            setSaving(true);
+            void moveAgentDepartment(p.cfg, p.networkId, nodeId, pickDept).then(result => {
+              setSaving(false);
+              if (result.ok) { setAdjustNote(t('agentOrg.saved')); return; }
+              // 失败回滚到这次操作前的状态(没有旧覆盖就不留乐观项)。
+              setMoves(prev => {
+                const rest = prev.filter(m => m.nodeId !== nodeId);
+                return previous ? [...rest, previous] : rest;
+              });
+              setAdjustNote(t(result.reason === 'forbidden' ? 'agentOrg.saveForbidden'
+                : result.reason === 'department' ? 'agentOrg.saveNoDepartment'
+                : result.reason === 'node' ? 'agentOrg.saveNoNode'
+                : 'agentOrg.saveFailed'));
+            });
           }}
-          onReset={() => { setMoves([]); setDemoNote(''); }}
         />
       ) : null}
     </View>
@@ -164,17 +175,8 @@ function DepartmentDetail(p: { data: AgentOrgData; placed: PlacedAgent[]; focus:
 function AgentLine(p: { agent: PlacedAgent }) {
   const { t } = useTranslation();
   const agent = p.agent;
-  const subtitle = agent.demo
-    ? (agent.ownerName ? t('agentOrg.demoKeptOwner', { name: agent.ownerName }) : t('agentOrg.demoKeptUnowned'))
-    : (agent.ownerName ? t('agentOrg.owner', { name: agent.ownerName }) : t('agentOrg.noOwner'));
-  return (
-    <SettingsRow
-      testID={`agent-org-agent-${agent.nodeId}`}
-      label={agent.alias}
-      subtitle={subtitle}
-      value={agent.demo ? t('agentOrg.demoBadge') : undefined}
-    />
-  );
+  const subtitle = agent.ownerName ? t('agentOrg.owner', { name: agent.ownerName }) : t('agentOrg.noOwner');
+  return <SettingsRow testID={`agent-org-agent-${agent.nodeId}`} label={agent.alias} subtitle={subtitle} />;
 }
 
 function DemoAdjust(p: {
@@ -184,17 +186,16 @@ function DemoAdjust(p: {
   pickAgent: string | null;
   pickDept: string | null | undefined;
   note: string;
+  saving: boolean;
   onPickAgent: (id: string) => void;
   onPickDept: (id: string | null) => void;
   onApply: () => void;
-  onReset: () => void;
 }) {
   const { t } = useTranslation();
   const departments = p.data?.departments ?? [];
   return (
     <View testID="agent-org-demo">
       <SettingsGroup title={t('agentOrg.demoTitle')} footer={t('agentOrg.demoHint')}>
-        <SettingsRow label={t('agentOrg.demoBanner')} tone="accent" testID="agent-org-demo-banner" />
         {p.placed.length === 0 ? <SettingsRow label={t('agentOrg.demoNoAgents')} testID="agent-org-demo-empty" /> : null}
       </SettingsGroup>
       {p.placed.length ? (
@@ -219,8 +220,7 @@ function DemoAdjust(p: {
           ))}
         </SettingsGroup>
       ) : null}
-      {p.placed.length ? <SettingsButton label={t('agentOrg.demoApply')} onPress={p.onApply} testID="agent-org-demo-apply" /> : null}
-      {p.moves.length ? <SettingsButton variant="plain" label={t('agentOrg.demoReset')} onPress={p.onReset} testID="agent-org-demo-reset" /> : null}
+      {p.placed.length ? <SettingsButton label={p.saving ? t('agentOrg.saving') : t('agentOrg.demoApply')} onPress={p.onApply} disabled={p.saving} testID="agent-org-demo-apply" /> : null}
       {p.note ? <SettingsGroup><SettingsRow label={p.note} testID="agent-org-demo-result" /></SettingsGroup> : null}
     </View>
   );
