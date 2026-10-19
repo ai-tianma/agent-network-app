@@ -112,5 +112,17 @@ ck('失败时不显示', showPendingToggle({ ok: false, error: 'x' }) === false)
   ck('抛错 → 错误文本，不外抛', r.ok === false && String((r as any).error).includes('boom'));
 }
 
+
+{
+  // 老 Hub 的真实形态：/api/skills 不存在 → 返回**首页 HTML 且 200**。
+  // 这不是解析失败，是「这个 Hub 没有这个接口」。
+  const original = globalThis.fetch;
+  (globalThis as any).fetch = async () => new Response('<!doctype html><title>CommHub</title>', { status: 200, headers: { 'content-type': 'text/html' } });
+  const r = await fetchHubSkills(cfg);
+  (globalThis as any).fetch = original;
+  ck('200 但返回 HTML → unsupported（不把 JSON 解析错误抛给用户）',
+    r.ok === false && (r as any).unsupported === true, JSON.stringify(r));
+}
+
 console.log(`\n${pass}/${total} passed`);
 if (pass !== total) process.exit(1);

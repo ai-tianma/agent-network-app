@@ -1669,6 +1669,18 @@ const enqueueSkills = async (
   return { ok: true, request_id: p.request_id, op: 'read' };
 };
 
+/** 读一个 JSON 响应；200 但内容不是 JSON 时不把解析错误抛给用户。
+ *
+ *  背景（真实现场）：老 Hub 没有 /api/skills 时会把**首页 HTML 以 200** 返回
+ *  （0.9.0-preview.137 实测），客户端 `res.json()` 直接抛
+ *  "The string did not match the expected pattern."，用户看到的就是这句。
+ *  这不是「解析失败」，是「这个 Hub 没有这个接口」——两者要修的机器不同。 */
+const readJsonOrNull = async (res: Response): Promise<any | null> => {
+  const text = await res.text().catch(() => "");
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return null; }
+};
+
 // ── Hub 级技能目录（#1473 / #909）───────────────────────────────────────
 //
 // 服务端 GET /api/skills 与 MCP list_skills 同源，只回元数据、**不回 SKILL.md
@@ -1776,8 +1788,9 @@ export const fetchHubSecrets = async (cfg: HubConfig): Promise<HubSecretsResult>
     }
     if (res.status === 403) return { ok: false, forbidden: true, error: '没有权限查看这个网络的密钥' };
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    const body = await res.json() as any;
-    if (!body || body.ok !== true || !Array.isArray(body.keys)) return { ok: false, error: 'Hub 返回空响应' };
+    const body = await readJsonOrNull(res);
+    if (!body) return { ok: false, unsupported: true, error: '当前 Hub 版本还没有密钥目录接口，请先升级 Hub' };
+    if (body.ok !== true || !Array.isArray(body.keys)) return { ok: false, error: 'Hub 返回空响应' };
     return { ok: true, keys: body.keys as HubSecretKey[] };
   } catch (e: any) {
     return { ok: false, error: String(e?.message ?? e) };
@@ -1802,8 +1815,9 @@ export const fetchHubSkills = async (
     }
     if (res.status === 403) return { ok: false, forbidden: true, error: '没有权限查看这个网络的技能目录' };
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    const body = await res.json() as any;
-    if (!body || body.ok !== true || !Array.isArray(body.skills)) return { ok: false, error: 'Hub 返回空响应' };
+    const body = await readJsonOrNull(res);
+    if (!body) return { ok: false, unsupported: true, error: '当前 Hub 版本还没有技能目录接口，请先升级 Hub' };
+    if (body.ok !== true || !Array.isArray(body.skills)) return { ok: false, error: 'Hub 返回空响应' };
     return { ok: true, reviewer: body.reviewer === true, skills: body.skills as HubSkillRow[] };
   } catch (e: any) {
     return { ok: false, error: String(e?.message ?? e) };
