@@ -463,6 +463,10 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.268:
+            - 任务评论正文按 Markdown 显示：标题、粗体、行内代码、列表和表格不再露出原字符；「评论」区与「动态」区行为一致。
+            - 评论可复制 Markdown 原文：触屏长按正文，鼠标设备点「复制」；「动态」里的长评论保留 8 行折叠，可展开/收起。
+
             What's new in 0.2.267:
             - 桌面「立即更新并重启」点下去后有加载态：按钮变「更新中…」并禁用，避免重复点击。
 
