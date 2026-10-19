@@ -1948,6 +1948,9 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
   // while a recent task has no result yet, otherwise the session status
   // so he can tell whether the agent is even online.
   const [sessionStatus, setSessionStatus] = useState('');
+  // Vincent 2026-10-19: the chat header had empty space next to the name —
+  // show which model this agent is running (same row the 30s poll already has).
+  const [sessionModel, setSessionModel] = useState('');
   // 聊天信息里「规则文件」「技能」出不出现,口径同节点信息页(visibleNodeSections)。
   // 能力位只在全量 /api/status 里有(chat-info-model.ts chatInfoCaps 顶部):下面 30s 的 light 轮询
   // 只给得出 agent-node 那一半(lightCaps,兜底);全量行在进聊天和每次打开聊天信息时取一次(fullCaps)。
@@ -1966,6 +1969,7 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
         const s = (data.sessions ?? []).find(x => x.alias === alias);
         if (live) {
           setSessionStatus(s?.status ?? 'offline');
+          setSessionModel(typeof s?.model === 'string' ? s.model : '');
           const next = chatInfoCaps(s);
           setLightCaps(c => (c.rules === next.rules && c.skills === next.skills ? c : next));
         }
@@ -2147,6 +2151,11 @@ export default function ChatScreen({ cfg: accountCfg, alias, networkId, onBack, 
             </Text>
           ) : null}
         </View>
+        {sessionModel ? (
+          <Text style={styles.modelChip} numberOfLines={1} testID="chat-header-model">
+            {sessionModel}
+          </Text>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('chat.info')}
@@ -3012,6 +3021,12 @@ const makeStyles = (B = bubbleLayout()) =>
   // The single ⋯: a 36 dp target flush with the right padding. Icon buttons are measured by their box
   // (tests/test-layout-sweep: the box is the symmetric thing), so left and right padding match.
   headerMore: { width: 36, height: ds(34), borderRadius: radius.item, alignItems: 'center', justifyContent: 'center' },
+  // Model id chip: secondary, one line, never steals width from the name column.
+  modelChip: {
+    maxWidth: 132, marginRight: 6, paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: radius.item, backgroundColor: colors.card, color: colors.textMuted,
+    fontSize: ds(11), overflow: 'hidden',
+  },
   headerTitleCol: { flex: 1, minWidth: 0 },
   beginning: {
     color: colors.textMuted,
