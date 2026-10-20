@@ -471,6 +471,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.273:
+            - 换上新的 AN 标志。浅色和深色使用对应笔画，小图标用加粗版。
+
             What's new in 0.2.272:
             - 保存节点密钥后可以选择稍后重启。节点正在执行任务时不会强制重启。
 
