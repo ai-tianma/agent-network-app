@@ -20,6 +20,7 @@ import { pointerUi } from './pointer-ui';
 import './i18n-accounts';
 import { THEME_PREFERENCES, THEME_PREFERENCE_LABEL, colors, onThemeChange, onThemePreferenceChange, setThemePreference, spacing, themeMode, themePreference, themePreferenceSummary, type ThemePreference, radius } from './theme';
 import { APP_VERSION } from './version';
+import { BrandMark } from './brand-mark';
 import { checkDesktopUpdate, desktopUpdateLastCheckedAt, desktopUpdateSnapshot, subscribeDesktopUpdates } from './desktop-updater';
 import { describeUpdateRow } from './update-check-state';
 import { IOS_UPDATE_ROW, openTestFlight } from './ios-testflight';
@@ -1200,6 +1201,7 @@ export default function SettingsScreen({
           {sectionsToRender.includes('about') && !showWideChangelog ? (
             <View style={sectionStyle}>
               {heading('about')}
+              <BrandMark size={48} />
               <SettingsGroup>
                 {show('about', 'version') ? <SettingsRow label={tr('settings.copy.77')} value={`v${APP_VERSION}`} onPress={onVersionTap} testID="settings-version-row" /> : null}
                 {show('about', 'update') ? (() => {

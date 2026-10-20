@@ -1,28 +1,28 @@
 {
   "_why": "app#180 — iOS flattens the transparent margin of assets/icon.png to white and shows a frame around the mark. This ties the opaque full-bleed iOS icon to the brand mark it is cut from; src/ios-icon-assets.test.ts re-runs the generator recorded here and compares pixels, so a brand change that skips regeneration fails at commit time.",
   "generator": "scripts/generate-ios-icon.mjs",
-  "generator_sha256": "cd61fa6d2c89d3b3d3950dd80c3f85afbc5479142ffcd118ca4b4755e8b32f41",
+  "generator_sha256": "b5720b87a9052bdb55b58a08ed1e0797ab455770df54ca465b40d369236bcc50",
   "params": {
     "canvas": 1024,
     "contentAlpha": 200,
     "zoom": 1.065,
     "fill": [
-      1,
-      13,
-      42
+      21,
+      80,
+      184
     ]
   },
   "crop_rule": "centred square of side max(bbox w,h)/zoom over the alpha>=contentAlpha bounding box; residual alpha flattened onto fill; box-resampled to canvas; written RGB without alpha",
   "content_box": {
-    "x0": 78,
-    "y0": 89,
-    "x1": 1173,
-    "y1": 1152
+    "x0": 0,
+    "y0": 0,
+    "x1": 1024,
+    "y1": 1024
   },
-  "crop_side": 1028,
+  "crop_side": 962,
   "source": "assets/icon.png",
-  "source_sha256": "834f58f77ad0c62fadc3cf4c6f8b17f5941df37fefcb1af90b9bcfd63582aeb3",
+  "source_sha256": "d120b0dff16e5c527bbe09955c851431f45bef9b2eda7f8823df69d0304f626e",
   "derived": {
-    "assets/icon-ios.png": "f487a751cc603b20f62b80ce349d014efdda73aa7344ed599db8d86fc198a178"
+    "assets/icon-ios.png": "129a28a3021b7d77993bd0b8ab588b8767b6171875af8f5ada71086a32bcd484"
   }
 }

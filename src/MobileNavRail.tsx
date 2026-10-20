@@ -6,7 +6,8 @@
 //
 // The decision of *when* this shows lives in src/nav-chrome.ts (pure + tested).
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { BrandMark } from './brand-mark';
 import { Text } from './ui-text';
 import { Ionicons } from './icons';
 import { colors, radius } from './theme';
@@ -115,8 +116,8 @@ export default function MobileNavRail({ tabs, active, onSelect, insetLeft, inset
     >
       {showBrand ? (
         <View style={s.brand}>
-          {/* Same transparent brand mark as the desktop rail (not the plated app icon). */}
-          <Image source={require('../assets/android-icon-foreground.png')} style={s.brandMark} resizeMode="contain" />
+          {/* Same theme mark as the desktop rail (not the plated app icon). */}
+          <BrandMark size={58} style={s.brandMark} />
         </View>
       ) : null}
       <ScrollView

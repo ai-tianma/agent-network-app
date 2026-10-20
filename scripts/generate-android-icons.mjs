@@ -26,12 +26,13 @@ export const PARAMS = {
   /** Android keeps the central 66% of the canvas visible under every mask. */
   safeZoneFraction: 0.66,
   /**
-   * Luminance ramp that separates the glowing mark from the dark plate.
-   * Below `lumaLow` is plate, above `lumaHigh` is solid mark, between is the
-   * glow and keeps its gradient.
+   * Luminance ramp that separates the pale mark from the blue plate.
+   * Scheme 16's plate is already bright (about 80–140), so the old dark-plate
+   * cut (32/120) swallowed the whole icon. Below `lumaLow` is plate, above
+   * `lumaHigh` is solid mark, between is the edge and keeps its gradient.
    */
-  lumaLow: 32,
-  lumaHigh: 120,
+  lumaLow: 160,
+  lumaHigh: 210,
   /** A pixel this opaque in the ramp counts as mark body for component finding. */
   coreThreshold: 0.45,
   /** Grow the kept component so the glow immediately around it survives. */

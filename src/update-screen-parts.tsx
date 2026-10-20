@@ -36,7 +36,7 @@ export const mix = (a: string, b: string, t: number): string => {
 };
 
 // 图标里的品牌蓝(assets/icon.png 左下那颗),只在更新页头部做底色用。
-const BRAND_BLUE = '#1d6cf0';
+const BRAND_BLUE = '#1b65db';
 
 /** 头部渐变最上面那一档的实色 —— 顶栏用它,和头部接成一片。 */
 export const heroTopColor = (ground: string): string => mix(ground, BRAND_BLUE, themeMode() === 'dark' ? 0.2 : 0.12);

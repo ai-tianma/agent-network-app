@@ -9,11 +9,11 @@
     "trimAlphaFloor": 8
   },
   "source": "assets/android-icon-monochrome.png",
-  "source_sha256": "701a518bc79cb4d59dc976aa688faa262bf18c9624d3315a7277d98527b1bcbb",
+  "source_sha256": "ffd040614b9aab3f67983f89dd0d830f17bfd56b0212a7d04b835c694d4a2b5b",
   "geometry_rule": "height is the budget (tray-icon scales the status image to 18pt tall); width follows the trimmed mark aspect so no height is spent on side margins",
   "platform_note": "macOS only. src-tauri/tray/tray.png stays a colour icon: a template image on Windows renders as a black smear in the notification area.",
   "derived": {
-    "src-tauri/tray/trayTemplate.png": "70d5851fc1973a21eee498110b03677a940687a2b46a08ffeec354fb9595c1ba",
-    "src-tauri/tray/trayTemplate@2x.png": "bdaa81f3cfee4d3d391d6a8b87c9015c8fe2af7ebd44a01c87179f5f726900b8"
+    "src-tauri/tray/trayTemplate.png": "e3b2035eb20f3a9100e6701f21331f5a4cb3df1218cb72d11af55d2afc48505e",
+    "src-tauri/tray/trayTemplate@2x.png": "49d72c704d47a7b18ac11a4da9558708a3c1d2bbb237aae149e324e89a2d863c"
   }
 }

@@ -21,8 +21,7 @@ check('desktop Settings opens its own window instead of replacing the main works
 // oversized box that compensates for the adaptive foreground's safe-zone padding.
 check(
   'desktop rail renders the transparent brand mark, not the plated app icon',
-  source.includes("source={require('./assets/android-icon-foreground.png')}") &&
-    source.includes('style={desktopStyles.railBrandMark}') &&
+  source.includes('<BrandMark size={54} style={desktopStyles.railBrandMark} />') &&
     !/railBrand[\s\S]{0,400}assets\/icon\.png/.test(source),
 );
 check(

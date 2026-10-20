@@ -71,7 +71,13 @@ const derivation = JSON.parse(readText('assets/icon-derivation.json')) as {
   source: string;
   derived: Record<string, string>;
 };
-const brandAssets = new Set([derivation.source, ...Object.keys(derivation.derived), 'assets/splash-icon.png']);
+const brandAssets = new Set([
+  derivation.source,
+  ...Object.keys(derivation.derived),
+  'assets/splash-icon.png',
+  'assets/mark-light.png',
+  'assets/mark-dark.png',
+]);
 
 // Ground colours of the two palettes in src/theme.ts.
 const theme = readText('src/theme.ts');

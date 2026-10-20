@@ -132,7 +132,7 @@ ck('rail badge on 任务 is the task-activity count', rail.includes('useTaskUnre
 ck('rail badge updates live from the unread store', rail.includes('subscribeUnread(() => setSnap(getUnreadSnapshot()))'));
 ck('rail pads the left + bottom insets and grows by the left one', rail.includes('width: mobileRailWidth(uiScale().densityFactor) + insetLeft, paddingLeft: insetLeft, paddingBottom: 8 + insetBottom'));
 ck('rail uses the desktop rail palette', rail.includes('backgroundColor: colors.railBg') && rail.includes('backgroundColor: colors.railActiveBg'));
-ck('rail uses the transparent brand mark (not the plated app icon)', rail.includes("require('../assets/android-icon-foreground.png')") && !rail.includes('assets/icon.png'));
+ck('rail uses the theme brand mark (not the plated app icon)', rail.includes('<BrandMark size={58}') && !rail.includes('assets/icon.png') && !rail.includes('android-icon-foreground.png'));
 ck('rail styles are built per mount (theme switch remounts)', rail.includes('const s = useMemo(makeStyles, []);'));
 
 console.log(`${p}/${t} passed`);

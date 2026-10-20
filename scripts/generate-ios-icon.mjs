@@ -24,8 +24,8 @@ export const PARAMS = {
   contentAlpha: 200,
   /** crop side = content side / zoom; 1.065 puts a 24%-radius corner outside Apple's 22.4% mask */
   zoom: 1.065,
-  /** plate colour the remaining translucent slivers are flattened onto (the mark's darkest plate tone) */
-  fill: [1, 13, 42],
+  /** plate colour the remaining translucent slivers are flattened onto (scheme 16's darkest plate tone, #1550B8) */
+  fill: [21, 80, 184],
 };
 
 const readPng = (path) => PNG.sync.read(readFileSync(path));

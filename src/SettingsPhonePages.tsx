@@ -22,6 +22,7 @@ import './i18n-fatal';
 import { fatalSummary } from './fatal-report';
 import { copyLastFatal, useLastFatalReport } from './use-last-fatal';
 import { Platform } from 'react-native';
+import { BrandMark } from './brand-mark';
 import { LOCAL_HUB_PROFILE_ID } from './local-hub';
 import { SettingsAccountRow, SettingsButton, SettingsCardContent, SettingsChoiceRow, SettingsGroup, SettingsRow, SettingsSwitchRow, type SettingsTone } from './settings-kit';
 import { ChangePasswordEditPage, VoiceAdvancedEditPage, VoiceApiKeyEditPage, QuietHoursEditPage } from './SettingsEditPages';
@@ -553,6 +554,7 @@ function AboutPage({ ctx }: { ctx: PhonePagesCtx }) {
   const tone: SettingsTone | undefined = view.tone === 'danger' ? 'danger' : view.tone === 'accent' ? 'accent' : undefined;
   return (
     <>
+    <BrandMark size={48} />
     <SettingsGroup footer={view.detail} testID="settings-about">
       {ctx.show('about', 'version') ? <SettingsRow testID="settings-version-row" label={tr('settings.copy.77')} value={`v${APP_VERSION}`} onPress={ctx.onVersionTap} /> : null}
       {ctx.show('about', 'update') ? (

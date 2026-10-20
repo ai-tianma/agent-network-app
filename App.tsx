@@ -6,6 +6,7 @@ import './src/i18n-accounts';
 import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StatusBar, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text, TextInput } from './src/ui-text';
 import { Ionicons } from './src/icons';
+import { BrandMark } from './src/brand-mark';
 import { SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SAFE_AREA_SIM, layoutOs, statusBarHeight } from './src/safe-area-runtime';
 import { mainWindowTopPadding } from './src/modal-safe-area';
@@ -806,7 +807,7 @@ function AppRoot() {
   if (booting) {
     return (
       <SafeAreaView style={[styles.root, rootInset, styles.center, bootStyles.root]}>
-        <Image source={require('./assets/splash-icon.png')} style={bootStyles.logo} resizeMode="contain" />
+        <BrandMark size={72} style={bootStyles.logo} />
         <Text style={bootStyles.title}>ANet</Text>
         <ActivityIndicator color={colors.accent} />
       </SafeAreaView>
@@ -1195,7 +1196,7 @@ export function FirstRunScreen({ busy, stage, error, onStartLocal, onRemote }: {
     <View style={entryStyles.root} testID="first-run-local-hub">
       <ScrollView style={loginStylesShared.scrollView} contentContainerStyle={loginStylesShared.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={[entryStyles.card, compact && entryStyles.cardCompact]}>
-        <Image source={require('./assets/splash-icon.png')} style={entryStyles.logo} resizeMode="contain" />
+        <BrandMark size={96} style={entryStyles.logo} />
         <Text style={entryStyles.title}>ANet</Text>
         <Text style={entryStyles.copy}>在这台电脑创建本地工作区，数据留在本机；也可以登录已有 Hub。</Text>
         {error ? <View style={entryStyles.errorBox}><Ionicons name="alert-circle-outline" size={17} color={colors.failed} /><Text style={entryStyles.error}>{maskUrlsInText(error)}</Text></View> : null}
@@ -1409,22 +1410,13 @@ function DesktopWorkspace({ cfg, screen, setScreen, onLogout, onLocalDataDeleted
   return (
     <View style={desktopStyles.shell}>
       <View style={desktopStyles.rail} testID="desktop-rail">
-        {/* The rail carries the brand mark, not the product icon. `assets/icon.png`
-            is the installable app icon: mark plus its dark plate, which on a 36px
-            rail slot reads as a black block and collides with the active-tab pill
-            underneath (same rounded square, similar tint). The Android adaptive
-            foreground is the same mark on transparency, derived from icon.png and
-            pixel-gated by src/icon-assets.test.ts, so it tracks any brand change.
-            It keeps ~22% safe-zone padding, hence the oversized box inside the
-            36px slot: the mark lands at ~30px, optically matching the 22px stroke
-            icons below. Both themes share it — the mark's saturated blues hold up
-            on the near-black rail and on the light one. */}
+        {/* The rail carries the theme mark, not the plated app icon. Scheme 16's
+            plate is bright blue; at 36px it still reads as a tile and collides
+            with the active-tab pill. mark-light / mark-dark are the stroke on
+            transparency. The box stays oversized so the stroke matches the
+            22px nav icons. */}
         <View style={desktopStyles.railBrand}>
-          <Image
-            source={require('./assets/android-icon-foreground.png')}
-            style={desktopStyles.railBrandMark}
-            resizeMode="contain"
-          />
+          <BrandMark size={54} style={desktopStyles.railBrandMark} />
         </View>
         <View style={desktopStyles.railTabs}>
           {DESKTOP_MAIN_TABS.map(tab => (
@@ -1670,7 +1662,7 @@ export function LoginScreen({ onLogin, initialProfile, onCancelReauth, onCancelA
     <KeyboardAvoidingView style={entryStyles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined} testID="login-screen">
       <ScrollView style={loginStyles.scrollView} contentContainerStyle={loginStyles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={[entryStyles.card, loginStyles.card, compact && entryStyles.cardCompact]}>
-        <Image source={require('./assets/splash-icon.png')} style={entryStyles.logo} resizeMode="contain" />
+        <BrandMark size={96} style={entryStyles.logo} />
         <View style={loginStyles.heading}>
           <Text style={entryStyles.title} testID={expired ? 'login-expired-title' : onCancelAdd && !initialProfile && !registering ? 'login-add-account-title' : undefined}>{expired ? t('sessions.expiredTitle') : initialProfile ? '重新验证账号' : registering ? t('login.registerTitle') : onCancelAdd ? t('accounts.addTitle') : '连接你的工作区'}</Text>
           <Text style={entryStyles.copy}>{expired ? t('sessions.expiredCopy') : initialProfile ? '登录状态已失效。重新验证只会更新这个账号，其他工作区不会受到影响。' : registering ? t('login.registerCopy') : onCancelAdd ? t('accounts.addCopy') : '输入 Hub 和账号信息，继续与你的 Agent 协作。'}</Text>
