@@ -1201,7 +1201,7 @@ export default function SettingsScreen({
           {sectionsToRender.includes('about') && !showWideChangelog ? (
             <View style={sectionStyle}>
               {heading('about')}
-              <BrandMark size={48} />
+              <BrandMark size={36} style={{ marginTop: 8, marginBottom: 12 }} />
               <SettingsGroup>
                 {show('about', 'version') ? <SettingsRow label={tr('settings.copy.77')} value={`v${APP_VERSION}`} onPress={onVersionTap} testID="settings-version-row" /> : null}
                 {show('about', 'update') ? (() => {

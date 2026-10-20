@@ -554,7 +554,7 @@ function AboutPage({ ctx }: { ctx: PhonePagesCtx }) {
   const tone: SettingsTone | undefined = view.tone === 'danger' ? 'danger' : view.tone === 'accent' ? 'accent' : undefined;
   return (
     <>
-    <BrandMark size={48} />
+    <BrandMark size={36} style={{ marginTop: 8, marginBottom: 12 }} />
     <SettingsGroup footer={view.detail} testID="settings-about">
       {ctx.show('about', 'version') ? <SettingsRow testID="settings-version-row" label={tr('settings.copy.77')} value={`v${APP_VERSION}`} onPress={ctx.onVersionTap} /> : null}
       {ctx.show('about', 'update') ? (

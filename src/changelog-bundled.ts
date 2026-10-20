@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.275:",
+  "- 关于页的标志居中，并缩小，不再贴在左边。",
+  "",
   "What's new in 0.2.274:",
   "- 侧栏标志缩小到和下方图标一样大，不再压到旁边的文字。",
   "",

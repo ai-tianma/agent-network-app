@@ -15,7 +15,7 @@ export function BrandMark({ size, style }: { size: number; style?: StyleProp<Ima
   return (
     <Image
       source={source}
-      style={[{ width: size, height: size }, style]}
+      style={[{ width: size, height: size, alignSelf: 'center' }, style]}
       resizeMode="contain"
       accessibilityIgnoresInvertColors
     />
