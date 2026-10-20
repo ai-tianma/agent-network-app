@@ -92,6 +92,9 @@ export const editIntentErrorText = (e: unknown): string => {
     if (e.code === 'edit_in_flight') return '已有一条待应用的编辑意向，等节点确认后再试。';
     if (e.code === 'schedule_read_only') return '该计划为只读（仅托管 cron 条目可改）。';
     if (e.code === 'node_owner_required' || e.code === 'node_owner_unclaimed') return '仅节点 owner 能修改该节点的计划。';
+    if (e.code === 'watcher_cannot_cancel') return '关注人不能取消这条计划。';
+    if (e.code === 'watcher_cannot_manage_watchers') return '只有创建者能修改关注人。';
+    if (e.code === 'watcher_not_in_network') return '关注人必须是这个网络里的人。';
     if (e.code === 'cross_network_node') return '节点不在当前网络内。';
   }
   return e instanceof Error ? e.message : String(e);

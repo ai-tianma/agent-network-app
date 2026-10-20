@@ -36,6 +36,7 @@ import MacTitleStrip from './mac-title-strip';
 import WinTitleBar from './win-title-bar';
 import NodePickerSheet, { NodePickerField } from './NodePicker';
 import { pickerChoices } from './node-picker-model';
+import { listRequirementPeople } from './requirement-people-api';
 import { useModalSafePadding } from './safe-area-runtime';
 import { pointerUi } from './pointer-ui';
 import { withBasePadding } from './modal-safe-area';
@@ -127,6 +128,8 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
 }) {
   const styles = useMemo(makeStyles, [visible]);
   const [name, setName] = useState(''); const [task, setTask] = useState('');
+  const [watcherIds, setWatcherIds] = useState<string[]>([]);
+  const [people, setPeople] = useState<{ id: string; name: string }[]>([]);
   const [target, setTarget] = useState(''); const [kind, setKind] = useState<HubScheduleSpec['type']>('once');
   const [when, setWhen] = useState(''); const [every, setEvery] = useState('1'); const [unit, setUnit] = useState<IntervalUnit>('hours'); const [clock, setClock] = useState('09:00');
   const [weekdays, setWeekdays] = useState([1]); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
@@ -185,7 +188,7 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
 
   useEffect(() => {
     if (!visible) { setPristine(null); setDiscardThen(null); return; }
-    setError(''); setConflict(null); setBase(editing); setAdjustedFrom(null); setPristine('pending');
+    setError(''); setConflict(null); setBase(editing); setWatcherIds((editing?.watchers ?? []).map(w => w.user_id)); setAdjustedFrom(null); setPristine('pending');
     if (!editing) {
       setName(''); setTask(''); setTarget(initialTarget ?? ''); setKind('once'); setWhen(''); setEvery('1'); setUnit('hours');
       setClock('09:00'); setWeekdays([1]); setMisfirePolicy('catch_up_once'); setPriority('normal'); setTimezone(detectedTimezone);
@@ -199,6 +202,16 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, editing, detectedTimezone, initialTarget, copyFrom]);
 
+  useEffect(() => {
+    if (!visible) return;
+    let live = true;
+    void listRequirementPeople(cfg).then(rows => {
+      if (live) setPeople(rows.filter(r => r.kind === 'user' && !r.unavailable).map(r => ({ id: r.id, name: r.displayName || r.name })));
+    }).catch(() => { if (live) setPeople([]); });
+    return () => { live = false; };
+  }, [visible, cfg.serverUrl, cfg.token, cfg.networkId]);
+  const supportsWatchers = !editing || Array.isArray(editing.watchers);
+  const canManageWatchers = !editing || editing.can_manage_watchers !== false;
   const invalidSchedule = (kind === 'once' && !when) ||
     (kind === 'interval' && (!Number.isInteger(Number(every)) || Number(every) < (unit === 'seconds' ? 60 : 1))) ||
     (kind === 'weekly' && weekdays.length === 0);
@@ -231,6 +244,10 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
     setBusy(true); setError(''); setConflict(null);
     try {
       const input = draftInput();
+      // A new plan omits an empty watcher list. Copying a schedule must keep the
+      // old POST body, and an older Hub must not see a field it does not know.
+      // Editing still sends the list, including [] to clear it.
+      if (supportsWatchers && canManageWatchers && (base || watcherIds.length > 0)) input.watchers = watcherIds;
       if (base) await save(base, input, false);
       else { await createScheduledTask(cfg, input); onSaved(); }
     } catch (e) {
@@ -303,7 +320,7 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
     } finally { setActing(false); }
   };
   const actions = current ? scheduledTaskActions(current.status) : [];
-  const canEdit = !editing || actions.includes('edit');
+  const canEdit = (!editing || actions.includes('edit')) && editing?.can_edit !== false;
 
   const whenMs = kind === 'once' && when ? new Date(when).getTime() : NaN;
   const timeHint = kind !== 'once' ? null
@@ -324,7 +341,7 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
               {actions.includes('run') && <Pressable testID="schedule-editor-run" disabled={acting || busy} style={[styles.primarySmall, (acting || busy) && styles.actionDisabled]} onPress={() => void act('run')}><Text style={styles.primaryText}>立即执行</Text></Pressable>}
               {actions.includes('toggle') && <Pressable testID="schedule-editor-toggle" disabled={acting || busy} style={[styles.action, (acting || busy) && styles.actionDisabled]} onPress={() => void act('toggle')}><Text style={styles.actionText}>{current.status === 'active' ? '暂停' : '恢复'}</Text></Pressable>}
               {actions.includes('copy') && <Pressable testID="schedule-editor-copy" disabled={acting || busy} style={[styles.action, (acting || busy) && styles.actionDisabled]} onPress={() => guarded(() => manage!.onCopy(current))}><Text style={styles.actionText}>{t('schedules.copy.action')}</Text></Pressable>}
-              {actions.includes('cancel') && <Pressable testID="schedule-editor-cancel-plan" disabled={acting || busy} style={[styles.action, styles.danger, (acting || busy) && styles.actionDisabled]} onPress={() => setCancelAsk(true)}><Text style={styles.dangerText}>取消计划</Text></Pressable>}
+              {actions.includes('cancel') && current.can_manage_watchers !== false && <Pressable testID="schedule-editor-cancel-plan" disabled={acting || busy} style={[styles.action, styles.danger, (acting || busy) && styles.actionDisabled]} onPress={() => setCancelAsk(true)}><Text style={styles.dangerText}>取消计划</Text></Pressable>}
             </View>
             {!canEdit ? <Text style={styles.meta}>这条计划已结束，不能再改；可以复制后新建。</Text> : null}
           </View>
@@ -351,6 +368,19 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
         })() : null}
         <View pointerEvents={canEdit ? 'auto' : 'none'} style={!canEdit && styles.formLocked}>
         <Label text="名称"><TextInput style={styles.input} value={name} onChangeText={setName} placeholder="每日巡检" placeholderTextColor={colors.textMuted} /></Label>
+        {supportsWatchers ? (
+          <View testID="schedule-watchers">
+            <Text style={styles.label}>关注人</Text>
+            <Text style={styles.meta}>{canManageWatchers ? '被绑定的人能看到并编辑这条计划，但不能取消或改关注人。' : '你是关注人，可以编辑这条计划。'}</Text>
+            {canManageWatchers ? people.map(person => {
+              const on = watcherIds.includes(person.id);
+              return <Pressable key={person.id} testID={`schedule-watcher-${person.id}`} onPress={() => setWatcherIds(ids => on ? ids.filter(id => id !== person.id) : [...ids, person.id])} style={{ paddingVertical: 6 }}>
+                <Text style={{ color: colors.text }}>{on ? '✓ ' : ''}{person.name}</Text>
+              </Pressable>;
+            }) : (editing?.watchers ?? []).map(w => <Text key={w.user_id} style={styles.meta}>{w.display_name || w.username}</Text>)}
+            {canManageWatchers && people.length === 0 ? <Text style={styles.meta}>没有可选的人类账户</Text> : null}
+          </View>
+        ) : null}
         <Label text="执行节点"><NodePickerField node={chosen} fallbackAlias={fallbackAlias} onPress={() => setPickerOpen(true)} /></Label>
         {/* 任务内容:⤢ 全屏 + 🎤,和任务描述同一个编辑器(TaskDescriptionEditor);节点收到的是原文,不放图片、不走富文本。
             表单一打开就是编辑框(原来就是输入框),桌面全屏从「左右」起。 */}

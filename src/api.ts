@@ -328,6 +328,11 @@ export interface HubScheduledTask {
   next_run_at?: string | null;
   last_run_at?: string | null;
   revision: number;
+  /** Present when the Hub supports schedule watchers. */
+  watchers?: { user_id: string; username: string; display_name: string }[];
+  is_watcher?: boolean;
+  can_edit?: boolean;
+  can_manage_watchers?: boolean;
 }
 
 export interface HubScheduledRun {
@@ -386,6 +391,7 @@ export type ScheduledTaskMutationInput = {
   timezone: string;
   schedule: HubScheduleSpec;
   misfire_policy: HubMisfirePolicy;
+  watchers?: string[];
 };
 
 export const createScheduledTask = (
