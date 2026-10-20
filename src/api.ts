@@ -1612,6 +1612,41 @@ const callHubTool = async (cfg: HubConfig, name: string, args: Record<string, un
   }
 };
 
+export type OpenCodeCatalogPoll =
+  | { ok: true; status: 'pending'; request_id: string }
+  | { ok: true; status: 'ready'; request_id: string; snapshot: { providers?: Array<{ id: string; activation?: string }>; models?: Array<{ providerId: string; id: string }> } }
+  | { ok: false; error: string; unsupported?: true };
+
+/** Queue a read of the node's OpenCode V2 server catalog. Does not start a server. */
+export async function queueOpenCodeCatalog(cfg: HubConfig, node: { nodeId: string; daemonNodeId: string }): Promise<OpenCodeCatalogPoll> {
+  const networkId = cfg.networkId ?? (await fetchNetworkId(cfg));
+  const r = await callHubTool(cfg, 'read_opencode_catalog', {
+    daemon_node_id: node.daemonNodeId,
+    node_id: node.nodeId,
+    ...(networkId ? { network_id: networkId } : {}),
+  });
+  if (r.kind === 'unsupported') return { ok: false, unsupported: true, error: '当前 Hub 还不能读取 OpenCode V2 模型列表' };
+  if (r.kind === 'error') return { ok: false, error: r.error };
+  const p = r.payload;
+  if (!p || p.ok !== true || typeof p.request_id !== 'string') return { ok: false, error: String(p?.error ?? 'Hub 返回空响应') };
+  return { ok: true, status: 'pending', request_id: p.request_id };
+}
+
+export async function pollOpenCodeCatalog(cfg: HubConfig, requestId: string): Promise<OpenCodeCatalogPoll> {
+  const networkId = cfg.networkId ?? (await fetchNetworkId(cfg));
+  const r = await callHubTool(cfg, 'get_opencode_catalog', {
+    request_id: requestId,
+    ...(networkId ? { network_id: networkId } : {}),
+  });
+  if (r.kind === 'unsupported') return { ok: false, unsupported: true, error: '当前 Hub 还不能读取 OpenCode V2 模型列表' };
+  if (r.kind === 'error') return { ok: false, error: r.error };
+  const p = r.payload;
+  if (!p) return { ok: false, error: 'Hub 返回空响应' };
+  if (p.ok === true && p.status === 'pending') return { ok: true, status: 'pending', request_id: requestId };
+  if (p.ok === true && p.status === 'ready' && p.snapshot) return { ok: true, status: 'ready', request_id: requestId, snapshot: p.snapshot };
+  return { ok: false, error: String(p.error ?? 'unavailable') };
+}
+
 const enqueueRulesFile = async (
   cfg: HubConfig,
   tool: 'read_node_rules_file' | 'write_node_rules_file',

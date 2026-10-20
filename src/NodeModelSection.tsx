@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Text, TextInput } from './ui-text';
 
-import { fetchNodeConfig, updateNodeConfig, type HubConfig, type HubNode, type NodeConfigRead } from './api';
+import { fetchNodeConfig, pollOpenCodeCatalog, queueOpenCodeCatalog, updateNodeConfig, type HubConfig, type HubNode, type NodeConfigRead } from './api';
 import { styles } from './app-styles';
 import {
   afterPoll,
@@ -24,6 +24,8 @@ import {
   type ModelChangePhase,
 } from './node-model-change';
 import { suggestedModels } from './runtime-catalog';
+import { catalogErrorText, isOpenCodeV2Node, modelIdsFromCatalog } from './opencode-v2-model-list';
+import { nodeProviderDaemon } from './node-provider-target';
 import { colors, spacing, radius } from './theme';
 
 export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: HubNode }) {
@@ -33,6 +35,9 @@ export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: 
   const [picked, setPicked] = useState<string>('');
   const [custom, setCustom] = useState('');
   const [phase, setPhase] = useState<ModelChangePhase>({ kind: 'idle' });
+  const v2 = isOpenCodeV2Node(node);
+  const [v2Models, setV2Models] = useState<string[] | null>(null);
+  const [v2Note, setV2Note] = useState('');
 
   const reload = useCallback(async () => {
     try {
@@ -47,6 +52,38 @@ export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: 
   }, [cfg, node.node_id]);
 
   useEffect(() => { void reload(); }, [reload]);
+
+  useEffect(() => {
+    if (!v2) return;
+    let live = true;
+    const daemonId = nodeProviderDaemon(node);
+    if (!daemonId) {
+      setV2Models([]);
+      setV2Note('这个节点没有所属 daemon，读不到 OpenCode 服务器上的模型列表。仍可手输 provider/model。');
+      return;
+    }
+    setV2Note('正在从 OpenCode V2 服务器读取模型列表…');
+    void (async () => {
+      const queued = await queueOpenCodeCatalog(cfg, { nodeId: node.node_id, daemonNodeId: daemonId });
+      if (!live) return;
+      if (!queued.ok) { setV2Models([]); setV2Note(catalogErrorText(queued.error)); return; }
+      for (let i = 0; i < 15; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!live) return;
+        const polled = await pollOpenCodeCatalog(cfg, queued.request_id);
+        if (!live) return;
+        if (!polled.ok) { setV2Models([]); setV2Note(catalogErrorText(polled.error)); return; }
+        if (polled.status === 'ready') {
+          const ids = modelIdsFromCatalog(polled.snapshot);
+          setV2Models(ids);
+          setV2Note(ids.length ? '列表来自这台机器上的 OpenCode V2 服务器，不是内置清单。' : 'OpenCode 服务器返回了空列表。仍可手输 provider/model。');
+          return;
+        }
+      }
+      if (live) { setV2Models([]); setV2Note('OpenCode 服务器还没返回模型列表。仍可手输 provider/model。'); }
+    })();
+    return () => { live = false; };
+  }, [v2, cfg, node.node_id, node.lifecycle_daemon_node_id, node.adoption?.daemon_node_id, node.adoption?.status]);
 
   const requested = phase.kind === 'restarting' ? phase.requested : null;
   const baseRevision = phase.kind === 'restarting' ? phase.baseRevision : null;
@@ -92,11 +129,11 @@ export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: 
 
   const availability = modelControlAvailability(view === undefined ? null : view);
   const busy = phaseIsBusy(phase);
-  const suggestions = suggestedModels(node.runtime);
+  const suggestions = v2 ? (v2Models ?? []) : suggestedModels(node.runtime);
   const currentModel = view?.model ?? node.model ?? node.config_snapshot?.model ?? null;
   const candidate = custom.trim() ? custom : picked;
   const chips = modelChips(suggestions, currentModel);
-  const hint = catalogHint(node.runtime);
+  const hint = v2 ? v2Note : catalogHint(node.runtime);
 
   const submit = async () => {
     if (!view || busy) return;
@@ -131,6 +168,7 @@ export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: 
             <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>
               改模型不经过任何大模型:Hub 下发后节点自己写配置并重启一次(约 5–45 秒),期间它不接任务。
             </Text>
+            {v2 && hint ? <Text testID="opencode-v2-models-note" style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{hint}</Text> : null}
             {chips.length > 0 ? (
               <View style={{ gap: spacing.sm }}>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>建议</Text>
@@ -153,7 +191,7 @@ export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: 
                   );
                 })}
                 </View>
-                {hint ? <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{hint}</Text> : null}
+                {!v2 && hint ? <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{hint}</Text> : null}
               </View>
             ) : null}
             <TextInput
