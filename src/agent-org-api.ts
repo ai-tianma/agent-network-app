@@ -168,14 +168,17 @@ export async function moveAgentDepartment(
     const text = await res.text().catch(() => '');
     let body: unknown = null;
     try { body = text ? JSON.parse(text) : null; } catch { body = null; }
-    const code = body && typeof body === 'object' ? (body as { code?: unknown }).code : undefined;
+    // Hub .140 返回 {ok:false,error:"department_not_found"};早期草案用 code。两种都认。
+    const contractError = body && typeof body === 'object'
+      ? ((body as { code?: unknown }).code ?? (body as { error?: unknown }).error)
+      : undefined;
     if (res.status === 403) return { ok: false, reason: 'forbidden' };
     if (res.status === 405 || res.status === 501) return { ok: false, reason: 'unsupported' };
     if (res.status === 404) {
       // 契约里的 404 带 node_not_found;旧 Hub 的路由不存在时是 404 + HTML/空正文。
-      return { ok: false, reason: code === 'node_not_found' ? 'node' : 'unsupported' };
+      return { ok: false, reason: contractError === 'node_not_found' ? 'node' : 'unsupported' };
     }
-    if (res.status === 400) return { ok: false, reason: code === 'department_not_found' ? 'department' : 'error' };
+    if (res.status === 400) return { ok: false, reason: contractError === 'department_not_found' ? 'department' : 'error' };
     if (res.status < 200 || res.status >= 300) return { ok: false, reason: 'error' };
     if (body && typeof body === 'object' && (body as { ok?: unknown }).ok === false) return { ok: false, reason: 'error' };
     return { ok: true };

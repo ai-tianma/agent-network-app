@@ -176,13 +176,21 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
     const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
     ck('403 = forbidden', r.ok === false && r.reason === 'forbidden');
   });
+  await withFetch(() => json(400, { ok: false, error: 'department_not_found' }), async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
+    ck('400 error=department_not_found(Hub .140) = department', r.ok === false && r.reason === 'department');
+  });
   await withFetch(() => json(400, { code: 'department_not_found' }), async () => {
     const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
-    ck('400 department_not_found = department', r.ok === false && r.reason === 'department');
+    ck('400 code=department_not_found(旧草案) = department', r.ok === false && r.reason === 'department');
+  });
+  await withFetch(() => json(404, { ok: false, error: 'node_not_found' }), async () => {
+    const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
+    ck('404 error=node_not_found(Hub .140) = node', r.ok === false && r.reason === 'node');
   });
   await withFetch(() => json(404, { code: 'node_not_found' }), async () => {
     const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
-    ck('404 node_not_found = node', r.ok === false && r.reason === 'node');
+    ck('404 code=node_not_found(旧草案) = node', r.ok === false && r.reason === 'node');
   });
   await withFetch(() => new Response('<html>not found</html>', { status: 404 }), async () => {
     const r = await moveAgentDepartment(cfgMove, 'net 1', 'n1', 'd1');
