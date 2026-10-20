@@ -1416,7 +1416,7 @@ function DesktopWorkspace({ cfg, screen, setScreen, onLogout, onLocalDataDeleted
             transparency. The box stays oversized so the stroke matches the
             22px nav icons. */}
         <View style={desktopStyles.railBrand}>
-          <BrandMark size={54} style={desktopStyles.railBrandMark} />
+          <BrandMark size={22} style={desktopStyles.railBrandMark} />
         </View>
         <View style={desktopStyles.railTabs}>
           {DESKTOP_MAIN_TABS.map(tab => (
@@ -1546,7 +1546,7 @@ const makeDesktopStyles = () => StyleSheet.create({
   // 激活 = 10 圆角淡 accent 底;悬停/聚焦 = 浅底;提示条挂在右侧。
   rail: { width: ds(64), backgroundColor: colors.railBg, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.border, alignItems: 'center', paddingTop: ds(14), paddingBottom: ds(10), zIndex: 10, overflow: 'visible' },
   railBrand: { width: ds(36), height: ds(36), alignItems: 'center', justifyContent: 'center' },
-  railBrandMark: { width: ds(54), height: ds(54) },
+  railBrandMark: { width: ds(22), height: ds(22) },
   railTabs: { flex: 1, paddingTop: ds(18), gap: ds(12), alignItems: 'center' },
   railSlot: { width: ds(40), height: ds(40), alignItems: 'center', justifyContent: 'center' },
   railButton: { width: ds(40), height: ds(40), borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' },
