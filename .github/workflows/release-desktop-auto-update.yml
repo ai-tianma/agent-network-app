@@ -471,6 +471,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.272:
+            - 保存节点密钥后可以选择稍后重启。节点正在执行任务时不会强制重启。
+
             What's new in 0.2.271:
             - 定时任务可以添加关注人。被添加的人能看到并编辑该计划；不能改关注人名单，也不能取消或立即运行。
 
