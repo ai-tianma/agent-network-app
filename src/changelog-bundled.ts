@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.276:",
+  "- OpenCode V2 节点切换模型时，列表来自该节点自己的模型目录，不再用内置名单。目录为空或不是 V2 时，仍可手填 provider/model。",
+  "",
   "What's new in 0.2.275:",
   "- 关于页的标志居中，并缩小，不再贴在左边。",
   "",
