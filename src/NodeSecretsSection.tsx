@@ -9,10 +9,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Text, TextInput } from './ui-text';
-import { pollNodeSecretOp, requestNodeSecretOp, type HubConfig, type NodeSecretSnapshot } from './api';
+import { pollNodeSecretOp, requestNodeSecretOp, runNodeLifecycleAction, type HubConfig, type NodeSecretSnapshot } from './api';
 import {
   SECRET_POLL_INTERVAL_MS, keyInputError, mutatingRevision, pollDecision, snapshotView, timeoutHint,
 } from './node-secrets-session';
+import {
+  manualRestartCommand, restartChoiceAfterAttempt, restartChoiceAfterSecret, restartChoiceText,
+  type RestartChoice,
+} from './node-restart-after-secret';
 import { buttonStyle, buttonTextStyle } from './elevation';
 import { colors, radius, spacing, type, weight } from './theme';
 
@@ -24,13 +28,33 @@ type Phase =
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-export default function NodeSecretsSection({ cfg, nodeId, alias }: { cfg: HubConfig; nodeId: string; alias?: string }) {
+// #1511 片二 —— 保存后不能只说「下次启动生效」就把用户晾着。节点跑在
+// `anet node start` 监督包装下(上报 config_update_capable)就替他排一次带倒计时的
+// 重启;否则给出能照抄的手动命令。在线与否、能力三态都从父级传下来。
+export default function NodeSecretsSection({
+  cfg, nodeId, alias, configUpdateCapable, online,
+}: {
+  cfg: HubConfig; nodeId: string; alias?: string;
+  /** GET /api/nodes/:id/config 的 config_update_capable;undefined = 读取中,null = 读不到。 */
+  configUpdateCapable?: boolean | null | undefined;
+  /** 节点会话状态不是 offline。 */
+  online?: boolean;
+}) {
   const [snapshot, setSnapshot] = useState<NodeSecretSnapshot | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
+  // #1511 —— 保存后的重启二选一 + 倒计时(倒计时内可取消)。
+  const [restartChoice, setRestartChoice] = useState<RestartChoice | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const restartTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
+
+  const clearRestartTimer = useCallback(() => {
+    if (restartTimer.current) { clearInterval(restartTimer.current); restartTimer.current = null; }
+  }, []);
+  useEffect(() => () => clearRestartTimer(), [clearRestartTimer]);
 
   /** 入队 + 轮询到终态。返回 snapshot 或 null。 */
   const run = useCallback(async (body: { action: 'list' | 'put' | 'delete'; key?: string; value?: string; revision?: number }) => {
@@ -62,6 +86,35 @@ export default function NodeSecretsSection({ cfg, nodeId, alias }: { cfg: HubCon
     if (nodeId) void run({ action: 'list' });
   }, [nodeId, run]);
 
+  // 保存成功后决定二选一;supervised 就排一次带倒计时的重启,倒计时归零才真下发。
+  // 下发拿到 Hub 回执后再细化:片一的在途门(node_busy_in_flight)要退回「只提示」。
+  const offerRestartAfterSave = useCallback(() => {
+    const planned = restartChoiceAfterSecret({ configUpdateCapable, online: online ?? false, alias });
+    setRestartChoice(planned);
+    if (planned.kind !== 'scheduled') { setCountdown(null); return; }
+    clearRestartTimer();
+    setCountdown(planned.countdownSeconds);
+    let left = planned.countdownSeconds;
+    restartTimer.current = setInterval(() => {
+      left -= 1;
+      if (left > 0) { if (mounted.current) setCountdown(left); return; }
+      clearRestartTimer();
+      if (mounted.current) setCountdown(null);
+      void (async () => {
+        const r = await runNodeLifecycleAction(cfg, 'restart_node', { node_id: nodeId, alias: alias ?? '' });
+        if (!mounted.current) return;
+        setRestartChoice(prev => restartChoiceAfterAttempt(prev ?? planned, r.ok ? { ok: true } : r, alias));
+      })();
+    }, 1000);
+  }, [alias, cfg, clearRestartTimer, configUpdateCapable, nodeId, online]);
+
+  // 用户在倒计时里点了取消:计划作废,退回「你自己重启」——不谎称已安排。
+  const cancelScheduledRestart = useCallback(() => {
+    clearRestartTimer();
+    if (mounted.current) setCountdown(null);
+    setRestartChoice({ kind: 'manual', command: manualRestartCommand(alias) });
+  }, [alias, clearRestartTimer]);
+
   const view = snapshotView(snapshot);
   const revision = mutatingRevision(snapshot);
   const busy = phase.kind === 'loading' || phase.kind === 'queued';
@@ -72,12 +125,13 @@ export default function NodeSecretsSection({ cfg, nodeId, alias }: { cfg: HubCon
     if (!revision) { setPhase({ kind: 'error', text: '还没拿到节点当前的版本号，先刷新一次再改。' }); return; }
     if (!value) { setPhase({ kind: 'error', text: '值不能为空。' }); return; }
     const snap = await run({ action: 'put', key: key.trim(), value, revision });
-    if (snap) { setKey(''); setValue(''); }
+    if (snap) { setKey(''); setValue(''); offerRestartAfterSave(); }
   };
 
   const onDelete = async (k: string) => {
     if (!revision) { setPhase({ kind: 'error', text: '还没拿到节点当前的版本号，先刷新一次再改。' }); return; }
-    await run({ action: 'delete', key: k, revision });
+    const snap = await run({ action: 'delete', key: k, revision });
+    if (snap) offerRestartAfterSave();
   };
 
   return (
@@ -91,6 +145,25 @@ export default function NodeSecretsSection({ cfg, nodeId, alias }: { cfg: HubCon
       {busy ? <ActivityIndicator testID="node-secrets-busy" /> : null}
       {phase.kind === 'queued' ? <Text testID="node-secrets-queued" style={{ color: colors.textSecondary, fontSize: type.small }}>{phase.text}</Text> : null}
       {phase.kind === 'error' ? <Text testID="node-secrets-error" style={{ color: colors.blocked, fontSize: type.small }}>{phase.text}</Text> : null}
+
+      {/* #1511 片二 —— 保存后的重启二选一。scheduled 时给倒计时 + 取消;busy 是
+          Hub 片一在途门的回执(节点正在跑任务),只提示不硬来。 */}
+      {restartChoice ? (
+        <View testID="node-secrets-restart-choice" style={{ gap: spacing.xs }}>
+          <Text
+            testID={`node-secrets-restart-${restartChoice.kind}`}
+            style={{ color: restartChoice.kind === 'busy' ? colors.blocked : colors.textSecondary, fontSize: type.small, lineHeight: 18 }}
+          >
+            {restartChoiceText(restartChoice)}
+            {countdown !== null ? `（剩余 ${countdown} 秒）` : ''}
+          </Text>
+          {countdown !== null ? (
+            <Pressable testID="node-secrets-restart-cancel" disabled={busy} onPress={cancelScheduledRestart}>
+              <Text style={{ color: colors.accent, fontSize: type.small }}>取消重启</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {view.kind === 'ok' ? (
         <View testID="node-secrets-list" style={{ gap: spacing.xs }}>

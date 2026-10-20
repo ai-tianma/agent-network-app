@@ -730,7 +730,13 @@ export default function NodeDetailScreen({
         {/* #1491 E2 — 节点密钥。只有节点上报了 node_secrets_capable 才显示：
             没升级的节点没有这条 lane，显示一个永远失败的按钮比不显示更糟。 */}
         {!readOnly && s.node_secrets_capable && s.node_id ? (
-          <NodeSecretsSection cfg={cfg} nodeId={s.node_id} alias={alias} />
+          <NodeSecretsSection
+            cfg={cfg}
+            nodeId={s.node_id}
+            alias={alias}
+            configUpdateCapable={configUpdateCapable}
+            online={online}
+          />
         ) : null}
       </View>
     );
