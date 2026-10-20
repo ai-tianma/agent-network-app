@@ -471,6 +471,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.270:
+            - 组织架构页调整 Agent 部门时，失败提示按真实原因显示：部门不存在、节点不存在、没有权限分别给出可读说明，不再都落到「操作失败」。
+
             What's new in 0.2.269:
             - 「环境变量 / 密钥」页标明只读，并新增一步跳转到「Hub 令牌 · API 密钥库」；添加或替换密钥不再需要自己找入口。
             - Hub 老版本返回 HTML 时提示「当前 Hub 版本还没有密钥目录接口，请先升级 Hub」，不再显示成设置失败。

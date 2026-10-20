@@ -1,6 +1,6 @@
 [package]
 name = "agent-network-desktop"
-version = "0.2.269"
+version = "0.2.270"
 description = "Agent Network desktop shell — Tauri 2 over the RN-web export"
 edition = "2021"
 
