@@ -471,6 +471,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.277:
+            - 定时任务的关注人改成头像胶囊，不再把全部账号平铺在表单里。点卡片即可添加或移除。
+
             What's new in 0.2.276:
             - OpenCode V2 节点切换模型时，列表来自该节点自己的模型目录，不再用内置名单。目录为空或不是 V2 时，仍可手填 provider/model。
 

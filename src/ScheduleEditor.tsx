@@ -37,6 +37,9 @@ import WinTitleBar from './win-title-bar';
 import NodePickerSheet, { NodePickerField } from './NodePicker';
 import { pickerChoices } from './node-picker-model';
 import { listRequirementPeople } from './requirement-people-api';
+import type { RequirementPerson } from './requirement-people';
+import RequirementPeoplePicker from './RequirementPeoplePicker';
+import AliasAvatar from './AliasAvatar';
 import { useModalSafePadding } from './safe-area-runtime';
 import { pointerUi } from './pointer-ui';
 import { withBasePadding } from './modal-safe-area';
@@ -129,7 +132,8 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
   const styles = useMemo(makeStyles, [visible]);
   const [name, setName] = useState(''); const [task, setTask] = useState('');
   const [watcherIds, setWatcherIds] = useState<string[]>([]);
-  const [people, setPeople] = useState<{ id: string; name: string }[]>([]);
+  const [people, setPeople] = useState<RequirementPerson[]>([]);
+  const [watchersOpen, setWatchersOpen] = useState(false);
   const [target, setTarget] = useState(''); const [kind, setKind] = useState<HubScheduleSpec['type']>('once');
   const [when, setWhen] = useState(''); const [every, setEvery] = useState('1'); const [unit, setUnit] = useState<IntervalUnit>('hours'); const [clock, setClock] = useState('09:00');
   const [weekdays, setWeekdays] = useState([1]); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
@@ -206,7 +210,7 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
     if (!visible) return;
     let live = true;
     void listRequirementPeople(cfg).then(rows => {
-      if (live) setPeople(rows.filter(r => r.kind === 'user' && !r.unavailable).map(r => ({ id: r.id, name: r.displayName || r.name })));
+      if (live) setPeople(rows.filter(r => r.kind === 'user' && !r.unavailable));
     }).catch(() => { if (live) setPeople([]); });
     return () => { live = false; };
   }, [visible, cfg.serverUrl, cfg.token, cfg.networkId]);
@@ -369,15 +373,40 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
         <View pointerEvents={canEdit ? 'auto' : 'none'} style={!canEdit && styles.formLocked}>
         <Label text="名称"><TextInput style={styles.input} value={name} onChangeText={setName} placeholder="每日巡检" placeholderTextColor={colors.textMuted} /></Label>
         {supportsWatchers ? (
-          <View testID="schedule-watchers">
+          <View testID="schedule-watchers" style={styles.field}>
             <Text style={styles.label}>关注人</Text>
-            <Text style={styles.meta}>{canManageWatchers ? '被绑定的人能看到并编辑这条计划，但不能取消或改关注人。' : '你是关注人，可以编辑这条计划。'}</Text>
-            {canManageWatchers ? people.map(person => {
-              const on = watcherIds.includes(person.id);
-              return <Pressable key={person.id} testID={`schedule-watcher-${person.id}`} onPress={() => setWatcherIds(ids => on ? ids.filter(id => id !== person.id) : [...ids, person.id])} style={{ paddingVertical: 6 }}>
-                <Text style={{ color: colors.text }}>{on ? '✓ ' : ''}{person.name}</Text>
-              </Pressable>;
-            }) : (editing?.watchers ?? []).map(w => <Text key={w.user_id} style={styles.meta}>{w.display_name || w.username}</Text>)}
+            <Text style={styles.meta}>{canManageWatchers ? '能看也能改这条计划，不能取消，也不能改关注人。' : '你是关注人，可以编辑这条计划。'}</Text>
+            <View style={styles.watcherField}>
+              {watcherIds.length === 0 ? (
+                <Pressable testID="schedule-watchers-field" accessibilityRole="button" accessibilityLabel="添加关注人" disabled={!canManageWatchers} onPress={() => setWatchersOpen(true)} style={styles.watcherOpen}>
+                  <Text style={styles.watcherPlaceholder}>{canManageWatchers ? '添加关注人' : '还没有关注人'}</Text>
+                </Pressable>
+              ) : (
+                <View style={styles.watcherChips}>
+                  {watcherIds.map(id => {
+                    const person = people.find(p => p.id === id);
+                    const saved = (editing?.watchers ?? []).find(w => w.user_id === id);
+                    const label = person?.displayName || person?.name || saved?.display_name || saved?.username || id;
+                    return (
+                      <View key={id} testID={`schedule-watcher-${id}`} style={styles.watcherChip}>
+                        <AliasAvatar alias={label} size={22} />
+                        <Text style={styles.watcherChipText} numberOfLines={1}>{label}</Text>
+                        {canManageWatchers ? (
+                          <Pressable testID={`schedule-watcher-remove-${id}`} accessibilityLabel={`移除 ${label}`} hitSlop={8} onPress={() => setWatcherIds(ids => ids.filter(x => x !== id))}>
+                            <Ionicons name="close" size={14} color={colors.textMuted} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+              {canManageWatchers ? (
+                <Pressable testID="schedule-watchers-manage" accessibilityRole="button" accessibilityLabel="管理关注人" hitSlop={8} onPress={() => setWatchersOpen(true)}>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </Pressable>
+              ) : null}
+            </View>
             {canManageWatchers && people.length === 0 ? <Text style={styles.meta}>没有可选的人类账户</Text> : null}
           </View>
         ) : null}
@@ -436,6 +465,19 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
           </View>
         ) : null}
       </ScrollView>
+      {visible && watchersOpen && canManageWatchers && cfg.networkId ? (
+        <RequirementPeoplePicker
+          networkId={cfg.networkId}
+          mode="participants"
+          kinds={['user']}
+          title="选择关注人"
+          hint={n => n ? `已选 ${n} 人` : '能看也能改，不能取消或改关注人'}
+          people={people}
+          selected={watcherIds.map(id => ({ kind: 'user' as const, id }))}
+          onClose={() => setWatchersOpen(false)}
+          onConfirm={rows => { setWatcherIds(rows.filter(r => r.kind === 'user').map(r => r.id)); setWatchersOpen(false); }}
+        />
+      ) : null}
       <NodePickerSheet
         visible={visible && pickerOpen}
         nodes={choices.nodes}
@@ -604,6 +646,12 @@ export function scheduleStyleDefs() { return {
   conflictSide: { color: colors.textMuted, fontSize: 11, marginTop: spacing.xs },
   conflictValue: { color: colors.text, fontSize: 13 }, muted: { color: colors.textMuted, fontSize: 13 },
   modalRoot: { flex: 1, backgroundColor: colors.bg }, modalHeader: { minHeight: 58, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: colors.border }, modalTitle: { flex: 1, textAlign: 'center', color: colors.text, fontWeight: '600', fontSize: 16 }, link: { color: colors.accent, fontSize: 15 }, headerSide: { minWidth: 56, minHeight: 44, justifyContent: 'center' }, headerSideEnd: { alignItems: 'flex-end' }, form: { padding: spacing.lg, paddingBottom: 60 }, field: { marginBottom: spacing.lg }, label: { color: colors.textMuted, fontSize: 12, marginBottom: spacing.sm }, input: { color: colors.text, backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: spacing.md, paddingVertical: 11 }, textarea: { minHeight: 100, textAlignVertical: 'top' },
+  watcherField: { minHeight: 48, marginTop: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: radius.control },
+  watcherOpen: { flex: 1 },
+  watcherPlaceholder: { color: colors.textMuted, fontSize: fontSize.body },
+  watcherChips: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  watcherChip: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%', height: 28, paddingLeft: 3, paddingRight: 8, borderRadius: radius.pill, backgroundColor: colors.subtleFill },
+  watcherChipText: { color: colors.text, fontSize: 13, flexShrink: 1 },
   segment: { flexDirection: 'row', borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, overflow: 'hidden' }, segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 10, backgroundColor: colors.card }, segmentActive: { backgroundColor: colors.accent }, segmentText: { color: colors.textMuted, fontSize: 12 }, segmentTextActive: { color: colors.onAccent, fontSize: 12, fontWeight: '600' }, weekdays: { flexDirection: 'row', justifyContent: 'space-between' }, day: { width: 38, height: 38, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }, dayActive: { backgroundColor: colors.accent, borderColor: colors.accent }, dayTextActive: { color: colors.onAccent, fontWeight: '600' },
   linkDisabled: { opacity: 0.4 },
   actionDisabled: { opacity: 0.4 },
