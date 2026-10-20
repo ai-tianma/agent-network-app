@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.271:",
+  "- 定时任务可以添加关注人。被添加的人能看到并编辑该计划；不能改关注人名单，也不能取消或立即运行。",
+  "",
   "What's new in 0.2.270:",
   "- 组织架构页调整 Agent 部门时，失败提示按真实原因显示：部门不存在、节点不存在、没有权限分别给出可读说明，不再都落到「操作失败」。",
   "",
