@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.279:",
+  "- 修复：任务仪表盘去掉「生成分享图」。手机底部那条按钮不再压住「最近完成」，桌面上的同一入口也一并撤掉。",
+  "",
   "What's new in 0.2.278:",
   "- 建 OpenCode V2 节点时，这台机器已上报的模型可以直接点选，不必再对着一串不能点的名字手填。",
   "",
