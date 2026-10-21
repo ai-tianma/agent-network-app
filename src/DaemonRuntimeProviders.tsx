@@ -12,9 +12,10 @@ import {
 import { colors, spacing } from './theme';
 
 function ModelLine({ model, onSelect }: { model: string; onSelect?: (model: string) => void }) {
+  const { t } = useTranslation();
   if (!onSelect) return <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{model}</Text>;
   return (
-    <Pressable testID={`daemon-provider-model-${model}`} accessibilityRole="button" accessibilityLabel={`选择模型 ${model}`} onPress={() => onSelect(model)} style={{ minHeight: 32, justifyContent: 'center' }}>
+    <Pressable testID={`daemon-provider-model-${model}`} accessibilityRole="button" accessibilityLabel={t('daemonProviders.selectModel', { model })} onPress={() => onSelect(model)} style={{ minHeight: 32, justifyContent: 'center' }}>
       <Text style={{ color: colors.accent, fontSize: 13 }}>{model}</Text>
     </Pressable>
   );

@@ -46,4 +46,5 @@ registerTranslations({
   'daemonProviders.opencodeTitle': ['这台机器上 OpenCode 已有的 provider/model', 'provider/model OpenCode already has on this machine'],
   'daemonProviders.opencodeHint': ['这是 OpenCode 自己的 provider/model，不是 Codex 的 model_providers。这里不收集密钥，也不会打开本地工具授权。', 'This is OpenCode\'s own provider/model, not Codex model_providers. This screen does not collect a key, and it does not allow local tools.'],
   'daemonProviders.listedTitle': ['这台机器上报的模型', 'Models reported by this machine'],
+  'daemonProviders.selectModel': ['选择模型 {model}', 'Select model {model}'],
 });
