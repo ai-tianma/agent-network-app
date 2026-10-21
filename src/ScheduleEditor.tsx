@@ -51,6 +51,7 @@ import { scheduledTaskActions } from './scheduled-task-actions';
 import TaskDescriptionEditor from './TaskDescriptionEditor';
 import TaskDuePicker from './TaskDuePicker';
 import { schedulePickerValue } from './schedule-date-time';
+import ScheduleClockPicker from './ScheduleClockPicker';
 import { contentDirty, SCHEDULE_CONTENT_MAX } from './schedule-content-edit';
 import { runDisplay, runDurationText, runFailureText, runIsOpen } from './schedule-run-result';
 import { describeMisfire, describeSchedule, formatAbsolute, scheduleStatusMeta } from './scheduled-view-model';
@@ -453,7 +454,9 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
         </Label>}
         <Label text="时区（IANA）"><TextInput style={styles.input} autoCapitalize="none" value={timezone} onChangeText={setTimezone} placeholder="Asia/Shanghai" placeholderTextColor={colors.textMuted} /></Label>
         {kind === 'interval' && <Label text="固定间隔"><TextInput style={styles.input} keyboardType="number-pad" value={every} onChangeText={setEvery} /><View style={[styles.segment, { marginTop: spacing.sm }]}>{(['seconds','minutes','hours','days'] as const).map((value, index) => <Pressable key={value} onPress={() => setUnit(value)} style={[styles.segmentItem, unit === value && styles.segmentActive]}><Text style={unit === value ? styles.segmentTextActive : styles.segmentText}>{['秒','分钟','小时','天'][index]}</Text></Pressable>)}</View></Label>}
-        {(kind === 'daily' || kind === 'weekly') && <Label text="时间"><TextInput style={styles.input} value={clock} onChangeText={setClock} placeholder="09:00" placeholderTextColor={colors.textMuted} /></Label>}
+        {/* #1962（admin 2026-10-21:「就别让手输入」）—— 每天/每周的时间也换成选择器。
+            单次那一处是 #990（TaskDuePicker）；这里只要时分，接口的 clock 仍是 "HH:mm"。 */}
+        {(kind === 'daily' || kind === 'weekly') && <Label text="时间"><ScheduleClockPicker value={clock} onChange={setClock} idBase="schedule-form-clock" sheet={!pointerUi()} /></Label>}
         {kind === 'weekly' && <View style={styles.weekdays}>{DAYS.map((d, i) => <Pressable key={d} onPress={() => setWeekdays(v => v.includes(i) ? v.filter(x => x !== i) : [...v, i].sort())} style={[styles.day, weekdays.includes(i) && styles.dayActive]}><Text style={weekdays.includes(i) ? styles.dayTextActive : styles.segmentText}>{d}</Text></Pressable>)}</View>}
         </View>
         {managing ? (
