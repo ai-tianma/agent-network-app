@@ -241,7 +241,10 @@ jobs:
               echo "  patched: version $vid now points at build $build_id"
             fi
             asc_get "appStoreVersions/$vid" --data-urlencode 'include=build' > "$vjson"
-            jq '{id, version: .attributes.versionString, state: .attributes.appStoreState, buildId: (.relationships.build.data.id // null)}' "$vjson"
+            # 🔴 带 include 的单资源 GET 回的是 JSON:API **document**（`{data:{…}}`），
+            #    而不带 include 时回的是裸资源。两种形状都见过，所以这里两种都认 ——
+            #    只认一种的话，回读会打出一片 null，看起来像「改了但没生效」。
+            jq '(.data // .) | {id, version: .attributes.versionString, state: .attributes.appStoreState, buildId: (.relationships.build.data.id // null)}' "$vjson"
           fi
 
           groups_json="$RUNNER_TEMP/groups.json"

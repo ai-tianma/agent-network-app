@@ -82,14 +82,17 @@ function runAttachTest() {
       attributes: { version: '151', processingState: 'VALID', expired: false,
         buildAudienceType: 'APP_STORE_ELIGIBLE', ...over } }] });
 
-    const run = ({ version, build, attach, state = 'REJECTED' }) => {
+    const run = ({ version, build, attach, state = 'REJECTED', shape = 'document' }) => {
       rmSync(calls, { force: true });
       rmSync(writeBody, { force: true });
       writeFileSync(versions, JSON.stringify(versionDoc(state, 'build-3')));
       writeFileSync(builds, JSON.stringify(build));
-      writeFileSync(one, JSON.stringify({ type: 'appStoreVersions', id: 'version-1',
+      const resource = { type: 'appStoreVersions', id: 'version-1',
         attributes: { versionString: '1.0', appStoreState: state },
-        relationships: { build: { data: { type: 'builds', id: 'build-151' } } } }));
+        relationships: { build: { data: { type: 'builds', id: 'build-151' } } } };
+      // The single-resource GET answers with a JSON:API document when `include=` is
+      // used, and with the bare resource otherwise. Both shapes exist in the wild.
+      writeFileSync(one, JSON.stringify(shape === 'document' ? { data: resource, included: [] } : resource));
       const result = spawnSync('bash', ['-eu', '-c', `
         app_id=fixture-app
         build_id=build-151
@@ -152,6 +155,22 @@ function runAttachTest() {
     assert.equal(body.data.relationships.build.data.id, 'build-151');
     // 8) and it must never submit for review
     assert(!callsMade.some(c => c.includes('appStoreVersionSubmission')), 'must not create a submission');
+    // 9) the read-back must print the real fields, not a wall of nulls.
+    //    The single-resource GET with `include=` answers with a JSON:API **document**
+    //    ({data:{…}}), while without `include` it answers with the bare resource —
+    //    both shapes exist, so the read-back has to accept both.
+    const readback = JSON.parse(r.stdout.slice(r.stdout.indexOf('{')));
+    assert.equal(readback.id, 'version-1');
+    assert.equal(readback.version, '1.0');
+    assert.equal(readback.state, 'REJECTED');
+    assert.equal(readback.buildId, 'build-151');
+    // 9b) and the same read-back must work when the API answers with the bare
+    //     resource instead of a document.
+    r = run({ version: null, build: buildDoc(), attach: '1.0', shape: 'bare' });
+    assert.equal(r.status, 0, r.stderr);
+    const bare = JSON.parse(r.stdout.slice(r.stdout.indexOf('{')));
+    assert.equal(bare.id, 'version-1');
+    assert.equal(bare.buildId, 'build-151');
     console.log('PASS: attaching a build to an App Store version is guarded and never submits');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
