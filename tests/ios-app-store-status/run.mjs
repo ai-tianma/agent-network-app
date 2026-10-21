@@ -53,7 +53,7 @@ try {
   assert.deepEqual(JSON.parse(empty.slice(empty.indexOf('{'))).versions, []);
   console.log('PASS: workflow App Store query is optional, read-only, sanitized and marks partial lists');
   runAttachTest();
-  runCancelTest();
+  runWithdrawTest();
 } finally { rmSync(dir, { recursive: true, force: true }); }
 
 /**
@@ -177,47 +177,49 @@ function runAttachTest() {
 }
 
 /**
- * The cancel step withdraws Beta App Review submissions, so it gets its own
- * tests. What must hold:
- *   - a build number this app does not have ⇒ nothing is cancelled
+ * The withdraw step removes superseded builds from the public beta group, so it
+ * gets its own tests. What must hold:
+ *   - a build number this app does not have ⇒ nothing is withdrawn
  *   - only builds STRICTLY OLDER than the one we keep are touched
- *   - only submissions still pending are withdrawn; approved/rejected stay
- *   - the current build's own submission is never touched
+ *   - only submissions still pending are acted on; approved/rejected stay
+ *   - the build we keep is never removed
+ *   - the outcome is measured, not assumed: the step re-reads the submission
+ *     and says whether it is gone
  */
-function runCancelTest() {
+function runWithdrawTest() {
   const start = workflow.indexOf(`          if [ -n "$CANCEL_SUPERSEDED_BETA_REVIEWS" ]; then`);
   const end = workflow.indexOf('          if [ "$INCLUDE_APP_STORE_VERSIONS" = \'true\' ]; then', start);
-  assert(start > 0 && end > start, 'cancel block not found in the workflow');
+  assert(start > 0 && end > start, 'withdraw block not found in the workflow');
   const block = workflow.slice(start, end).replace(/^          /gm, '');
 
-  const dir = mkdtempSync(join(tmpdir(), 'ios-cancel-'));
+  const dir = mkdtempSync(join(tmpdir(), 'ios-withdraw-'));
   try {
     const calls = join(dir, 'calls');
     const builds = join(dir, 'builds.json');
-    const subs = join(dir, 'subs.json');
+    const removed = join(dir, 'removed');
 
-    // the app's builds: 151, 152, 153 (older) and 154 (the one we keep)
     const appBuilds = { data: [
       { type: 'builds', id: 'b-151', attributes: { version: '151' } },
       { type: 'builds', id: 'b-152', attributes: { version: '152' } },
       { type: 'builds', id: 'b-153', attributes: { version: '153' } },
       { type: 'builds', id: 'b-154', attributes: { version: '154' } },
     ] };
-    // every build reports one submission; 153's review is already approved
-    // (that one must be left alone).
-    const subsFor = (buildId, state = 'IN_REVIEW') => ({ data: [
-      { type: 'betaAppReviewSubmissions', id: `sub-${buildId}`,
-        attributes: { betaReviewState: state } },
-    ] });
-    const writeSubs = (states = {}) => {
-      for (const [id, state] of Object.entries({ 'b-151': 'IN_REVIEW', 'b-152': 'IN_REVIEW', 'b-153': 'APPROVED', 'b-154': 'IN_REVIEW', ...states })) {
-        writeFileSync(join(dir, `src-subs-${id}.json`), JSON.stringify(subsFor(id, state)));
-      }
-    };
+    const groups = { data: [
+      { type: 'betaGroups', id: 'g-internal', attributes: { name: 'Internal', publicLinkId: null } },
+      { type: 'betaGroups', id: 'g-public', attributes: { name: 'Public', publicLinkId: 'ZvqYnCA9' } },
+    ] };
+    // 151 and 152 have pending reviews; 153's review is already approved.
+    const stateOf = { 'b-151': 'IN_REVIEW', 'b-152': 'WAITING_FOR_REVIEW', 'b-153': 'APPROVED', 'b-154': 'IN_REVIEW' };
 
     const run = ({ keep }) => {
       rmSync(calls, { force: true });
+      rmSync(removed, { force: true });
       writeFileSync(builds, JSON.stringify(appBuilds));
+      for (const [id, st] of Object.entries(stateOf)) {
+        writeFileSync(join(dir, `src-subs-${id}.json`), JSON.stringify({ data: [
+          { type: 'betaAppReviewSubmissions', id: `sub-${id}`, attributes: { betaReviewState: st } },
+        ] }));
+      }
       const result = spawnSync('bash', ['-eu', '-c', `
         app_id=fixture-app
         BUNDLE_ID=top.vansin.agentnetwork
@@ -225,70 +227,64 @@ function runCancelTest() {
         CANCEL_SUPERSEDED_BETA_REVIEWS="${keep}"
         asc_get() {
           case "$1" in
-            builds) echo "GET $1" >> "$CALLS"; cat "$BUILDS";;
+            builds) echo "GET builds" >> "$CALLS"; cat "$BUILDS";;
+            betaGroups) echo "GET betaGroups" >> "$CALLS"; cat "$GROUPS";;
             betaAppReviewSubmissions)
-              echo "GET $1" >> "$CALLS"
+              echo "GET betaAppReviewSubmissions" >> "$CALLS"
               bid=''
               for a in "$@"; do
                 case "$a" in
                   *filter\\[build\\]=*) bid=\${a##*=} ;;
                 esac
               done
-              cat "$RUNNER_TEMP/src-subs-$bid.json" 2>/dev/null || echo '{"data":[]}';;
+              # a build that was removed from the public group has no submission left
+              if [ -n "$bid" ] && grep -qx "$bid" "$REMOVED" 2>/dev/null; then
+                echo '{"data":[]}'
+              else
+                cat "$RUNNER_TEMP/src-subs-$bid.json"
+              fi ;;
             *) echo "unexpected GET $1" >&2; exit 98;;
           esac
         }
-        curl() {
-          # the delete call: record the url, answer 204
-          for a in "$@"; do
-            case "$a" in
-              https://*) echo "DELETE $a" >> "$CALLS";;
-            esac
-          done
-          printf '204'
+        asc_write() {
+          echo "WRITE $1 $2 $3" >> "$CALLS"
+          case "$1 $2" in
+            DELETE*relationships/builds)
+              # the body names the build(s) being removed
+              bid=$(echo "$3" | sed 's/.*"id":"\\([^"]*\\)".*/\\1/')
+              echo "$bid" >> "$REMOVED";;
+          esac
         }
         ${block}
-      `], { env: { ...process.env, RUNNER_TEMP: dir, CALLS: calls, BUILDS: builds, SUBS: subs }, encoding: 'utf8' });
+      `], { env: { ...process.env, RUNNER_TEMP: dir, CALLS: calls, BUILDS: builds, GROUPS: join(dir, 'groups.json'), REMOVED: removed }, encoding: 'utf8' });
       return result;
     };
+    writeFileSync(join(dir, 'groups.json'), JSON.stringify(groups));
 
-    // 1) a build number this app does not have ⇒ refuse, cancel nothing
-    writeSubs();
+    // 1) a build number this app does not have ⇒ refuse, remove nothing
     let r = run({ keep: '999' });
     assert.notEqual(r.status, 0, 'an unknown build number must fail the step');
-    const refused = readFileSync(calls, 'utf8');
-    assert(!refused.includes('DELETE'), 'nothing may be deleted when the build number is unknown');
-    assert(r.stdout.includes('refusing to cancel anything'), 'the refusal must say why');
+    assert(!readFileSync(calls, 'utf8').includes('WRITE DELETE'), 'nothing may be removed when the build number is unknown');
+    assert(r.stdout.includes('refusing to withdraw anything'), 'the refusal must say why');
 
-    // 2) the happy path: only the older, still-pending submissions go
-    writeSubs();
+    // 2) the happy path: the two older pending ones leave the public group,
+    //    the approved one stays, and the outcome is measured
     r = run({ keep: '154' });
     assert.equal(r.status, 0, r.stderr);
-    const made = readFileSync(calls, 'utf8').split('\n').filter((l) => l.startsWith('DELETE'));
-    assert.equal(made.length, 2, `expected two withdrawals (151 and 152), got ${made.length}; calls=${JSON.stringify(readFileSync(calls, 'utf8'))} stdout=${JSON.stringify(r.stdout)} stderr=${JSON.stringify(r.stderr)}`);
+    const wrote = readFileSync(calls, 'utf8').split('\n').filter((l) => l.startsWith('WRITE DELETE'));
+    assert.equal(wrote.length, 2, `expected two removals, got ${wrote.length}: ${wrote.join(' | ')}`);
+    assert(wrote.some((w) => w.includes('b-151')), 'build 151 was not removed');
+    assert(wrote.some((w) => w.includes('b-152')), 'build 152 was not removed');
+    assert(!wrote.some((w) => w.includes('b-153')), 'an approved review must not be touched');
+    assert(!wrote.some((w) => w.includes('b-154')), 'the build we keep must never be removed');
+    assert(r.stdout.includes('is gone'), 'the outcome must be measured, not assumed');
+    assert(r.stdout.includes('removed 2'), 'the count must be printed');
 
-    assert(made.some((m) => m.includes('sub-b-151')), `wrong submission withdrawn: ${made.join(' ')}`);
-    assert(made.some((m) => m.includes('sub-b-152')), `build 152 was not withdrawn: ${made.join(' ')}`);
-    assert(!made.some((m) => m.includes('sub-b-153')), 'an approved review must not be withdrawn');
-    assert(!made[0].includes('sub-b-154'), 'the build we keep must never be withdrawn');
-    assert(r.stdout.includes('withdrew 2'), 'the count must be printed');
-
-    // 3) approved submissions are left alone
-    writeSubs({ 'b-151': 'APPROVED', 'b-152': 'APPROVED', 'b-153': 'APPROVED' });
+    // 3) the build we keep is never removed even when its own review is pending
     r = run({ keep: '154' });
-    assert.equal(r.status, 0, r.stderr);
-    const kept = readFileSync(calls, 'utf8').split('\n').filter((l) => l.startsWith('DELETE'));
-    assert.equal(kept.length, 0, 'an approved review must not be withdrawn');
-    assert(r.stdout.includes('leaving build 151'), 'the skip must be printed');
+    const mine = readFileSync(calls, 'utf8').split('\n').filter((l) => l.startsWith('WRITE DELETE'));
+    assert(!mine.some((w) => w.includes('b-154')), 'the build we keep must never be removed');
 
-    // 4) the build we keep is never withdrawn, even when its own review is pending
-    writeSubs();
-    r = run({ keep: '154' });
-    assert.equal(r.status, 0, r.stderr);
-    const mine = readFileSync(calls, 'utf8').split('\n').filter((l) => l.startsWith('DELETE'));
-    assert(!mine.some((m) => m.includes('sub-b-154')), 'the build we keep must never be withdrawn');
-    assert(mine.length === 2, `only the two older pending ones may go, got ${mine.length}`);
-
-    console.log('PASS: cancelling superseded beta reviews is guarded by age, existence and review state');
+    console.log('PASS: withdrawing superseded builds from the public group is guarded and the outcome is measured');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }

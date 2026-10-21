@@ -160,30 +160,43 @@ jobs:
             exit 1
           fi
 
-          # ── withdraw the superseded builds' pending Beta App Review submissions ──
+          # ── withdraw the superseded builds from the beta groups ──────────────
           # 🔴 为什么需要：同一天发了好几版，每一版都提交了一次 Beta App Review，
           #    Apple 的提交上限（422 ENTITY_UNPROCESSABLE.SUBMISSION_LIMIT_REACHED）
           #    就把最新那一版挡在外面了 —— 那一版在公开组里，externalBuildState
           #    停在 READY_FOR_BETA_SUBMISSION，外部测试者拿不到，而所有检查都是绿的。
-          #    被取代的旧版再占着审核位没有意义（它审的是已经过时的版本）。
-          # 护栏：给出的 build 号必须真的存在；只动**更旧**的 build；只撤销还在审的
-          #    提交（已批准/已拒绝的不动）；每一次撤销都打印出来。
+          #
+          # 🔴 2026-10-21 实测：**betaAppReviewSubmissions 不允许 DELETE**
+          #    （Apple: "Allowed operations are: CREATE, GET_COLLECTION, GET_INSTANCE"），
+          #    所以「直接撤销提交」这条路走不通。能做的只有把 build 从 beta 组里移除 ——
+          #    提交挂在组里的 build 上，移除之后应当随之失效。
+          #    但这一步**不假设**它一定生效：移除之后重新查一遍提交和组成员，
+          #    把实际结果打印出来（撤掉了 / 没撤掉 / 不在公开组）。
+          #
+          # 护栏：给出的 build 号必须真的存在；只动**更旧**的 build；只动还在审的
+          #       提交；只从**公开**组里移除（内部组留着，测试者还要用）；每一次都打印。
           if [ -n "$CANCEL_SUPERSEDED_BETA_REVIEWS" ]; then
             keep="$CANCEL_SUPERSEDED_BETA_REVIEWS"
-            echo "Cancel pending Beta App Review submissions of builds older than $keep"
+            echo "Withdraw superseded builds (older than $keep) from the public beta group"
             all_builds="$RUNNER_TEMP/app-builds.json"
             asc_get builds --data-urlencode "filter[app]=$app_id" --data-urlencode 'limit=200' > "$all_builds"
             keep_exists=$(jq --arg v "$keep" '[.data[]|select((.attributes.version // "") == $v)]|length' "$all_builds")
             if [ "$keep_exists" = 0 ]; then
-              echo "::error::build $keep does not exist for $BUNDLE_ID — refusing to cancel anything"
+              echo "::error::build $keep does not exist for $BUNDLE_ID — refusing to withdraw anything"
               exit 1
             fi
-            cancelled=0
+            groups_for_withdraw="$RUNNER_TEMP/groups-withdraw.json"
+            asc_get betaGroups --data-urlencode "filter[app]=$app_id" --data-urlencode 'limit=200' > "$groups_for_withdraw"
+            public_group_id=$(jq -r '.data[]|select(.attributes.publicLinkId != null and .attributes.publicLinkId != "")|.id' "$groups_for_withdraw" | head -1)
+            if [ -z "$public_group_id" ]; then
+              echo "::error::no public beta group found for $BUNDLE_ID — refusing to withdraw anything"
+              exit 1
+            fi
+            withdrawn=0
             while IFS= read -r row; do
               [ -n "$row" ] || continue
               bnum=$(jq -r '.attributes.version' <<<"$row")
               bid=$(jq -r '.id' <<<"$row")
-              # 只动更旧的：数字比较用 10# 去掉前导零
               if [ "$((10#$bnum))" -ge "$((10#$keep))" ]; then continue; fi
               subs="$RUNNER_TEMP/subs-$bid.json"
               asc_get betaAppReviewSubmissions --data-urlencode "filter[build]=$bid" --data-urlencode 'limit=10' > "$subs"
@@ -193,26 +206,24 @@ jobs:
                 state=$(jq -r '.attributes.betaReviewState // "UNKNOWN"' <<<"$sub")
                 case "$state" in
                   IN_REVIEW|WAITING_FOR_REVIEW|PENDING)
-                    echo "  withdrawing beta review submission $sid of build $bnum (state=$state)"
-                    curl --silent --show-error --request DELETE \
-                      -H "Authorization: Bearer $jwt" -H 'Accept: application/json' \
-                      --output "$RUNNER_TEMP/del.json" --write-out '%{http_code}' \
-                      "https://api.appstoreconnect.apple.com/v1/betaAppReviewSubmissions/$sid" > "$RUNNER_TEMP/del.code" || true
-                    code=$(cat "$RUNNER_TEMP/del.code")
-                    if [ "${code:0:1}" = 2 ]; then
-                      cancelled=$((cancelled + 1))
-                      echo "  withdrawn: build $bnum submission $sid"
+                    echo "  build $bnum has a pending beta review ($state) — removing it from the public group"
+                    group_link=$(jq -cn --arg bid "$bid" '{data:[{type:"builds",id:$bid}]}')
+                    asc_write DELETE "betaGroups/$public_group_id/relationships/builds" "$group_link" > /dev/null
+                    withdrawn=$((withdrawn + 1))
+                    # 复查：提交是否真的随之没了 —— 不假设，量。
+                    asc_get betaAppReviewSubmissions --data-urlencode "filter[build]=$bid" --data-urlencode 'limit=10' > "$subs"
+                    left=$(jq -r '.data|length' "$subs")
+                    if [ "$left" = 0 ]; then
+                      echo "  withdrawn: build $bnum submission $sid is gone"
                     else
-                      echo "::error::withdrawing submission $sid (build $bnum) returned HTTP $code"
-                      jq -r '.errors[]? | "  apple error: status=\(.status // "") code=\(.code // "") title=\(.title // "") detail=\(.detail // "")"' "$RUNNER_TEMP/del.json" >&2 2>/dev/null || true
-                      exit 1
+                      echo "  build $bnum submission $sid is STILL there ($left) — removing the build from the group did not withdraw it"
                     fi ;;
                   *)
                     echo "  leaving build $bnum submission $sid alone (state=$state)" ;;
                 esac
               done < <(jq -c '.data[]?' "$subs")
             done < <(jq -c '.data[]?' "$all_builds")
-            echo "withdrew $cancelled pending Beta App Review submission(s) of builds older than $keep"
+            echo "removed $withdrawn superseded build(s) from the public beta group"
           fi
 
           if [ "$INCLUDE_APP_STORE_VERSIONS" = 'true' ]; then
