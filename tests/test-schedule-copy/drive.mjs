@@ -152,6 +152,16 @@ const measureActions = async (page) => {
   out.sort((a, b) => a.y - b.y || a.x - b.x);
   return out;
 };
+/**
+ * 新设计（#1011）把「取消计划」挪到最右、与其它动作隔开 —— 红字、破坏性动作不贴着主操作。
+ * 所以「所有间距都相等」不再是判据；判据变成：**挨在一起的那一组间距相等**，
+ * 而被隔开的那一个是刻意分开的（间距明显更大），且它得是那个破坏性动作。
+ */
+const clusterGaps = (line) => {
+  const gaps = line.slice(1).map((b, i) => b.x - (line[i].x + line[i].w));
+  const split = gaps.findIndex(g => g > 40);
+  return { gaps, split, cluster: split < 0 ? gaps : gaps.slice(0, split), apart: split < 0 ? null : line[split + 1] };
+};
 const checkRow = (tag, boxes) => {
   console.log(`\n${tag} action row (CSS px):\n| button | x | y | w | h | gap to prev |\n|---|---|---|---|---|---|`);
   boxes.forEach((b, i) => {
@@ -165,8 +175,11 @@ const checkRow = (tag, boxes) => {
   const line = boxes.filter(b => Math.abs(b.y - copy.y) < 1);
   ck(`${tag}: all buttons on one line (no wrap)`, line.length === boxes.length, `${line.length}/${boxes.length}`);
   ck(`${tag}: same height as siblings`, boxes.every(b => Math.abs(b.h - copy.h) < 0.5), boxes.map(b => b.h).join('/'));
-  const gaps = line.slice(1).map((b, i) => b.x - (line[i].x + line[i].w));
-  ck(`${tag}: even gaps`, gaps.every(g => Math.abs(g - gaps[0]) < 0.5), gaps.map(g => g.toFixed(1)).join('/'));
+  const { gaps, split, cluster, apart } = clusterGaps(line);
+  ck(`${tag}: the actions that sit together are evenly gapped`, cluster.length === 0 || cluster.every(g => Math.abs(g - cluster[0]) < 0.5), gaps.map(g => g.toFixed(1)).join('/'));
+  if (split >= 0) {
+    ck(`${tag}: the action set apart is the destructive one (${apart.label})`, apart.label === '取消计划');
+  }
   const edit = boxes.find(b => b.label === '编辑');
   if (edit) ck(`${tag}: 复制 directly after 编辑`, line.indexOf(copy) === line.indexOf(edit) + 1);
 };
@@ -268,8 +281,9 @@ const nonCreateWrites = () => writes.filter(w => !(w.method === 'POST' && w.path
   console.log(`\nD phone 390×844 action row (CSS px):\n| button | x | y | w | h | gap to prev |\n|---|---|---|---|---|---|`);
   row.forEach((b, i) => console.log(`| ${b.label} | ${b.x} | ${b.y} | ${b.w} | ${b.h} | ${i ? (b.x - row[i - 1].x - row[i - 1].w).toFixed(1) : '—'} |`));
   ck('D: action row = 立即执行/暂停/编辑/取消计划 on one line', row.map(b => b.label).join() === '立即执行,暂停,编辑,取消计划' && row.every(b => b.y === row[0].y), row.map(b => `${b.label}@${b.y}`).join());
-  const gaps = row.slice(1).map((b, i) => b.x - row[i].x - row[i].w);
-  ck('D: row gaps even', gaps.every(g => Math.abs(g - gaps[0]) < 0.5), gaps.join('/'));
+  const d = clusterGaps(row);
+  ck('D: the actions that sit together are evenly gapped', d.cluster.length === 0 || d.cluster.every(g => Math.abs(g - d.cluster[0]) < 0.5), d.gaps.join('/'));
+  if (d.split >= 0) ck('D: the action set apart is 取消计划', d.apart.label === '取消计划');
   const back = await page.getByText('‹ 定时任务', { exact: true }).locator('xpath=..').boundingBox();
   const copy = await page.locator('[data-testid="schedule-copy"]').boundingBox();
   const bar = await page.locator('[data-testid="schedule-copy"]').locator('xpath=..').boundingBox();
@@ -299,7 +313,17 @@ const nonCreateWrites = () => writes.filter(w => !(w.method === 'POST' && w.path
   ck('E: no leftover action buttons', (await detail.getByText('编辑', { exact: true }).count()) === 0 && (await detail.getByText('立即执行', { exact: true }).count()) === 0);
   const label = await detail.getByText('任务内容', { exact: true }).boundingBox();
   const target = await detail.getByText('测试甲', { exact: true }).first().boundingBox();
-  ck('E: 任务内容 follows the target line with no empty row gap (< 60 px)', label.y - (target.y + target.height) < 60, `${(label.y - target.y - target.height).toFixed(1)} px`);
+  // 新设计（#1011）把「下次执行 / 上次执行」两张信息卡放在目标行与「任务内容」之间。
+  // 所以判据从「这段必须 < 60 px」变成：**要么很短，要么被那两张卡占着** ——
+  // 不许是一个空洞（原判据抓的正是空洞，但新布局里那 139 px 是有内容的）。
+  const band = label.y - (target.y + target.height);
+  const facts = [];
+  for (const f of ['下次执行', '上次执行']) {
+    const t = detail.getByText(f, { exact: true });
+    if (await t.count()) facts.push(await t.first().boundingBox());
+  }
+  const filled = facts.some(b => b && b.y >= (target.y + target.height) - 2 && b.y <= label.y);
+  ck('E: 任务内容 follows the target line with no empty row gap (short, or filled by the run-info cards)', band < 60 || filled, `${band.toFixed(1)} px band, ${facts.length} run-info label(s), filled=${filled}`);
   if (OUT) await page.screenshot({ path: `${OUT}/phone-completed-detail.png` });
   await ctx.close();
 }
