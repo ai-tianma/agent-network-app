@@ -1,6 +1,8 @@
 import { registerTranslations } from './i18n';
 registerTranslations({
   'hubProvider.title': ['Hub Provider', 'Hub Provider'],
+  'hubProvider.confusableHint': ['金库里有两个只差大小写/下划线的密钥名（{names}）—— 选哪个决定用哪把钥匙', 'The vault has two key names that differ only in case or underscores ({names}) — which one you pick decides which key is used'],
+  'hubProvider.confusableRow': ['这个名字还有一个只差大小写/下划线的孪生名字', 'This name has a twin that differs only in case or underscores'],
   'hubProvider.credentialSource': ['密钥来源', 'Credential source'],
   'hubProvider.newKey': ['填写新密钥', 'Enter a new key'],
   'hubProvider.savedKey': ['选择已存 Hub 密钥', 'Use a saved Hub key'],

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { Text, TextInput } from './ui-text';
 import { fetchHostSupervisors, type HubConfig, type HostSupervisorDaemon } from './api';
 import { readHubProviderCatalogInfo, saveHubProviderConfig, bindHubProviderConfig } from './hub-provider-management-api';
+import { confusableSecretGroups, isInConfusableGroup } from './secret-name-hints';
 import { readHubTokenNames } from './hub-token-management-api';
 import { EMPTY_HUB_PROVIDER, hubProviderInput, type HubProvider, type HubProviderForm } from './hub-provider-management';
 import { providerWriteTransportAllowed, providerHttpWarning } from './daemon-provider-management-api';
@@ -57,6 +58,8 @@ function HubProviderPage({ cfg, onBack }: { cfg: HubConfig; onBack?: () => void 
     live.current = true; void load();
     return () => { live.current = false; reading.current?.abort(); controller.current?.abort(); };
   }, []);
+  // 只差大小写/下划线的密钥名（TM_PAT 与 TMPAT）在这里是「选错就换了一把钥匙」：标出来。
+  const confusableGroups = useMemo(() => confusableSecretGroups(secretNames ?? []), [secretNames]);
   const field = (name: keyof HubProviderForm, value: string) => setForm(f => ({ ...f, [name]: value }));
   const save = async () => {
     if (locked.current || !secure || rows === null || !hubProviderInput(form)
@@ -175,11 +178,19 @@ function HubProviderPage({ cfg, onBack }: { cfg: HubConfig; onBack?: () => void 
         {credentialMode === 'reference' && <View style={{ gap: spacing.sm }}>
           <Text style={{ color: colors.textMuted }}>{t('hubProvider.referenceHint')}</Text>
           {secretNames === null ? <Text style={{ color: colors.failed }}>{t('hubProvider.unconfirmed')}</Text> : secretNames.length === 0 ? <Text style={{ color: colors.textMuted }}>{t('hubProvider.noSavedKeys')}</Text> : null}
+          {confusableGroups.length ? (
+            <Text testID="hub-provider-secret-confusable" style={{ color: colors.blocked, fontSize: 12 }}>
+              {t('hubProvider.confusableHint', { names: confusableGroups.map(g => g.join('、')).join(' / ') })}
+            </Text>
+          ) : null}
           {secretNames?.map(name => <Pressable key={name} testID={`hub-provider-secret-${name}`} accessibilityRole="radio"
             accessibilityState={{ selected: form.secretKeyRef === name, disabled: busy }} disabled={busy}
             onPress={() => setForm(f => ({ ...f, secretKeyRef: name, key: '' }))}
             style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: form.secretKeyRef === name ? colors.tonalBg : colors.inputBg }}>
             <Text style={{ color: colors.text }}>{form.secretKeyRef === name ? '✓ ' : '○ '}{name}</Text>
+            {isInConfusableGroup(name, confusableGroups) ? (
+              <Text testID={`hub-provider-secret-confusable-${name}`} style={{ color: colors.blocked, fontSize: 12 }}>{t('hubProvider.confusableRow')}</Text>
+            ) : null}
           </Pressable>)}
         </View>}
         {(['id', 'label', 'baseUrl', 'models', ...(credentialMode === 'key' ? ['key'] as const : [])] as const).map(name => <View key={name} style={{ gap: spacing.xs }}>

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import type { HubConfig } from './api';
 import { Text, TextInput } from './ui-text';
 import { readHubTokenNames, saveHubToken } from './hub-token-management-api';
 import { hubTokenInput } from './hub-token-management';
+import { confusableSecretGroups, confusableSecretName, isInConfusableGroup } from './secret-name-hints';
 import { providerWriteTransportAllowed, providerHttpWarning } from './daemon-provider-management-api';
 import { buttonStyle, buttonTextStyle } from './elevation';
 import { useTranslation } from './i18n-react';
@@ -21,6 +22,8 @@ function HubTokenPage({ cfg }: { cfg: HubConfig }) {
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [note, setNote] = useState('');
   const current = useRef<AbortController | null>(null); const locked = useRef(false); const live = useRef(true);
   const secure = providerWriteTransportAllowed(cfg.serverUrl);
+  // 只差大小写/下划线的名字（TM_PAT 与 TMPAT）会让人以为在加一个新钥匙：标出来，让人自己确认。
+  const confusableGroups = useMemo(() => confusableSecretGroups(names ?? []), [names]);
   const refresh = async () => {
     if (locked.current) return;
     current.current?.abort(); const ctrl = new AbortController(); current.current = ctrl;
@@ -63,6 +66,9 @@ function HubTokenPage({ cfg }: { cfg: HubConfig }) {
         {loading ? <ActivityIndicator color={colors.accent} /> : names?.length === 0 ? <Text style={{ color: colors.textSecondary }}>{t('hubToken.empty')}</Text> : null}
         {names?.map(name => <View key={name} testID={`hub-token-row-${name}`} style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.inputBg, gap: spacing.sm }}>
           <Text style={{ color: colors.text }}>{name}</Text>
+          {isInConfusableGroup(name, confusableGroups) ? (
+            <Text testID={`hub-token-confusable-row-${name}`} style={{ color: colors.blocked, fontSize: 12 }}>{t('hubToken.confusableRow')}</Text>
+          ) : null}
           {button('hubToken.replace', () => { setKey(name); setValue(''); }, busy, false, `hub-token-replace-${name}`)}
         </View>)}
         <Text style={{ color: colors.textMuted }}>{t('hubToken.noDelete')}</Text>
@@ -73,6 +79,9 @@ function HubTokenPage({ cfg }: { cfg: HubConfig }) {
         <Text style={{ color: colors.textSecondary }}>{t('hubToken.name')}</Text>
         <TextInput testID="hub-token-name" value={key} onChangeText={setKey} editable={!busy} autoCapitalize="none" autoCorrect={false}
           style={{ color: colors.text, backgroundColor: colors.inputBg, borderRadius: radius.md, padding: spacing.md }} />
+        {confusableSecretName(key, names ?? []) ? (
+          <Text testID="hub-token-confusable-hint" style={{ color: colors.blocked, fontSize: 12 }}>{t('hubToken.confusableHint', { name: confusableSecretName(key, names ?? []) ?? '' })}</Text>
+        ) : null}
         <Text style={{ color: colors.textSecondary }}>{t('hubToken.value')}</Text>
         <TextInput testID="hub-token-value" value={value} onChangeText={setValue} editable={!busy} secureTextEntry autoCapitalize="none" autoCorrect={false}
           style={{ color: colors.text, backgroundColor: colors.inputBg, borderRadius: radius.md, padding: spacing.md }} />

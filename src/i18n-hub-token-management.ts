@@ -2,6 +2,8 @@ import { registerTranslations } from './i18n';
 registerTranslations({
   'hubToken.title': ['Hub 令牌 · API 密钥库', 'Hub tokens · API key vault'],
   'hubToken.boundary': ['当前网络的共享 API 密钥，加密保存在 Hub，只显示名称。不是 Hub 登录令牌或节点身份令牌。', 'Shared API keys for this network, encrypted in the Hub. Only names are shown. These are not Hub login or node identity tokens.'],
+  'hubToken.confusableRow': ['金库里还有一个只差大小写/下划线的名字，别当成新钥匙', 'The vault already has a name that differs only in case or underscores — not a new key'],
+  'hubToken.confusableHint': ['金库里已经有 {name}，和你输入的名字只差大小写/下划线。确认不是同一个？', 'The vault already has {name}, which differs from your input only in case or underscores. Are they the same?'],
   'hubToken.catalog': ['已保存的密钥名称', 'Saved key names'],
   'hubToken.empty': ['暂无密钥，请添加。', 'No keys yet. Add one below.'],
   'hubToken.form': ['添加或替换 · 需网络所有者权限', 'Add or replace · Network owner access required'],
