@@ -191,7 +191,11 @@ const nonCreateWrites = () => writes.filter(w => !(w.method === 'POST' && w.path
   const nodeA = await paintedText(page, '[data-testid="schedule-target-name"]');
   ck('A: node prefilled', (await page.locator('[data-testid="schedule-target-name"]').innerText()) === '测试甲' && painted(nodeA), pw(nodeA));
   ck('A: timezone prefilled', (await page.getByPlaceholder('Asia/Shanghai').inputValue()) === 'Asia/Shanghai');
-  ck('A: weekly time prefilled', (await page.getByPlaceholder('09:00').inputValue()) === '08:30');
+  // #1000 把每天/每周的时间也换成了选择器（ScheduleClockPicker），旧的
+  // getByPlaceholder('09:00') 输入框没有了。读选择器字段上的显示值（'HH:mm'）——
+  // 断言的意图不变：每周的时间是从来源计划预填的。
+  const weeklyTime = await page.locator('[data-testid="schedule-form-clock-field"]').innerText();
+  ck('A: weekly time prefilled', weeklyTime.trim() === '08:30', weeklyTime);
   if (OUT) { await page.waitForTimeout(600); await page.screenshot({ path: `${OUT}/desktop-copy-form.png` }); }
   await name.fill('巡检 周三版');
   await page.locator('[data-testid="schedule-form-save"]').click();
