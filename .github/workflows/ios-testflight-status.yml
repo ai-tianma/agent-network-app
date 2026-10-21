@@ -32,6 +32,11 @@ on:
         required: false
         type: string
         default: ""
+      cancel_superseded_beta_reviews:
+        description: "Withdraw the pending Beta App Review submissions of every build OLDER than this build number, so Apple's submission limit frees a slot for the current one. Refuses a build number this app does not have."
+        required: false
+        type: string
+        default: ""
       distribute_to_groups:
         description: Comma-separated beta group names (or all-internal) to attach this build to once it is VALID. Empty = no change.
         required: false
@@ -65,6 +70,7 @@ jobs:
           LIST_BETA_GROUPS: ${{ inputs.list_beta_groups }}
           INCLUDE_APP_STORE_VERSIONS: ${{ inputs.include_app_store_versions }}
           ATTACH_APP_STORE_VERSION: ${{ inputs.attach_app_store_version }}
+          CANCEL_SUPERSEDED_BETA_REVIEWS: ${{ inputs.cancel_superseded_beta_reviews }}
           DISTRIBUTE_TO_GROUPS: ${{ inputs.distribute_to_groups }}
           BUNDLE_ID: top.vansin.agentnetwork
           PUBLIC_LINK_ID: ZvqYnCA9
@@ -152,6 +158,61 @@ jobs:
           if [ -z "$app_id" ]; then
             echo "::error::no App Store Connect app found for $BUNDLE_ID"
             exit 1
+          fi
+
+          # ── withdraw the superseded builds' pending Beta App Review submissions ──
+          # 🔴 为什么需要：同一天发了好几版，每一版都提交了一次 Beta App Review，
+          #    Apple 的提交上限（422 ENTITY_UNPROCESSABLE.SUBMISSION_LIMIT_REACHED）
+          #    就把最新那一版挡在外面了 —— 那一版在公开组里，externalBuildState
+          #    停在 READY_FOR_BETA_SUBMISSION，外部测试者拿不到，而所有检查都是绿的。
+          #    被取代的旧版再占着审核位没有意义（它审的是已经过时的版本）。
+          # 护栏：给出的 build 号必须真的存在；只动**更旧**的 build；只撤销还在审的
+          #    提交（已批准/已拒绝的不动）；每一次撤销都打印出来。
+          if [ -n "$CANCEL_SUPERSEDED_BETA_REVIEWS" ]; then
+            keep="$CANCEL_SUPERSEDED_BETA_REVIEWS"
+            echo "Cancel pending Beta App Review submissions of builds older than $keep"
+            all_builds="$RUNNER_TEMP/app-builds.json"
+            asc_get builds --data-urlencode "filter[app]=$app_id" --data-urlencode 'limit=200' > "$all_builds"
+            keep_exists=$(jq --arg v "$keep" '[.data[]|select((.attributes.version // "") == $v)]|length' "$all_builds")
+            if [ "$keep_exists" = 0 ]; then
+              echo "::error::build $keep does not exist for $BUNDLE_ID — refusing to cancel anything"
+              exit 1
+            fi
+            cancelled=0
+            while IFS= read -r row; do
+              [ -n "$row" ] || continue
+              bnum=$(jq -r '.attributes.version' <<<"$row")
+              bid=$(jq -r '.id' <<<"$row")
+              # 只动更旧的：数字比较用 10# 去掉前导零
+              if [ "$((10#$bnum))" -ge "$((10#$keep))" ]; then continue; fi
+              subs="$RUNNER_TEMP/subs-$bid.json"
+              asc_get betaAppReviewSubmissions --data-urlencode "filter[build]=$bid" --data-urlencode 'limit=10' > "$subs"
+              while IFS= read -r sub; do
+                [ -n "$sub" ] || continue
+                sid=$(jq -r '.id' <<<"$sub")
+                state=$(jq -r '.attributes.betaReviewState // "UNKNOWN"' <<<"$sub")
+                case "$state" in
+                  IN_REVIEW|WAITING_FOR_REVIEW|PENDING)
+                    echo "  withdrawing beta review submission $sid of build $bnum (state=$state)"
+                    curl --silent --show-error --request DELETE \
+                      -H "Authorization: Bearer $jwt" -H 'Accept: application/json' \
+                      --output "$RUNNER_TEMP/del.json" --write-out '%{http_code}' \
+                      "https://api.appstoreconnect.apple.com/v1/betaAppReviewSubmissions/$sid" > "$RUNNER_TEMP/del.code" || true
+                    code=$(cat "$RUNNER_TEMP/del.code")
+                    if [ "${code:0:1}" = 2 ]; then
+                      cancelled=$((cancelled + 1))
+                      echo "  withdrawn: build $bnum submission $sid"
+                    else
+                      echo "::error::withdrawing submission $sid (build $bnum) returned HTTP $code"
+                      jq -r '.errors[]? | "  apple error: status=\(.status // "") code=\(.code // "") title=\(.title // "") detail=\(.detail // "")"' "$RUNNER_TEMP/del.json" >&2 2>/dev/null || true
+                      exit 1
+                    fi ;;
+                  *)
+                    echo "  leaving build $bnum submission $sid alone (state=$state)" ;;
+                esac
+              done < <(jq -c '.data[]?' "$subs")
+            done < <(jq -c '.data[]?' "$all_builds")
+            echo "withdrew $cancelled pending Beta App Review submission(s) of builds older than $keep"
           fi
 
           if [ "$INCLUDE_APP_STORE_VERSIONS" = 'true' ]; then
