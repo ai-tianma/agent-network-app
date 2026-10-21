@@ -69,7 +69,10 @@ const strip = (s: string) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/^\s
 const chat = strip(read('ChatScreen.tsx'));
 const detail = strip(read('NodeDetailScreen.tsx'));
 const api = strip(read('api.ts'));
-ck('api: fetchStatus is the light projection, fetchNodeStatus the full one', /fetchStatus = \(cfg: HubConfig\) =>\s*get<[^>]+>\(cfg, '\/api\/status\?light=1'\)/.test(api) && /fetchNodeStatus = \(cfg: HubConfig, alias\?: string\) =>\s*get<[^>]+>\(cfg, nodeStatusPath\(cfg\.networkId, alias\)\)/.test(api));
+// #1974: fetchStatus 现在多一步「记住 alias → network」(列表是跨网络的,发送要用它),
+// 所以这里从「一行箭头函数」放宽成「仍然读 light 投影」,并另加一条断言。
+ck('api: fetchStatus is the light projection, fetchNodeStatus the full one', /fetchStatus = (?:async )?\(cfg: HubConfig\)\s*=>\s*\{?[\s\S]{0,240}?get<[^>]+>\(cfg, '\/api\/status\?light=1'\)/.test(api) && /fetchNodeStatus = \(cfg: HubConfig, alias\?: string\) =>\s*get<[^>]+>\(cfg, nodeStatusPath\(cfg\.networkId, alias\)\)/.test(api));
+ck('api: the agent list read remembers alias -> network (#1974)', api.includes('rememberAliasNetworks(aliasNetworkCache, data?.sessions)'));
 ck('chat: caps come from the full status (fetchNodeStatus → chatInfoCaps → setFullCaps)', /fetchNodeStatus\(cfg, alias\)[\s\S]{0,400}chatInfoCaps\(s\)[\s\S]{0,200}setFullCaps\(/.test(chat));
 ck('chat: the full read re-runs when the info panel opens', /\}, \[cfg, alias, infoOpen\]\);/.test(chat));
 ck('chat: full caps win, light only as fallback', /const sessionCaps = fullCaps \?\? lightCaps;/.test(chat));

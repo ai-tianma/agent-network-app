@@ -148,6 +148,8 @@ import { fetchAuthMe, forgetAuthMeFor } from './user-admin-api';
 import { SendTaskError, isNetworkScopedSendFailure } from './send-failure-reason';
 export { SendTaskError } from './send-failure-reason';
 import { stripHumanDms } from './human-dm';
+import { aliasNetworkFor, networkCandidates, rememberAliasNetworks } from './send-target-network';
+import { aliasNetworkCache, resolveAliasNetwork } from './alias-network-lookup';
 import { splitSystemNotices, stripSystemNotices } from './system-notice';
 import { createReplyInboxReader } from './inbox-cursor';
 import { createUserMessagesWindow } from './user-messages-window';
@@ -226,8 +228,16 @@ async function get<T>(cfg: HubConfig, path: string): Promise<T> {
 // inside the read deadline on flaky cellular. Older hubs ignore the param
 // and return the full payload, so the call is safe regardless of server
 // version.
-export const fetchStatus = (cfg: HubConfig) =>
-  get<{ sessions: Session[] }>(cfg, '/api/status?light=1');
+/**
+ * 列表不带 network_id ⇒ hub 按「我属于哪些网络」返回 ⇒ 列表是**跨网络**的。
+ * 每一行都带 network_id,这里记下来:发送时直接用「这个 alias 住在哪个网络」,
+ * 不用再靠 cfg.networkId 猜(admin 2026-10-21:其他用户发不了消息给 Agent 节点)。
+ */
+export const fetchStatus = async (cfg: HubConfig) => {
+  const data = await get<{ sessions: Session[] }>(cfg, '/api/status?light=1');
+  rememberAliasNetworks(aliasNetworkCache, data?.sessions);
+  return data;
+};
 
 /** Detached daemon management must not inherit the account's default network. */
 export const fetchScopedStatus = (cfg: HubConfig) =>
@@ -1004,19 +1014,40 @@ export const sendTask = async (
   priority: TaskPriority = 'normal',
   clientRequestId = createDashboardRequestId(),
 ): Promise<SendTaskResponse> => {
+  // #1968 私信发不出去(admin 2026-10-21 截图:tang → tang02 404 alias_not_found):
+  // 列表是跨网络的(cfg.networkId 落在用户自己的个人网络),发送却钉死这一个网络。
+  // 先用「这个 alias 住在哪个网络」发 —— 它就在用户点的那个 Agent 所在网络里。
+  // 发送前用「这个 alias 住在哪个网络」——**只查已经记住的**(列表读时记下的),不发请求:
+  // 发送路径的请求数是不变量(send-settle / task-priority-send 的断言)。
+  // 没记住(第一次发、还没拉过列表)就走下面的重试那条路:那里才允许多读一次。
+  const targetNetwork = aliasNetworkFor(aliasNetworkCache, to);
   try {
-    return await sendTaskOnce(cfg, to, content, attachments, priority, clientRequestId);
+    return await sendTaskOnce(cfg, to, content, attachments, priority, clientRequestId, targetNetwork);
   } catch (err) {
     if (!isNetworkScopedSendFailure(err)) throw err;
     sendIdentityCache.delete(sendIdentityKey(cfg));
     forgetAuthMeFor(cfg);
     const identity = await fetchAuthIdentity(cfg);
     const fresh = identity.networkId;
-    if (!fresh || fresh === err.networkId) throw err;
+    // 候选顺序:列表里记下的 alias 所属网络 → hub 查到的 → 重算的默认网络。
+    // #552 的老路只有第三个,而且当两个网络对这个人都是 'all' 时它挑回原来那个错网络。
+    const hinted = await resolveAliasNetwork(cfg.serverUrl, cfg.token, to);
+    const candidates = networkCandidates(err.networkId, [hinted, fresh]);
+    if (!candidates.length) throw err;
     rememberSendIdentity(cfg, identity);
-    cfg.networkId = fresh;
-    try { void Promise.resolve(networkIdPersister?.(cfg, fresh)).catch(() => {}); } catch { /* persistence is best-effort */ }
-    return sendTaskOnce(cfg, to, content, attachments, priority, clientRequestId);
+    let lastError: unknown = err;
+    for (const networkId of candidates.slice(0, 2)) {
+      try {
+        const response = await sendTaskOnce(cfg, to, content, attachments, priority, clientRequestId, networkId);
+        cfg.networkId = networkId;
+        try { void Promise.resolve(networkIdPersister?.(cfg, networkId)).catch(() => {}); } catch { /* persistence is best-effort */ }
+        return response;
+      } catch (retryError) {
+        lastError = retryError;
+        if (!isNetworkScopedSendFailure(retryError)) throw retryError;
+      }
+    }
+    throw lastError;
   }
 };
 
@@ -1027,12 +1058,14 @@ const sendTaskOnce = async (
   attachments: TaskAttachment[] | undefined,
   priority: TaskPriority,
   clientRequestId: string,
+  /** 这一次发送用的网络(目标 alias 所在网络)。给了就用它,不动 cfg.networkId。 */
+  networkOverride?: string,
 ): Promise<SendTaskResponse> => {
   const started = Date.now();
   const dreqAt = dreqCreatedAt(clientRequestId);
   const load = appFetchLoad(started);
   const cached = sendIdentityCache.get(sendIdentityKey(cfg));
-  let networkId = cfg.networkId ?? cached?.networkId;
+  let networkId = networkOverride ?? cfg.networkId ?? cached?.networkId;
   let username = cfg.username?.trim() || cached?.username;
   let identitySource: SendTiming['identity'] = cfg.networkId && cfg.username?.trim() ? 'cfg' : 'cache';
   // #68 replacement: current hubs (#1156 / preview.38+) attribute omitted `from` from the user token.
@@ -1049,7 +1082,8 @@ const sendTaskOnce = async (
     identitySource = 'background';
     void fetchAuthIdentity(cfg).then(identity => rememberSendIdentity(cfg, identity));
   }
-  if (networkId) cfg.networkId = networkId;
+  // 覆盖来的网络只用于这一次发送:cfg.networkId 是「这个账号的网络」,不能被目标 Agent 的网络改写。
+  if (networkId && !networkOverride) cfg.networkId = networkId;
   if (username) cfg.username = username;
   const identityMs = Date.now() - started;
 
