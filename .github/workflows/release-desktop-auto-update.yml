@@ -471,6 +471,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.282:
+            - 修复：Hub 令牌 · API 密钥库里，名字只差大小写或下划线的密钥现在会互相提示（线上确实同时存在 TMPAT 与 TM_PAT 两个不同的密钥，肉眼分不出），并标出成对的那几行；Provider 选已存密钥时同样会提示。
+
             What's new in 0.2.281:
             - 修复：给别的网络里的 Agent 发消息不再「没有找到这个 Agent」。Agent 列表是跨网络的，发送却一直钉在登录时选中的那个网络上 —— 现在按目标 Agent 实际所在的网络发送。
 
