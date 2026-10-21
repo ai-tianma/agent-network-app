@@ -27,6 +27,11 @@ on:
         required: false
         type: boolean
         default: false
+      attach_app_store_version:
+        description: "Re-point this App Store version (version string, e.g. 1.0) at the inspected build. It does NOT submit for review, and it refuses a build that is not VALID / not expired / not APP_STORE_ELIGIBLE."
+        required: false
+        type: string
+        default: ""
       distribute_to_groups:
         description: Comma-separated beta group names (or all-internal) to attach this build to once it is VALID. Empty = no change.
         required: false
@@ -59,6 +64,7 @@ jobs:
           SET_EXPORT_COMPLIANCE_ONLY: ${{ inputs.set_export_compliance_only }}
           LIST_BETA_GROUPS: ${{ inputs.list_beta_groups }}
           INCLUDE_APP_STORE_VERSIONS: ${{ inputs.include_app_store_versions }}
+          ATTACH_APP_STORE_VERSION: ${{ inputs.attach_app_store_version }}
           DISTRIBUTE_TO_GROUPS: ${{ inputs.distribute_to_groups }}
           BUNDLE_ID: top.vansin.agentnetwork
           PUBLIC_LINK_ID: ZvqYnCA9
@@ -187,6 +193,56 @@ jobs:
 
           details_json="$RUNNER_TEMP/build-details.json"
           asc_get buildBetaDetails --data-urlencode "filter[build]=$build_id" --data-urlencode 'limit=2' > "$details_json"
+
+          # ── re-point an App Store version at this build ─────────────────────
+          # 🔴 为什么需要这一步：版本 1.0 绑的是 **build 3，而那个 build 的二进制已过期**。
+          #    绑着过期 build 的版本过不了审核 —— 就算别的问题都修好了也一样。所以
+          #    「把版本指向一个有效 build」是任何一次重提审的前置条件。
+          # 🔴 这一步**不提交审核**（appStoreVersionSubmissions 一概不碰），也不改版本号、
+          #    描述、截图、隐私问卷 —— 那些都要按 Apple 的拒审原信来改，不能猜。
+          #    护栏：build 必须 VALID、未过期、且是 APP_STORE_ELIGIBLE；版本不能正在审核中。
+          if [ -n "$ATTACH_APP_STORE_VERSION" ]; then
+            echo "Attach build $BUILD_NUMBER to App Store version $ATTACH_APP_STORE_VERSION"
+            vjson="$RUNNER_TEMP/attach-version.json"
+            asc_get "apps/$app_id/appStoreVersions" \
+              --data-urlencode 'filter[platform]=IOS' \
+              --data-urlencode "filter[versionString]=$ATTACH_APP_STORE_VERSION" \
+              --data-urlencode 'include=build' \
+              --data-urlencode 'limit=10' > "$vjson"
+            vid=$(jq -r '.data[0].id // empty' "$vjson")
+            if [ -z "$vid" ]; then
+              echo "::error::no App Store version $ATTACH_APP_STORE_VERSION for $BUNDLE_ID"
+              exit 1
+            fi
+            vstate=$(jq -r '.data[0].attributes.appStoreState // "UNKNOWN"' "$vjson")
+            vbuild=$(jq -r '.data[0].relationships.build.data.id // "none"' "$vjson")
+            echo "  version $vid state=$vstate currently bound to ${vbuild:-none}"
+            case "$vstate" in
+              WAITING_FOR_REVIEW|IN_REVIEW|WAITING_FOR_RELEASE)
+                echo "::error::version $vid is in state $vstate — refusing to change its build while review is pending"
+                exit 1 ;;
+            esac
+            bstate=$(jq -r '.data[0].attributes.processingState // "UNKNOWN"' "$builds_json")
+            # 🔴 jq 的 `//` 对 **false 也成立**（它是「取替代值」不是「取默认值」）：
+            #    `false // "UNKNOWN"` 会得到 "UNKNOWN"。build 151 的 expired 正是 false,
+            #    照直写会把唯一可用的 build 判成「过期」而拒掉。所以显式分支。
+            bexpired=$(jq -r 'if (.data[0].attributes.expired == null) then "UNKNOWN" else (.data[0].attributes.expired | tostring) end' "$builds_json")
+            bkind=$(jq -r '.data[0].attributes.buildAudienceType // "UNKNOWN"' "$builds_json")
+            echo "  build $build_id state=$bstate expired=$bexpired audience=$bkind"
+            if [ "$bstate" != 'VALID' ] || [ "$bexpired" != 'false' ] || [ "$bkind" != 'APP_STORE_ELIGIBLE' ]; then
+              echo "::error::build $BUILD_NUMBER is not a reviewable App Store build (state=$bstate expired=$bexpired audience=$bkind) — refusing to attach it"
+              exit 1
+            fi
+            if [ "$vbuild" = "$build_id" ]; then
+              echo "  already bound to this build — nothing to change"
+            else
+              vpatch=$(jq -cn --arg vid "$vid" --arg bid "$build_id" '{data:{type:"appStoreVersions",id:$vid,relationships:{build:{data:{type:"builds",id:$bid}}}}}')
+              asc_write PATCH "appStoreVersions/$vid" "$vpatch" > /dev/null
+              echo "  patched: version $vid now points at build $build_id"
+            fi
+            asc_get "appStoreVersions/$vid" --data-urlencode 'include=build' > "$vjson"
+            jq '{id, version: .attributes.versionString, state: .attributes.appStoreState, buildId: (.relationships.build.data.id // null)}' "$vjson"
+          fi
 
           groups_json="$RUNNER_TEMP/groups.json"
           asc_get betaGroups --data-urlencode "filter[app]=$app_id" --data-urlencode 'limit=200' > "$groups_json"

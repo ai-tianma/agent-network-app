@@ -52,4 +52,106 @@ try {
   const empty = run(true, { data: [], links: {} });
   assert.deepEqual(JSON.parse(empty.slice(empty.indexOf('{'))).versions, []);
   console.log('PASS: workflow App Store query is optional, read-only, sanitized and marks partial lists');
+  runAttachTest();
 } finally { rmSync(dir, { recursive: true, force: true }); }
+
+/**
+ * The attach step can PATCH an App Store version, so it gets its own tests:
+ * it must refuse a version that is under review, refuse any build that cannot
+ * be reviewed, and — only then — write exactly one PATCH with the right body.
+ */
+function runAttachTest() {
+  const start = workflow.indexOf(`          if [ -n "$ATTACH_APP_STORE_VERSION" ]; then`);
+  const end = workflow.indexOf('          groups_json=', start);
+  assert(start > 0 && end > start, 'attach block not found in the workflow');
+  const block = workflow.slice(start, end).replace(/^          /gm, '');
+
+  const dir = mkdtempSync(join(tmpdir(), 'ios-attach-'));
+  try {
+    const calls = join(dir, 'calls');
+    const writeBody = join(dir, 'write-body');
+    const versions = join(dir, 'versions.json');
+    const builds = join(dir, 'builds.json');
+    const one = join(dir, 'one.json');
+
+    const versionDoc = (state, buildId) => ({ data: [{
+      type: 'appStoreVersions', id: 'version-1',
+      attributes: { versionString: '1.0', appStoreState: state, appVersionState: state, downloadable: true },
+      relationships: { build: { data: { type: 'builds', id: buildId } } } }] });
+    const buildDoc = (over = {}) => ({ data: [{ type: 'builds', id: 'build-151',
+      attributes: { version: '151', processingState: 'VALID', expired: false,
+        buildAudienceType: 'APP_STORE_ELIGIBLE', ...over } }] });
+
+    const run = ({ version, build, attach, state = 'REJECTED' }) => {
+      rmSync(calls, { force: true });
+      rmSync(writeBody, { force: true });
+      writeFileSync(versions, JSON.stringify(versionDoc(state, 'build-3')));
+      writeFileSync(builds, JSON.stringify(build));
+      writeFileSync(one, JSON.stringify({ type: 'appStoreVersions', id: 'version-1',
+        attributes: { versionString: '1.0', appStoreState: state },
+        relationships: { build: { data: { type: 'builds', id: 'build-151' } } } }));
+      const result = spawnSync('bash', ['-eu', '-c', `
+        app_id=fixture-app
+        build_id=build-151
+        BUILD_NUMBER=151
+        ATTACH_APP_STORE_VERSION="${attach}"
+        builds_json="$BUILDS"
+        asc_get() {
+          case "$1" in
+            apps/fixture-app/appStoreVersions) echo "GET $1" >> "$CALLS"; cat "$VERSIONS";;
+            appStoreVersions/version-1) echo "GET $1" >> "$CALLS"; cat "$ONE";;
+            *) echo "unexpected GET $1" >&2; exit 98;;
+          esac
+        }
+        asc_write() { echo "$1 $2" >> "$CALLS"; printf '%s' "$3" > "$WRITEBODY"; }
+        ${block}
+      `], { env: { ...process.env, RUNNER_TEMP: dir, CALLS: calls, WRITEBODY: writeBody,
+        VERSIONS: versions, BUILDS: builds, ONE: one }, encoding: 'utf8' });
+      return result;
+    };
+
+    // 1) no request at all when the input is empty
+    let r = run({ version: null, build: buildDoc(), attach: '' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(existsSync(calls), false, 'empty input must make no App Store request');
+
+    // 2) a version that is under review must not be touched
+    r = run({ version: null, build: buildDoc(), attach: '1.0', state: 'WAITING_FOR_REVIEW' });
+    assert.notEqual(r.status, 0, 'a version under review must fail the step');
+    assert(!existsSync(writeBody), 'a version under review must not be written');
+
+    // 3) an expired build must be refused (this is today's 1.0 problem)
+    r = run({ version: null, build: buildDoc({ expired: true }), attach: '1.0' });
+    assert.notEqual(r.status, 0, 'an expired build must be refused');
+    assert(!existsSync(writeBody), 'an expired build must not be attached');
+
+    // 4) a build that is not APP_STORE_ELIGIBLE must be refused
+    r = run({ version: null, build: buildDoc({ buildAudienceType: 'TESTFLIGHT' }), attach: '1.0' });
+    assert.notEqual(r.status, 0, 'a TestFlight-only build must be refused');
+    assert(!existsSync(writeBody), 'a TestFlight-only build must not be attached');
+
+    // 5) a build that is still processing must be refused
+    r = run({ version: null, build: buildDoc({ processingState: 'PROCESSING' }), attach: '1.0' });
+    assert.notEqual(r.status, 0, 'a processing build must be refused');
+
+    // 6) a build whose expiry is unknown must be refused (fail closed)
+    const unknown = buildDoc();
+    delete unknown.data[0].attributes.expired;
+    r = run({ version: null, build: unknown, attach: '1.0' });
+    assert.notEqual(r.status, 0, 'an unknown expiry must be refused');
+
+    // 7) the happy path: exactly one PATCH, pointing at the inspected build
+    r = run({ version: null, build: buildDoc(), attach: '1.0' });
+    assert.equal(r.status, 0, r.stderr);
+    const callsMade = readFileSync(calls, 'utf8').trim().split('\n');
+    assert.deepEqual(callsMade, ['GET apps/fixture-app/appStoreVersions', 'PATCH appStoreVersions/version-1',
+      'GET appStoreVersions/version-1'], 'exactly one PATCH, then read back');
+    const body = JSON.parse(readFileSync(writeBody, 'utf8'));
+    assert.equal(body.data.type, 'appStoreVersions');
+    assert.equal(body.data.id, 'version-1');
+    assert.equal(body.data.relationships.build.data.id, 'build-151');
+    // 8) and it must never submit for review
+    assert(!callsMade.some(c => c.includes('appStoreVersionSubmission')), 'must not create a submission');
+    console.log('PASS: attaching a build to an App Store version is guarded and never submits');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+}
