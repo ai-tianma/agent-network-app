@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from './icons';
-import { ActivityIndicator, Alert, BackHandler, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text, TextInput } from './ui-text';
 import {
   cancelScheduledTask,
@@ -394,6 +394,7 @@ export default function ScheduledTasksScreen({ cfg, onOpenChat, open }: {
             testID={`schedule-filter-${chip.status}`}
             accessibilityRole="button"
             accessibilityState={{ selected: chip.selected }}
+            aria-selected={chip.selected}
             onPress={() => { setFilter(chip.status); setSelectedId(null); }}
             style={[styles.chip, chip.selected && styles.chipActive]}
           >
@@ -601,7 +602,7 @@ export default function ScheduledTasksScreen({ cfg, onOpenChat, open }: {
   );
 }
 
-/** 列表行:56–72dp。头像 = 执行节点;没有下次也没有上次时不画时间(不出「—」)。 */
+/** 头像 = 执行节点;频率和执行时间分行,不与标题争宽度。 */
 function ScheduleRow({ row, now, busy, selected, onOpen, onToggle }: {
   row: HubScheduledTask;
   now: number;
@@ -610,33 +611,45 @@ function ScheduleRow({ row, now, busy, selected, onOpen, onToggle }: {
   onOpen: () => void;
   onToggle: () => void;
 }) {
-  const s = useMemo(makeStyles, [row, selected]);
+  const s = useLocalStyles();
   const vm = scheduleRowModel(row, now, DEVICE_TIMEZONE);
   return (
     <View style={[s.row, selected && s.rowSelected]} testID={`schedule-row-${row.schedule_id}`}>
-      <Pressable style={s.rowMain} onPress={onOpen} accessibilityRole="button" accessibilityLabel={`${vm.name}，${vm.status.label}`}>
-        <AliasAvatar alias={vm.target} size={36} />
+      <Pressable style={({ hovered, pressed }: any) => [s.rowMain, (hovered || pressed) && s.rowMainHover]} onPress={onOpen} accessibilityRole="button" accessibilityState={{ selected }} aria-selected={selected} accessibilityLabel={`${vm.name}，${vm.status.label}`}>
         <View style={s.rowText}>
           <View style={s.rowLine}>
             <Text style={s.rowName} numberOfLines={1}>{vm.name}</Text>
             <StatusPill label={vm.status.label} tone={vm.status.tone} />
           </View>
           <View style={s.rowLine}>
+            <AliasAvatar alias={vm.target} size={20} />
             <Text style={s.rowTarget} numberOfLines={1}>{vm.target}</Text>
-            <Text style={s.scheduleChip} numberOfLines={1}>{vm.scheduleText}</Text>
-            {vm.when ? <Text style={s.rowWhen} numberOfLines={1}>{vm.when.text}</Text> : null}
           </View>
+          <Text style={s.scheduleChip} numberOfLines={2}>{vm.scheduleText}</Text>
+          {vm.when ? <Text style={s.rowWhen} numberOfLines={1}>{vm.when.text}</Text> : null}
         </View>
       </Pressable>
       {vm.toggle !== null ? (
-        <Switch
+        <Pressable
+          accessibilityRole="switch"
           accessibilityLabel={vm.toggle ? `暂停 ${vm.name}` : `恢复 ${vm.name}`}
-          value={vm.toggle}
+          accessibilityState={{ checked: vm.toggle, disabled: busy }}
+          aria-checked={vm.toggle}
+          {...(Platform.OS === 'web' ? { onKeyDown: (event: any) => {
+            // Pressable already activates Enter on keyup; only Space needs bridging.
+            if (event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (!busy && !event.repeat) onToggle();
+          } } : {})}
           disabled={busy}
-          onValueChange={onToggle}
-          trackColor={{ true: colors.accent, false: colors.border }}
-          thumbColor={colors.card}
-        />
+          onPress={onToggle}
+          style={({ hovered, pressed }: any) => [s.rowToggle, (hovered || pressed) && s.rowMainHover, busy && s.actionDisabled]}
+        >
+          <View style={[s.toggleTrack, vm.toggle && s.toggleTrackOn]}>
+            <View style={[s.toggleThumb, vm.toggle && s.toggleThumbOn]} />
+          </View>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -663,17 +676,15 @@ function ScheduleDetail({ row, now, busy, runs, cfg, expandedRun, runTasks, onTo
   onOpenContent: (row: HubScheduledTask) => void;
   onDiscardContent: (row: HubScheduledTask) => void;
 }) {
-  const s = useMemo(makeStyles, [row]);
+  const s = useLocalStyles();
   // 折叠的「上一次还没结束」跳过组展开哪一个(只影响本页显示,和单条执行的 expandedRun 分开)。
   const [expandedSkipGroup, setExpandedSkipGroup] = useState<string | null>(null);
   const { t } = useTranslation();
   const status = scheduleStatusMeta(row.status);
   const availableActions = scheduledTaskActions(row.status);
   const misfire = describeMisfire(row.misfire_policy);
-  const timeLine = (raw: string | null | undefined, none: string) => {
-    const abs = formatAbsolute(raw, now);
-    return abs ? `${abs}（${formatRelative(raw, now)}）` : none;
-  };
+  const nextAt = row.status === 'active' ? formatAbsolute(row.next_run_at, now) : '';
+  const lastAt = formatAbsolute(row.last_run_at, now);
   return (
     <View style={s.flex} testID="schedule-detail">
       {onBack ? (
@@ -689,23 +700,42 @@ function ScheduleDetail({ row, now, busy, runs, cfg, expandedRun, runTasks, onTo
         </View>
       ) : null}
       <ScrollView contentContainerStyle={s.detailContent}>
-        <View style={s.rowLine}>
+        <View style={s.detailTitleRow}>
           <Text style={s.detailTitle} selectable>{row.name}</Text>
           <StatusPill label={status.label} tone={status.tone} />
         </View>
-        <View style={[s.rowLine, { marginTop: spacing.sm }]}>
+        <View style={[s.detailMeta, { marginTop: spacing.sm }]}>
           <AliasAvatar alias={row.target_alias} size={22} />
           <Text style={s.detailTarget}>{row.target_alias}</Text>
           {row.priority !== 'normal' ? <Text style={s.metaInline}>{row.priority === 'high' ? '高优先级' : '低优先级'}</Text> : null}
         </View>
         {availableActions.some(a => a !== 'history' && !(a === 'copy' && onBack)) ? <View style={s.actionsRow}>
-          {availableActions.includes('run') && <Pressable disabled={busy} style={[s.primarySmall, busy && s.actionDisabled]} onPress={() => onAction(row, 'run')}><Text style={s.primaryText}>立即执行</Text></Pressable>}
-          {availableActions.includes('toggle') && <Pressable disabled={busy} style={[s.action, busy && s.actionDisabled]} onPress={() => onAction(row, 'toggle')}><Text style={s.actionText}>{row.status === 'active' ? '暂停' : '恢复'}</Text></Pressable>}
-          {availableActions.includes('edit') && <Pressable disabled={busy} style={[s.action, busy && s.actionDisabled]} onPress={() => onEdit(row)}><Text style={s.actionText}>编辑</Text></Pressable>}
-          {/* 手机单栏:五个按钮在 390 宽里折行(实测 376 > 342),「复制」放到顶栏右侧,这一行保持四个。 */}
-          {availableActions.includes('copy') && !onBack && <Pressable testID="schedule-copy" disabled={busy} style={[s.action, busy && s.actionDisabled]} onPress={() => onCopy(row)}><Text style={s.actionText}>{t('schedules.copy.action')}</Text></Pressable>}
-          {availableActions.includes('cancel') && <Pressable disabled={busy} style={[s.action, s.danger, busy && s.actionDisabled]} onPress={() => onCancel(row)}><Text style={s.dangerText}>取消计划</Text></Pressable>}
+          {availableActions.includes('run') && <Pressable accessibilityRole="button" disabled={busy} style={[s.primarySmall, s.detailAction, busy && s.actionDisabled]} onPress={() => onAction(row, 'run')}><Ionicons name="play" size={14} color={colors.onAccent} /><Text style={s.primaryText}>立即执行</Text></Pressable>}
+          {availableActions.includes('toggle') && <Pressable accessibilityRole="button" disabled={busy} style={[s.action, s.detailAction, busy && s.actionDisabled]} onPress={() => onAction(row, 'toggle')}><Text style={s.actionText}>{row.status === 'active' ? '暂停' : '恢复'}</Text></Pressable>}
+          {availableActions.includes('edit') && <Pressable accessibilityRole="button" disabled={busy} style={[s.action, s.detailAction, busy && s.actionDisabled]} onPress={() => onEdit(row)}><Text style={s.actionText}>编辑</Text></Pressable>}
+          {/* 手机上「复制」留在顶栏,主操作区保持四个按钮并允许大字体时换行。 */}
+          {availableActions.includes('copy') && !onBack && <Pressable accessibilityRole="button" testID="schedule-copy" disabled={busy} style={[s.action, s.detailAction, s.quietAction, busy && s.actionDisabled]} onPress={() => onCopy(row)}><Text style={s.actionText}>{t('schedules.copy.action')}</Text></Pressable>}
+          {availableActions.includes('cancel') && <Pressable accessibilityRole="button" disabled={busy} style={[s.action, s.detailAction, s.cancelAction, busy && s.actionDisabled]} onPress={() => onCancel(row)}><Text style={s.dangerText}>取消计划</Text></Pressable>}
         </View> : null}
+
+        <View style={s.executionSummary}>
+          <View style={s.summaryCard} testID="schedule-next-execution">
+            <View style={s.rowLine}>
+              <Ionicons name="time-outline" size={15} color={colors.accent} />
+              <Text style={s.summaryLabel}>下次执行</Text>
+            </View>
+            <Text style={s.summaryValue} selectable>{nextAt || (row.status === 'active' ? '暂无' : row.status === 'paused' ? '已暂停，恢复后继续' : '不会再执行')}</Text>
+            {nextAt ? <Text style={s.summaryHint}>{formatRelative(row.next_run_at, now)}</Text> : null}
+          </View>
+          <View style={s.summaryCard} testID="schedule-last-execution">
+            <View style={s.rowLine}>
+              <Ionicons name="refresh-outline" size={15} color={colors.textMuted} />
+              <Text style={s.summaryLabel}>上次执行</Text>
+            </View>
+            <Text style={s.summaryValue} selectable>{lastAt || '还没执行过'}</Text>
+            {lastAt ? <Text style={s.summaryHint}>{formatRelative(row.last_run_at, now)}</Text> : null}
+          </View>
+        </View>
 
         {/* 任务内容:⤢ 全屏看 / 改 / 语音输入(ScheduleContentFullscreen,任务描述同一套)。只有能编辑的计划(进行中 / 已暂停)给;
             手机上点卡片本身也进全屏(先是阅读,顶栏切「编辑」),桌面卡片保持可选中复制。 */}
@@ -742,11 +772,9 @@ function ScheduleDetail({ row, now, busy, runs, cfg, expandedRun, runTasks, onTo
 
         <Text style={s.sectionLabel}>计划</Text>
         <View style={s.facts}>
-          <Fact label="频率" value={describeSchedule(row.schedule, row.timezone, DEVICE_TIMEZONE, now)} />
+          <Fact label="频率" value={describeSchedule(row.schedule, row.timezone, row.timezone, now)} />
           <Fact label="时区" value={row.timezone} />
-          <Fact label="错过执行" value={misfire.short} hint={misfire.long} />
-          <Fact label="下次执行" value={row.status === 'active' ? timeLine(row.next_run_at, '暂无') : row.status === 'paused' ? '已暂停，恢复后继续' : '不会再执行'} />
-          <Fact label="上次执行" value={timeLine(row.last_run_at, '还没执行过')} last />
+          <Fact label="错过执行" value={misfire.short} hint={misfire.long} last />
         </View>
 
         <Text style={s.sectionLabel}>执行记录</Text>
@@ -1062,26 +1090,42 @@ function makeStyles() { return StyleSheet.create({
   chipCount: { color: colors.textMuted, fontSize: fontSize.small },
   chipCountActive: { color: colors.bg, fontSize: fontSize.small, opacity: 0.75 },
   masterDetail: { flex: 1, flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border },
-  masterList: { flexShrink: 0, borderRightWidth: 1, borderRightColor: colors.border },
-  listContent: { paddingVertical: spacing.xs, paddingBottom: spacing.xl },
+  masterList: { flexShrink: 0, borderRightWidth: 1, borderRightColor: colors.border, backgroundColor: colors.listBg },
+  listContent: { padding: spacing.sm, gap: spacing.sm, paddingBottom: spacing.xl },
   detailPane: { flex: 1, backgroundColor: colors.bg },
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 64, paddingRight: spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  rowSelected: { backgroundColor: colors.rowActive },
-  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingLeft: spacing.lg, paddingRight: spacing.sm, paddingVertical: 10 },
-  rowText: { flex: 1, minWidth: 0, gap: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 100, paddingRight: spacing.xs, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control },
+  rowSelected: { backgroundColor: colors.tonalBg, borderColor: colors.accent },
+  rowMain: { flex: 1, minWidth: 0, padding: spacing.md, borderRadius: radius.control },
+  rowMainHover: { backgroundColor: colors.rowHover },
+  rowText: { minWidth: 0, gap: 7 },
   rowLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minWidth: 0 },
-  rowName: { flexShrink: 1, color: colors.text, fontSize: fontSize.body + 1, fontWeight: weight.strong },
-  rowTarget: { flexShrink: 1, color: colors.textSecondary, fontSize: fontSize.small, maxWidth: 110 },
-  scheduleChip: { flexShrink: 0, color: colors.textSecondary, fontSize: fontSize.caption, backgroundColor: colors.subtleFill, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 2, overflow: 'hidden' },
+  rowName: { flex: 1, color: colors.text, fontSize: fontSize.body + 1, fontWeight: weight.strong },
+  rowTarget: { flex: 1, color: colors.textSecondary, fontSize: fontSize.small },
+  scheduleChip: { color: colors.textSecondary, fontSize: fontSize.small, lineHeight: 18 },
   rowWhen: { flexShrink: 1, color: colors.textMuted, fontSize: fontSize.caption },
+  rowToggle: { width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control },
+  toggleTrack: { width: 30, height: 18, padding: 2, borderRadius: radius.pill, backgroundColor: colors.textMuted, justifyContent: 'center' },
+  toggleTrackOn: { backgroundColor: colors.accent },
+  toggleThumb: { width: 14, height: 14, borderRadius: radius.pill, backgroundColor: colors.card },
+  toggleThumbOn: { alignSelf: 'flex-end', backgroundColor: colors.onAccent },
   detailBar: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   backButton: { paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
   backText: { color: colors.accent, fontSize: fontSize.title },
-  detailContent: { padding: spacing.xl, paddingBottom: 60, maxWidth: 760 },
+  detailContent: { padding: spacing.lg, paddingBottom: 60, width: '100%', maxWidth: 880, alignSelf: 'center' },
+  detailTitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  detailMeta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   detailTitle: { flexShrink: 1, color: colors.text, fontSize: fontSize.heading, fontWeight: weight.strong },
-  detailTarget: { color: colors.textSecondary, fontSize: fontSize.body },
+  detailTarget: { flexShrink: 1, color: colors.textSecondary, fontSize: fontSize.body },
   metaInline: { color: colors.textMuted, fontSize: fontSize.small },
-  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg },
+  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg },
+  detailAction: { minHeight: 44, flexDirection: 'row', justifyContent: 'center', gap: 6, paddingHorizontal: 10 },
+  quietAction: { borderColor: 'transparent' },
+  cancelAction: { marginLeft: 'auto', borderColor: 'transparent' },
+  executionSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg },
+  summaryCard: { flexGrow: 1, flexBasis: 156, minWidth: 156, padding: spacing.md, gap: spacing.sm, borderRadius: radius.control, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  summaryLabel: { flexShrink: 1, color: colors.textMuted, fontSize: fontSize.small },
+  summaryValue: { color: colors.text, fontSize: fontSize.title, fontWeight: weight.strong, fontVariant: ['tabular-nums'] },
+  summaryHint: { color: colors.textMuted, fontSize: fontSize.small },
   // 「任务内容 · ⤢ 全屏」一行:标题的上下外边距挪到这一行上,按钮和标题同一条中线。
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl, marginBottom: spacing.sm },
   sectionHeadLabel: { marginTop: 0, marginBottom: 0 },
@@ -1101,11 +1145,11 @@ function makeStyles() { return StyleSheet.create({
   factValue: { color: colors.text, fontSize: fontSize.body },
   factHint: { color: colors.textMuted, fontSize: fontSize.small, marginTop: 2, lineHeight: 17 },
   runRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  runHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 10, minHeight: 44 },
+  runHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md, minHeight: 52 },
   runText: { flex: 1, minWidth: 0 },
-  runLine: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, minWidth: 0 },
-  runTime: { flexShrink: 0, color: colors.text, fontSize: fontSize.body },
-  runDuration: { flexShrink: 1, color: colors.textMuted, fontSize: fontSize.small },
+  runLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: spacing.sm, rowGap: spacing.xs, minWidth: 0 },
+  runTime: { flexShrink: 1, color: colors.text, fontSize: fontSize.body, fontVariant: ['tabular-nums'] },
+  runDuration: { flexShrink: 1, color: colors.textMuted, fontSize: fontSize.small, fontVariant: ['tabular-nums'] },
   runError: { color: colors.textMuted, fontSize: fontSize.small, marginTop: 2 },
   // 「在等谁」可以省略号截断;「已等 N 分钟」是一个整体,放不下就整段换到下一行。
   skipDetail: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
