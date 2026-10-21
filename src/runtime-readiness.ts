@@ -56,9 +56,24 @@ export interface RuntimeReadinessView {
   /** shared_login_count > 1 时的提醒:「与 N 个节点共用登录」。 */
   sharedLoginWarning: string | null;
   version: string | null;
+  /** unknown 且 CLI 其实找到了 ⇒ 「检测到了,但没探完」,不是「没找到」。 */
+  cliDetected?: boolean;
 }
 
 export const UNCHECKED_LABEL = '未检测';
+
+/**
+ * 「检测到了,但没探完」的标签。
+ *
+ * admin 2026-10-21 截图:新建节点的 Runtime 步里,OpenCode 那行写「**未检测**:检测到 OpenCode V2;…」——
+ * 同一句话里既说「未检测」又说「检测到」,读起来自相矛盾(admin 原话:「怎么 OpenCode 还检测不到」)。
+ *
+ * 实际数据(daemon-dev 上报):`cli:'found'`、`version:'2.0.22'`、`auth:'unknown'`、`network:'skipped'`。
+ * 也就是说 **CLI 是找到了的**,只是 OpenCode 的 provider/登录没法从这台机器探(daemon 故意跳过),
+ * 所以 hub 把它归成 unknown。unknown 说的是「没探完」,不是「没找到」——
+ * 这两件事必须分开说,否则用户会去装一个已经装好的东西。
+ */
+export const DETECTED_LABEL = '已检测到';
 
 const BLOCKED_STATES: ReadonlySet<string> = new Set(['missing_cli', 'not_logged_in', 'no_network']);
 
@@ -109,8 +124,12 @@ export function readinessFor(d: ReadinessInput, runtimeId: string): RuntimeReadi
     return { measured: true, state, chip: 'ready', icon: '✓', selectable: true, reason: null, note: null, sharedLoginWarning: warn, version };
   }
   if (state === 'unknown') {
-    const note = reasonText ? `${UNCHECKED_LABEL}：${reasonText}` : UNCHECKED_LABEL;
-    return { measured: true, state, chip: 'unknown', icon: '?', selectable: true, reason: reasonText, note, sharedLoginWarning: warn, version };
+    // CLI 找到了(cli:'found'/'bundled' 或报出了版本)⇒ 是「没探完」,不是「没找到」。
+    const cliDetected = raw.cli === 'found' || raw.cli === 'bundled' || !!version;
+    const label = cliDetected ? `${DETECTED_LABEL} CLI${version ? ` ${version}` : ''}` : UNCHECKED_LABEL;
+    // 已检测到时用分号连原因:「已检测到 CLI 2.0.22；检测到 OpenCode V2;…」读起来不重复。
+    const note = reasonText ? `${label}${cliDetected ? '；' : '：'}${reasonText}` : label;
+    return { measured: true, state, chip: 'unknown', icon: '?', selectable: true, reason: reasonText, note, sharedLoginWarning: warn, version, cliDetected };
   }
   const reason = reasonText ?? FALLBACK_REASON[state];
   return { measured: true, state, chip: 'blocked', icon: '✗', selectable: false, reason, note: reason, sharedLoginWarning: null, version };

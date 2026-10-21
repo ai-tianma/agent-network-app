@@ -4,8 +4,7 @@
 import { readFileSync } from 'node:fs';
 import {
   UNCHECKED_LABEL, chipTitle, hasReadiness, readinessChips, readinessFor, readinessSelectable, sharedLoginWarning,
-  type ReadinessInput,
-} from './runtime-readiness';
+  type ReadinessInput, DETECTED_LABEL } from './runtime-readiness';
 
 let passed = 0, total = 0;
 const check = (name: string, ok: boolean, extra = '') => { total++; if (ok) { passed++; console.log('✅', name); } else { console.error('❌', name, extra); } };
@@ -61,6 +60,24 @@ check('🔴 hub unknown: ? chip, STILL selectable', unk.chip === 'unknown' && un
 check('hub unknown: note = 未检测 + reason', unk.note === `${UNCHECKED_LABEL}：检测超时`, String(unk.note));
 const unkBare = readinessFor({ runtime_readiness: { x: { ok: false, state: 'unknown', reason: '' } } }, 'x');
 check('hub unknown without reason: note = 未检测', unkBare.note === UNCHECKED_LABEL);
+
+// #1975(admin 2026-10-21:「怎么 OpenCode 还检测不到」)—— daemon 常常是**故意**跳过
+// auth/network 探测,但 CLI 是找到了的(cli:'found' + version)。这时说「未检测」是错的:
+// 一句话里既说「未检测」又说「检测到 OpenCode V2」,读起来自相矛盾。
+const opencodeV2 = readinessFor({
+  runtime_readiness: {
+    'opencode-cli': {
+      ok: false, state: 'unknown', version: '2.0.22', cli: 'found', auth: 'unknown', network: 'skipped',
+      reason: '检测到 OpenCode V2;provider、模型和登录取决于目标节点配置',
+    },
+  },
+}, 'opencode-cli');
+check('🔴 CLI 找到了就不说「未检测」', !String(opencodeV2.note).startsWith(UNCHECKED_LABEL), String(opencodeV2.note));
+check('🔴 说了「已检测到 CLI」并带上版本', String(opencodeV2.note).includes(`${DETECTED_LABEL} CLI 2.0.22`), String(opencodeV2.note));
+check('🔴 原样保留 daemon 给的原因', String(opencodeV2.note).includes('检测到 OpenCode V2'), String(opencodeV2.note));
+check('🔴 仍然可选、胶囊仍是 ? (不装也不禁)', opencodeV2.selectable === true && opencodeV2.chip === 'unknown' && opencodeV2.icon === '?');
+const unknownNoCli = readinessFor({ runtime_readiness: { x: { ok: false, state: 'unknown', reason: '检测超时' } } }, 'x');
+check('真的没测到 CLI 时仍然是「未检测」', unknownNoCli.note === `${UNCHECKED_LABEL}：检测超时` && !unknownNoCli.cliDetected);
 // hub 认不出的 state(未来新增)/ state 缺失 / 条目不是对象 → unknown、可选
 for (const [label, entry] of [['future state', { ok: false, state: 'rate_limited', reason: 'x' }], ['no state', { ok: true }], ['entry is a string', 'ready']] as Array<[string, any]>) {
   const v = readinessFor({ runtime_readiness: { x: entry } }, 'x');
