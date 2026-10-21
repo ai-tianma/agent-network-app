@@ -451,6 +451,32 @@ jobs:
           bash -n "$RUNNER_TEMP/retry-macos-dmg.sh"
           chmod +x "$RUNNER_TEMP/retry-macos-dmg.sh"
 
+      # 一个 tag 只留一个 release 对象。
+      #
+      # 事故(2026-10-21 实测,来自发版速度分析):同一个 tag 上出现了**两个** release
+      # (desktop-v0.2.274:一个 draft、一个 published)—— tauri-action 每次跑都新建,
+      # 重跑就多一个草稿;最近 20 个 release 里 9 个是**从未发布**的草稿,
+      # 用户和更新器看到的是残缺版本,latest.json 也可能指向半个版本。
+      #
+      # 这里在构建之前先清掉同 tag 的**草稿**(已发布的不动:它带着已下载的资产,
+      # 删掉会毁掉用户的更新记录),让重跑变成「更新同一个 release」。
+      - name: Remove stale draft releases for this tag (idempotent release creation)
+        if: inputs.publish == true
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          tag="desktop-v$version"
+          drafts=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq ".[] | select(.tag_name == \"$tag\" and .draft == true) | .id")
+          for id in $drafts; do
+            echo "deleting stale draft release $id for $tag"
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+          done
+          echo "idempotent-release: $tag has no stale draft left"
+
       - uses: tauri-apps/tauri-action@944946e3e4cac6603d1fe8f514171e9ecd3c78aa # v1
         if: inputs.publish == true
         env:
