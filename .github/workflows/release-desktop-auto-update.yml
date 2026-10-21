@@ -497,6 +497,12 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.283:
+            - 修复：每天/每周的「时间」不再让你手打输入，改成选择器（小时网格 + 分钟网格 + 常用时刻）。单次的执行时间此前已换成日历 + 时分秒面板（0.2.282 之前），现在两处都不用手输。
+            - 修复：Agent 归属与人类部门是两个独立的 —— 只有显式指定部门才算归属，负责人属于哪个部门不再把 Agent 带过去（需要 Hub 0.9.0-preview.144 及以上）。
+            - 改进：同一个版本不再出现两个 release 对象；已发布过的版本重发会直接报错提示先 bump 版本号；iOS 构建卡住会在 4 小时内终止并自动重试一次。
+            - 改进：发版耗时与未发版积压各有一个可复跑的只读脚本（release-timeline.mjs / release-backlog.mjs），随仓交付。
+
             What's new in 0.2.282:
             - 修复：Hub 令牌 · API 密钥库里，名字只差大小写或下划线的密钥现在会互相提示（线上确实同时存在 TMPAT 与 TM_PAT 两个不同的密钥，肉眼分不出），并标出成对的那几行；Provider 选已存密钥时同样会提示。
 
