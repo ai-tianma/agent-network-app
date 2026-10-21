@@ -21,7 +21,7 @@ import DaemonCreateProvider from './DaemonCreateProvider';
 import type { CreateProviderReference } from './daemon-provider-create';
 import OpenCodeProviderNote from './OpenCodeProviderNote';
 import { readListProviders } from './daemon-provider-read';
-import type { TaggedProvider } from './daemon-runtime-providers';
+import { displayDaemonProviders, type TaggedProvider } from './daemon-runtime-providers';
 import { useTranslation } from './i18n-react';
 import './i18n-provider';
 import {
@@ -297,6 +297,12 @@ export default function CreateNodeWizardScreen({ cfg, daemon, onBack, onExit, de
   const folder = folderEdited ?? workdirSlug(name, workdirFallback);
   const folderErr = workdirRoot && folderEdited !== null ? folderError(folderEdited) : null;
   const openCodeError = opencodeCreateError({ runtimeId, opencodeGeneration, opencodeUnsafeTools, model });
+  const daemonModelChoices = (() => {
+    const shown = displayDaemonProviders({ daemon, rows: daemonProviderRows, read: daemonProviderRead, runtimeId, opencodeGeneration });
+    if (shown.kind === 'opencode') return shown.models;
+    if (shown.kind === 'codex' || shown.kind === 'listed') return shown.providers.flatMap(p => p.models);
+    return [];
+  })();
   const surface = providerSurface(runtimeId, opencodeGeneration);
   const transportOk = hubTransportAllowsSecrets(cfg.serverUrl);
   const providerIssues = providerLocalIssues({ runtimeId, ...providerForm }, transportOk);
@@ -681,6 +687,7 @@ export default function CreateNodeWizardScreen({ cfg, daemon, onBack, onExit, de
               read={daemonProviderRead}
               runtimeId={runtimeId}
               opencodeGeneration={opencodeGeneration}
+              onSelectModel={setModel}
             />
           </View>
         )}
@@ -710,10 +717,18 @@ export default function CreateNodeWizardScreen({ cfg, daemon, onBack, onExit, de
             {runtimeId === 'opencode-cli' && opencodeGeneration === 'v2' ? (
               <View style={styles.section}>
                 <Text style={styles.label}>目标机器已配置的 provider/model</Text>
+                <View testID="opencode-v2-model-choices" style={styles.choiceList}>
+                  {daemonModelChoices.map(m => (
+                    <Pressable key={m} testID={`opencode-v2-model-choice-${m}`} accessibilityRole="button" accessibilityLabel={`选择模型 ${m}`} onPress={() => setModel(m)} style={[styles.choiceRow, model === m && styles.choiceRowSelected]}>
+                      <Text style={[styles.choiceText, model === m && styles.choiceTextSelected]}>{m}</Text>
+                      {model === m ? <Ionicons name="checkmark" size={18} color={colors.accent} /> : null}
+                    </Pressable>
+                  ))}
+                </View>
                 <TextInput testID="opencode-v2-model" value={model} onChangeText={setModel}
                   autoCapitalize="none" autoCorrect={false} placeholder="provider/model" style={styles.input} />
                 <Text testID="opencode-v2-model-hint" style={[styles.hint, !!openCodeError && styles.hintErr]}>
-                  {openCodeError ?? '上方是建议值，不保证可用；模型与登录凭据以目标机器配置为准。这里不收集密钥。'}
+                  {openCodeError ?? '点选这台机器已上报的模型。没有列表时再手填 provider/model。这里不收集密钥。'}
                 </Text>
               </View>
             ) : null}

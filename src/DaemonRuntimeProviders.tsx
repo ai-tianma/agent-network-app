@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Text } from './ui-text';
 import { useTranslation } from './i18n-react';
 import './i18n-provider';
@@ -11,13 +11,22 @@ import {
 } from './daemon-runtime-providers';
 import { colors, spacing } from './theme';
 
-function ProviderBlock({ provider }: { provider: PublicProvider }) {
+function ModelLine({ model, onSelect }: { model: string; onSelect?: (model: string) => void }) {
+  if (!onSelect) return <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{model}</Text>;
+  return (
+    <Pressable testID={`daemon-provider-model-${model}`} accessibilityRole="button" accessibilityLabel={`选择模型 ${model}`} onPress={() => onSelect(model)} style={{ minHeight: 32, justifyContent: 'center' }}>
+      <Text style={{ color: colors.accent, fontSize: 13 }}>{model}</Text>
+    </Pressable>
+  );
+}
+
+function ProviderBlock({ provider, onSelectModel }: { provider: PublicProvider; onSelectModel?: (model: string) => void }) {
   return (
     <View style={{ gap: 2 }}>
       {provider.id ? <Text style={{ color: colors.text, fontSize: 13 }}>{provider.id}</Text> : null}
       {provider.baseUrl ? <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{provider.baseUrl}</Text> : null}
       {provider.models.map(model => (
-        <Text key={model} style={{ color: colors.textSecondary, fontSize: 12 }}>{model}</Text>
+        <ModelLine key={model} model={model} onSelect={onSelectModel} />
       ))}
     </View>
   );
@@ -30,12 +39,15 @@ export default function DaemonRuntimeProviders({
   read,
   runtimeId,
   opencodeGeneration,
+  onSelectModel,
 }: {
   daemon: DaemonProviderSource;
   rows: readonly TaggedProvider[];
   read: 'pending' | 'ok' | 'unsupported' | 'error';
   runtimeId: string;
   opencodeGeneration?: 'v1' | 'v2';
+  /** 点一个已上报的模型，写进创建表单。不传则只展示。 */
+  onSelectModel?: (model: string) => void;
 }) {
   const { t } = useTranslation();
   const display = displayDaemonProviders({ daemon, rows, read, runtimeId, opencodeGeneration });
@@ -69,7 +81,7 @@ export default function DaemonRuntimeProviders({
           <Text style={muted}>{t('daemonProviders.codexHint')}</Text>
           <View testID="daemon-runtime-providers-codex" style={{ gap: spacing.sm }}>
             {display.providers.map(provider => (
-              <ProviderBlock key={`${provider.id}:${provider.baseUrl ?? ''}`} provider={provider} />
+              <ProviderBlock key={`${provider.id}:${provider.baseUrl ?? ''}`} provider={provider} onSelectModel={onSelectModel} />
             ))}
           </View>
         </>
@@ -80,7 +92,7 @@ export default function DaemonRuntimeProviders({
           <Text style={muted}>{t('daemonProviders.opencodeHint')}</Text>
           <View testID="daemon-runtime-providers-opencode" style={{ gap: 2 }}>
             {display.models.map(model => (
-              <Text key={model} style={{ color: colors.textSecondary, fontSize: 12 }}>{model}</Text>
+              <ModelLine key={model} model={model} onSelect={onSelectModel} />
             ))}
           </View>
         </>
@@ -93,7 +105,7 @@ export default function DaemonRuntimeProviders({
               <View key={`${provider.id}:${provider.models.join(',')}`} style={{ gap: 2 }}>
                 {provider.id ? <Text style={{ color: colors.text, fontSize: 13 }}>{provider.id}</Text> : null}
                 {provider.models.map(model => (
-                  <Text key={model} style={{ color: colors.textSecondary, fontSize: 12 }}>{model}</Text>
+                  <ModelLine key={model} model={model} onSelect={onSelectModel} />
                 ))}
               </View>
             ))}
