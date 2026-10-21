@@ -5,6 +5,9 @@
 export const BUNDLED_RELEASE_BODY: string = [
   "Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.",
   "",
+  "What's new in 0.2.281:",
+  "- 修复：给别的网络里的 Agent 发消息不再「没有找到这个 Agent」。Agent 列表是跨网络的，发送却一直钉在登录时选中的那个网络上 —— 现在按目标 Agent 实际所在的网络发送。",
+  "",
   "What's new in 0.2.280:",
   "- 修复：建节点的「选服务器」页好读了。标题不再露出 host_supervisor；卡片主标题是可辨认的名字，裸机器 ID 降成旁注；这台机器上没有的 runtime 改用中性灰（不再像报错）；选中态只留一处；点不动的「下一步」会说明为什么。",
   "- 修复：节点页在「配置的模型不在这台机器上报的列表里」时给一句提醒（不拦提交，列表可能先于服务器更新）。",
@@ -1223,6 +1226,7 @@ export const BUNDLED_RELEASE_BODY: string = [
 
 /** Release date (published_at) per version, as far as it was known when this file was generated. */
 export const BUNDLED_RELEASE_DATES: Record<string, string> = {
+  "0.2.280": "2026-10-21T08:34:41Z",
   "0.2.279": "2026-10-21T05:27:04Z",
   "0.2.278": "2026-10-21T02:59:32Z",
   "0.2.277": "2026-10-21T00:11:31Z",
