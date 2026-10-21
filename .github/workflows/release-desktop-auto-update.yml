@@ -497,6 +497,11 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.284:
+            - 改进：定时任务卡片重新梳理信息层级，任务名称、执行状态和计划时间更容易一眼分清。
+            - 改进：「下次执行」与「上次执行」按真实执行数据显示时间和结果摘要，方便判断计划何时运行、最近一次是否成功。
+            - 改进：卡片操作更轻量，常用操作不再抢占任务内容；启用开关支持键盘操作与清晰的焦点提示，浅色、深色主题下都更易辨认。
+
             What's new in 0.2.283:
             - 修复：每天/每周的「时间」不再让你手打输入，改成选择器（小时网格 + 分钟网格 + 常用时刻）。单次的执行时间此前已换成日历 + 时分秒面板（0.2.282 之前），现在两处都不用手输。
             - 修复：Agent 归属与人类部门是两个独立的 —— 只有显式指定部门才算归属，负责人属于哪个部门不再把 Agent 带过去（需要 Hub 0.9.0-preview.144 及以上）。
