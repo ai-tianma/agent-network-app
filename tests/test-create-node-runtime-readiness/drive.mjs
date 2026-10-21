@@ -48,8 +48,18 @@ const LEGACY = {
 };
 const EXPECT_ICON = { 'claude-agent-sdk': '✓', 'codex-sdk': '✗', 'grok-build-acp': '✗', 'claude-code-cli': '?', 'codex-app-server': '✓' };
 
-const VIEWPORTS = [{ name: 'desktop-1200x850', w: 1200, h: 850, desktop: true }, { name: 'phone-390x844', w: 390, h: 844, mobile: true }];
+// 选服务器页的三档验收尺寸(admin 2026-10-21):手机 390×844 / 窄桌面 1000×700 / 桌面 1200×800。
+const VIEWPORTS = [
+  { name: 'phone-390x844', w: 390, h: 844, mobile: true },
+  { name: 'desktop-1000x700', w: 1000, h: 700, desktop: true },
+  { name: 'desktop-1200x800', w: 1200, h: 800, desktop: true },
+];
 const THEMES = ['light', 'dark'];
+
+// 中性灰 vs 红:admin 2026-10-21 明确不可用要灰、不要红。颜色按 rgb 通道差判,不锁具体色值。
+const rgb = (s) => (s || '').match(/\d+/g)?.slice(0, 3).map(Number) || null;
+const isRed = (s) => { const c = rgb(s); return !!c && c[0] - Math.max(c[1], c[2]) > 30; };
+const isGrey = (s) => { const c = rgb(s); return !!c && Math.max(...c) - Math.min(...c) <= 24; };
 
 let fails = 0;
 const ck = (name, ok, extra = '') => { if (!ok) fails++; console.log(`${ok ? 'PASS' : 'FAIL'}: ${name}${extra ? ` (${extra})` : ''}`); };
@@ -124,6 +134,32 @@ for (const vp of VIEWPORTS) {
         ck(`${tag} picker: no horizontal page scroll (${cards.scrollW} ≤ ${cards.innerW})`, cards.scrollW <= cards.innerW);
       }
 
+      // (5) 2026-10-21 视觉返工:术语、次要 ID、中性灰、单一选中态、灰按钮给理由
+      const look = await page.evaluate(() => {
+        const card = document.querySelector('[data-testid="daemon-card-d_example_1"]');
+        const title = card?.querySelector('[data-testid="daemon-card-title"]');
+        const idLine = card?.querySelector('[data-testid="daemon-card-id"]');
+        const chip = document.querySelector('[data-testid="readiness-chip-grok-build-acp"]');
+        const chipText = chip?.querySelector('div,span') || chip;
+        const accentOf = (el) => (el ? getComputedStyle(el).color : null);
+        return {
+          header: document.body.innerText.split('\n').find(t => t.includes('服务器')) || '',
+          titleSize: title ? parseFloat(getComputedStyle(title).fontSize) : null,
+          idSize: idLine ? parseFloat(getComputedStyle(idLine).fontSize) : null,
+          idText: idLine?.textContent || '',
+          blockedChipColor: accentOf(chipText),
+          readyChipColor: accentOf((document.querySelector('[data-testid="readiness-chip-claude-agent-sdk"]')?.querySelector('div,span')))
+            || accentOf(document.querySelector('[data-testid="readiness-chip-claude-agent-sdk"]')),
+          radios: document.querySelectorAll('[data-testid="daemon-radio"]').length,
+          dots: document.querySelectorAll('[data-testid="daemon-card-d_example_1"] [data-testid="daemon-health-dot"]').length,
+          footerHint: document.querySelector('[data-testid="picker-footer-hint"]')?.textContent || '',
+        };
+      });
+      ck(`${tag} picker: header says 服务器, not host_supervisor`, look.header.includes('服务器') && !look.header.includes('host_supervisor'), look.header);
+      ck(`${tag} picker: machine name is the title, id is smaller copy`, look.titleSize != null && look.idSize != null && look.idSize < look.titleSize && look.idText.includes('机器 ID'), JSON.stringify({ title: look.titleSize, id: look.idSize, text: look.idText }));
+      ck(`🔴 ${tag} picker: an unavailable runtime chip is neutral, not red`, isGrey(look.blockedChipColor) && !isRed(look.blockedChipColor), look.blockedChipColor);
+      ck(`${tag} picker: health dot is not next to the selection radio`, look.dots === 1 && look.radios > 0, JSON.stringify(look));
+      ck(`${tag} picker: the disabled 下一步 says why`, look.footerHint.includes('先选一台服务器'), look.footerHint);
       // (2) 原因
       const grok = page.locator(q('readiness-chip-grok-build-acp')).first();
       if (vp.desktop) {

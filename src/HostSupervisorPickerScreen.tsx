@@ -46,6 +46,14 @@ export interface HostSupervisorPickerScreenProps {
 
 type ViewMode = 'auto' | 'list';
 
+/** 机器健康的旁注文字(hub 的 alert_level 原样映射,不在客户端重算判据)。 */
+const ALERT_LABEL: Record<string, string> = {
+  green: '在线',
+  yellow: '有告警',
+  red: '异常',
+  gray: '未上报',
+};
+
 export default function HostSupervisorPickerScreen({
   cfg,
   onBack,
@@ -155,7 +163,7 @@ export default function HostSupervisorPickerScreen({
           {/* app#253 —— 桌面端 + Local workspace:这台机器就是「那台机器」,给一键扫描/安装卡片 */}
           {cfg.profileId === LOCAL_HUB_PROFILE_ID && isTauriDesktop() ? <LocalDaemonSetupCard cfg={cfg} onInstalled={() => { setRefreshing(true); void load(); }} /> : null}
           <View style={styles.onboardingCard}>
-            <Text style={styles.onboardingTitle}>ⓘ  还没有可用的 host_supervisor 节点</Text>
+            <Text style={styles.onboardingTitle}>还没有可用的服务器</Text>
             <Text style={styles.onboardingBody}>
               要在某台机器上创建节点，先在那台机器上跑一次 daemon 初始化命令：
             </Text>
@@ -168,6 +176,7 @@ export default function HostSupervisorPickerScreen({
         <Footer
           disabled
           label="下一步"
+          hint="还没有可用的服务器：先按上面的命令注册一台"
           onPress={() => { /* never called when disabled */ }}
         />
       </View>
@@ -214,6 +223,7 @@ export default function HostSupervisorPickerScreen({
         <Footer
           disabled={!selected}
           label="下一步"
+          hint="确认用这台服务器"
           onPress={() => handleNext(daemons.find(x => x.daemon_node_id === selected) || d, onPicked)}
         />
       </View>
@@ -226,7 +236,7 @@ export default function HostSupervisorPickerScreen({
       <Header onBack={onBack} showBack={paneShowsBack(desktop)} title="选服务器" {...headerRefresh} />
       <View style={styles.contentPad}>
         <Text style={styles.listHeader}>
-          选择一台 host_supervisor 节点 ({count})
+          选择服务器（{count}）
         </Text>
       </View>
       <FlatList
@@ -253,6 +263,7 @@ export default function HostSupervisorPickerScreen({
       <Footer
         disabled={!selected}
         label="下一步"
+        hint="先选一台服务器，再继续"
         onPress={() => {
           const d = daemons.find(x => x.daemon_node_id === selected);
           if (d) handleNext(d, onPicked);
@@ -318,9 +329,12 @@ function HeaderRefresh({ onRefresh, refreshing }: { onRefresh: () => void; refre
   );
 }
 
-function Footer({ disabled, label, onPress }: { disabled: boolean; label: string; onPress: () => void }) {
+function Footer({ disabled, label, onPress, hint }: { disabled: boolean; label: string; onPress: () => void; hint?: string }) {
   return (
     <View style={styles.footer}>
+      {/* admin 2026-10-21:灰掉的「下一步」以前是一条沉默的大灰条,像坏了。
+          现在说明它为什么不能点,按钮本身也不再是整条灰底。 */}
+      {disabled && hint ? <Text testID="picker-footer-hint" style={styles.footerHint}>{hint}</Text> : null}
       <Pressable
         disabled={disabled}
         onPress={onPress}
@@ -359,17 +373,23 @@ function DaemonCard({
     red: colors.failed,
     gray: colors.rest,
   }[alert];
-  const cardStyle = [
-    styles.card,
-    selected && styles.cardSelected,
-  ];
+  // admin 2026-10-21:标题左边那颗健康绿点紧挨着选中 radio,看着像同一套控件。
+  // 选中态只留 radio(整卡高亮跟着它走);健康状态降级成底部一行旁注,带字,不会被误读成选中。
+  const health = daemon.online === false
+    ? { color: colors.rest, label: '离线' }
+    : { color: alertColor, label: ALERT_LABEL[alert] ?? ALERT_LABEL.gray };
+  const telemetry = [
+    daemon.host_telemetry?.cpu_cores != null ? `${daemon.host_telemetry.cpu_cores} 核` : '',
+    daemon.host_telemetry?.mem_gb != null ? `${daemon.host_telemetry.mem_gb} GB` : '',
+  ].filter(Boolean).join(' · ');
+  // 选中态只留 radio 一处(admin 2026-10-21):整卡描边 + radio 会读成两套控件。
+  const cardStyle = [styles.card];
   const inner = (
     <>
       <View style={styles.cardHeader}>
-        <View style={[styles.dot, { backgroundColor: alertColor }]} />
-        <Text style={styles.cardTitle} numberOfLines={1}>{daemon.alias}</Text>
+        <Text testID="daemon-card-title" style={styles.cardTitle} numberOfLines={1}>{daemon.alias}</Text>
         {radio ? (
-          <View style={[styles.radio, selected && styles.radioSelected]}>
+          <View testID="daemon-radio" style={[styles.radio, selected && styles.radioSelected]}>
             {selected ? <View style={styles.radioInner} /> : null}
           </View>
         ) : rightAction ? (
@@ -382,34 +402,43 @@ function DaemonCard({
           </Pressable>
         ) : null}
       </View>
-      {daemon.hostname ? (
-        <Text style={styles.cardSubtitle} numberOfLines={1}>{daemon.hostname}</Text>
-      ) : null}
       {/* #623 —— daemon 报了 runtime_readiness:每个 runtime 一颗 ✓/✗/? 胶囊,替掉「可建节点 ✓」那一行。
           机器级闸门(can_create_nodes)不变:建不了 / 未知时那一行照旧在。没报 ⇒ 和以前一模一样。 */}
       {readiness ? <ReadinessChips chips={readiness} /> : <RuntimeChips runtimes={daemon.runtimes_supported} />}
       {/* #1475 —— daemon 能拿哪些密钥。现网 7 个 daemon 全是 []，以前界面上完全看不出来。
           没上报（旧 Hub/daemon）就整行不显示，不替它说「未授权」。 */}
+      {readiness && describeDaemonCapability(daemon, Date.now()).kind === 'ready' ? null : <CapabilityRow daemon={daemon} />}
+      {/* 底部元信息:健康(带字)+ CPU/内存,然后是机器 ID。
+          admin 2026-10-21:裸 hostname 以前占着正文位置,现在只当「机器 ID」旁注。 */}
+      <View style={styles.metaRow}>
+        <View testID="daemon-health-dot" style={[styles.dot, { backgroundColor: health.color }]} />
+        <Text style={styles.metaText}>{health.label}</Text>
+        {telemetry ? <Text style={styles.metaText}>· {telemetry}</Text> : null}
+      </View>
+      {daemon.hostname ? (
+        <Text testID="daemon-card-id" style={styles.metaId} numberOfLines={1}>机器 ID · {daemon.hostname}</Text>
+      ) : null}
+      {/* #1475 —— daemon 能拿哪些密钥。现网 7 个 daemon 全是 []，以前界面上完全看不出来。
+          没上报（旧 Hub/daemon）就整行不显示，不替它说「未授权」。
+          admin 2026-10-21:每张卡都重复同一句技术话太重,降成最小的旁注。 */}
       {(() => {
         const v = describeAllowedSecretKeys(daemon.allowed_secret_keys);
         if (v.kind === 'unknown') return null;
         return (
-          <Text testID={`daemon-secret-keys-${v.kind}`} style={styles.cardSubtitle} numberOfLines={2}>{v.text}</Text>
+          <Text testID={`daemon-secret-keys-${v.kind}`} style={styles.metaId} numberOfLines={2}>{v.text}</Text>
         );
       })()}
-      {readiness && describeDaemonCapability(daemon, Date.now()).kind === 'ready' ? null : <CapabilityRow daemon={daemon} />}
-      {(daemon.host_telemetry?.cpu_cores != null || daemon.host_telemetry?.mem_gb != null) ? (
-        <Text style={styles.telemetry}>
-          {daemon.host_telemetry?.cpu_cores != null ? `${daemon.host_telemetry.cpu_cores} 核` : ''}
-          {daemon.host_telemetry?.cpu_cores != null && daemon.host_telemetry?.mem_gb != null ? ' · ' : ''}
-          {daemon.host_telemetry?.mem_gb != null ? `${daemon.host_telemetry.mem_gb} GB` : ''}
-        </Text>
-      ) : null}
     </>
   );
   if (onPress) {
     return (
-      <Pressable testID={`daemon-card-${daemon.daemon_node_id}`} style={({ pressed }) => [cardStyle, pressed && { opacity: 0.85 }]} onPress={onPress}>
+      <Pressable
+        testID={`daemon-card-${daemon.daemon_node_id}`}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        style={({ pressed, hovered }: any) => [cardStyle, hovered && styles.cardHover, pressed && { opacity: 0.85 }]}
+        onPress={onPress}
+      >
         {inner}
       </Pressable>
     );
@@ -449,7 +478,9 @@ function ReadinessChips({ chips }: { chips: ReadinessChip[] }) {
     <View testID="picker-readiness">
       <View style={styles.chipRow}>
         {chips.map(c => {
-          const tone = c.view.chip === 'ready' ? colors.running : c.view.chip === 'blocked' ? colors.failed : colors.rest;
+          // admin 2026-10-21:红色 ✗ 读起来像「这台机器坏了」,其实只是「这个 runtime 在这台机器上没有」。
+          // 不可用 = 中性灰;红只留给真的故障(⻅ CapabilityRow / 错误态)。
+          const tone = c.view.chip === 'ready' ? colors.running : colors.rest;
           const title = chipTitle(c);
           return (
             <View key={c.runtime} style={styles.rChipWrap}>
@@ -478,7 +509,7 @@ function ReadinessChips({ chips }: { chips: ReadinessChip[] }) {
         })}
       </View>
       {open ? (
-        <Text testID={`readiness-detail-${open.runtime}`} style={[styles.rDetail, open.view.chip === 'blocked' && { color: colors.failed }]}>
+        <Text testID={`readiness-detail-${open.runtime}`} style={styles.rDetail}>
           {chipTitle(open)}
         </Text>
       ) : null}
@@ -608,7 +639,7 @@ const makeStyles = () => StyleSheet.create({
     borderRadius: radius.surface,
     padding: spacing.md + 2,
   },
-  cardSelected: { borderColor: colors.accent },
+  cardHover: { backgroundColor: colors.rowHover },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -617,7 +648,9 @@ const makeStyles = () => StyleSheet.create({
   },
   dot: { width: 10, height: 10, borderRadius: radius.pill },
   cardTitle: { color: colors.text, fontSize: 15, fontWeight: '600', flex: 1 },
-  cardSubtitle: { color: colors.textMuted, fontSize: 12, marginBottom: spacing.xs },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm },
+  metaText: { color: colors.textSecondary, fontSize: 11 },
+  metaId: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   rightActionText: { color: colors.accent, fontSize: 13, fontWeight: '600' },
 
   // Radio (count≥2 list)
@@ -659,9 +692,10 @@ const makeStyles = () => StyleSheet.create({
     borderTopWidth: 1,
   },
   primaryBtn: { ...buttonStyle('primary') },
-  primaryBtnDisabled: { backgroundColor: colors.border },
+  primaryBtnDisabled: { backgroundColor: colors.tonalBg, borderColor: colors.border, borderWidth: 1 },
   primaryBtnText: { ...buttonTextStyle('primary') },
   primaryBtnTextDisabled: { color: colors.textMuted },
+  footerHint: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginBottom: spacing.sm },
 
   // 501 degrade
   warnCard: {
