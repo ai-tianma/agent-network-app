@@ -14,6 +14,7 @@ import {
   afterPoll,
   afterSubmit,
   catalogHint,
+  modelNotOnMachineNote,
   modelChips,
   modelControlAvailability,
   phaseIsBusy,
@@ -134,6 +135,8 @@ export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: 
   const candidate = custom.trim() ? custom : picked;
   const chips = modelChips(suggestions, currentModel);
   const hint = v2 ? v2Note : catalogHint(node.runtime);
+  // 只在 V2 目录**读到了**的时候才谈「不在列表里」:目录为空/读不到 ⇒ 不知道,不乱报。
+  const notOnMachine = v2 && (v2Models?.length ?? 0) > 0 ? modelNotOnMachineNote(currentModel, v2Models ?? []) : null;
 
   const submit = async () => {
     if (!view || busy) return;
@@ -169,6 +172,9 @@ export default function NodeModelSection({ cfg, node }: { cfg: HubConfig; node: 
               改模型不经过任何大模型:Hub 下发后节点自己写配置并重启一次(约 5–45 秒),期间它不接任务。
             </Text>
             {v2 && hint ? <Text testID="opencode-v2-models-note" style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{hint}</Text> : null}
+            {notOnMachine ? (
+              <Text testID="model-not-on-machine" style={{ color: colors.blocked, fontSize: 12, lineHeight: 18 }}>{notOnMachine}</Text>
+            ) : null}
             {chips.length > 0 ? (
               <View style={{ gap: spacing.sm }}>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>建议</Text>

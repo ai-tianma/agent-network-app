@@ -96,6 +96,22 @@ export function modelChips(suggestions: readonly string[], current: string | nul
   return [cur, ...suggestions];
 }
 
+/**
+ * 「当前模型不在这台机器上报的列表里」的提醒。
+ *
+ * 看板 #1941 / admin 2026-10-21:agent 节点拒跑最常见的原因就是配置里的模型
+ * 这台机器根本没有(TMAI狗 配 grok-4.7,ACP 只有 4.6/4.5)。列表来自机器本身,
+ * 所以「不在列表里」是一句可靠的提醒;但它**不是判据**——列表可能先于
+ * 服务器更新,不拦提交,只把话说清楚。
+ * 目录为空(读不到/没上报)或没配模型 ⇒ null,不凭空报警。
+ */
+export function modelNotOnMachineNote(current: string | null | undefined, catalog: readonly string[]): string | null {
+  const cur = (current ?? '').trim();
+  if (!cur || catalog.length === 0) return null;
+  if (catalog.includes(cur)) return null;
+  return `当前模型 ${cur} 不在这台机器上报的模型列表里;节点可能拒绝运行。点一个它上报的模型再保存。`;
+}
+
 /** One-line caveat under the chips for runtimes whose catalog is known to lag
  * the provider; null for runtimes with no such caveat. */
 export function catalogHint(runtime: string | null | undefined): string | null {

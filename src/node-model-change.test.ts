@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { afterPoll, afterSubmit, modelControlAvailability, phaseText, validateModelId, RESTART_MAX_POLLS, modelChips, catalogHint } from './node-model-change';
+import { afterPoll, afterSubmit, modelControlAvailability, phaseText, validateModelId, RESTART_MAX_POLLS, modelChips, catalogHint, modelNotOnMachineNote } from './node-model-change';
 import { RUNTIME_MODEL_SUGGESTIONS, suggestedModels } from './runtime-catalog';
 
 let passed = 0, total = 0;
@@ -70,5 +70,9 @@ check('no current model → chips are exactly the catalog', JSON.stringify(model
 check('empty catalog with a current model still shows that model', JSON.stringify(modelChips([], 'p/m')) === JSON.stringify(['p/m']));
 check('opencode-cli gets the lagging-catalog hint; others get none', catalogHint('opencode-cli') !== null && catalogHint('opencode-cli')!.includes('OpenCode Zen') && catalogHint('claude-agent-sdk') === null && catalogHint(null) === null);
 check('section renders chips via modelChips and shows the catalog hint', section.includes('modelChips(') && section.includes('catalogHint('));
+check('a model the machine does not report gets a warning', (modelNotOnMachineNote('grok-4.7', ['grok-4.6', 'grok-4.5']) || '').includes('grok-4.7'));
+check('a model the machine reports gets no warning', modelNotOnMachineNote('grok-4.6', ['grok-4.6', 'grok-4.5']) === null);
+check('no catalog or no model → no warning', modelNotOnMachineNote('grok-4.7', []) === null && modelNotOnMachineNote(null, ['a/b']) === null && modelNotOnMachineNote('   ', ['a/b']) === null);
+check('section shows the not-on-machine warning', section.includes('modelNotOnMachineNote('));
 console.log(`node model change: ${passed}/${total} checks passed`);
 if (passed !== total) process.exit(1);
