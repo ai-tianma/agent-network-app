@@ -13,9 +13,9 @@
 //   share            : the export is a real PNG — signature + IHDR 1080×1920, then 4:5 = 1080×1350; an unticked task
 //                      is left out of the model the card is drawn from (checked through the preview re-render).
 //   phone 390×844    : the 仪表盘 tab is reachable, 今天完成 hero painted, 最近完成 directly under it with 5 rows and
-//                      展开 → more rows, sticky 生成分享图 inside the viewport, no horizontal scroll.
+//                      展开 → more rows, no horizontal scroll.
 // Exit 1 when any check fails or a viewport could not be opened.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { serveExport, initScript, findChromium, ANDROID_UA, paintedText } from '../test-layout-sweep/harness.mjs';
 
@@ -114,12 +114,6 @@ const box = (page, sel) => page.evaluate((s) => {
   return { x: b.x, y: b.y, w: b.width, h: b.height, r: b.right, b: b.bottom, text: el.textContent };
 }, sel);
 const count = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter(e => e.getClientRects().length).length, sel);
-/** PNG → { w, h } from the IHDR chunk; null when the bytes are not a PNG. */
-const pngSize = (buf) => {
-  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-  if (buf.length < 24 || !sig.every((b, i) => buf[i] === b) || buf.toString('ascii', 12, 16) !== 'IHDR') return null;
-  return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
-};
 
 const { url, close } = await serveExport(WEB);
 const browser = await chromium.launch({ headless: true, executablePath: findChromium(), args: ['--disable-web-security'] });
@@ -195,37 +189,6 @@ for (const theme of ['light', 'dark']) {
     const closeBtn = page.locator('[data-testid="req-detail-close"]');
     if (await closeBtn.count()) await closeBtn.first().click().catch(() => {});
 
-    // share → real PNG, 9:16 then 4:5
-    await page.locator(tid('dash-share')).first().click();
-    await page.locator(tid('dash-share-preview') + ' img').first().waitFor({ timeout: 15000 });
-    await page.waitForTimeout(500);
-    if (OUT) await page.screenshot({ path: join(OUT, `desktop-share-${theme}-${mode}.png`) });
-    const firstTask = await page.evaluate(() => window.__tasksFixture.archived[0].id);
-    // untick the newest task: the preview re-renders (new blob URL) and that title leaves the card model
-    const before = await page.evaluate(() => document.querySelector('[data-testid="dash-share-preview"] img')?.src);
-    await page.locator(tid(`dash-share-task-${firstTask}`)).first().click();
-    await page.waitForFunction((b) => document.querySelector('[data-testid="dash-share-preview"] img')?.src !== b, before, { timeout: 10000 }).catch(() => {});
-    const after = await page.evaluate(() => document.querySelector('[data-testid="dash-share-preview"] img')?.src);
-    const unticked = await page.evaluate((id) => document.querySelector(`[data-testid="dash-share-task-${id}"]`)?.getAttribute('aria-checked'), firstTask);
-    const sizes = {};
-    for (const size of ['portrait', 'feed']) {
-      await page.locator(tid(`dash-size-${size}`)).first().click();
-      await page.waitForTimeout(700);
-      const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.locator(tid('dash-share-save')).first().click()]);
-      const file = await dl.path();
-      const buf = readFileSync(file);
-      sizes[size] = { ...pngSize(buf), bytes: buf.length, name: dl.suggestedFilename() };
-      if (OUT) writeFileSync(join(OUT, `card-${size}-${theme}-${mode}.png`), buf);
-    }
-    record(vp, 'share export', {
-      portraitPng: sizes.portrait?.w === 1080 && sizes.portrait?.h === 1920,
-      feedPng: sizes.feed?.w === 1080 && sizes.feed?.h === 1350,
-      notTiny: sizes.portrait?.bytes > 30000 && sizes.feed?.bytes > 30000,
-      fileName: /^agent-network-week-\d{4}-\d{2}-\d{2}-1080x1920\.png$/.test(sizes.portrait?.name || ''),
-      untickRerenders: !!before && !!after && before !== after && unticked === 'false',
-    }, { sizes: JSON.stringify(sizes) });
-    await page.locator(tid('dash-share-dialog-close')).first().click();
-
     if (mode === 'hub') {
       // live: a completion lands on the hub → next poll (15 s) slides it into the top of the timeline
       const newId = await page.evaluate(() => {
@@ -271,36 +234,10 @@ for (const theme of ['light', 'dark']) {
       fiveRows: five === 5,
       expands: expanded > 5,
       titlePainted: !!pTitle?.painted && pTitle.w >= 40,
-      ctaInViewport: !!cta && cta.b <= 844 && cta.y > 700,
+      // 「生成分享图」入口已下线：手机底部那条按钮必须不存在，别又被加回来盖住「最近完成」。
+      noShareCta: cta === null,
       noOverflow: pOverflow <= 0,
     }, { tab: tab && `${r1(tab.x)}..${r1(tab.r)}`, five, expanded, gap: heroB && rc && r1(rc.y - heroB.b) });
-    // native branch (no Canvas on Android/iOS): the RN card (ShareCardNative) is the preview, no save button, the note says
-    // to save on desktop. __anetDashNativeCard makes the web export take that branch so the same component is measured.
-    await pp.evaluate(() => { window.__anetDashNativeCard = true; });
-    await pp.locator(tid('dash-share')).first().click();
-    await pp.locator(tid('dash-share-native-card')).first().waitFor({ timeout: 10000 }).catch(() => {});
-    await pp.waitForTimeout(400);
-    const card = await box(pp, tid('dash-share-native-card'));
-    const cardTitles = await pp.evaluate(() => [...document.querySelectorAll('[data-testid="share-card-title"]')].map(e => { const b = e.getBoundingClientRect(); return { w: b.width, h: b.height, t: e.textContent }; }));
-    const note = await paintedText(pp, tid('dash-share-native-note'));
-    const saveBtn = await count(pp, tid('dash-share-save'));
-    const shareBtn = await paintedText(pp, `${tid('dash-share-native')} *`, '分享图片');
-    const shot = await pp.evaluate(() => { const el = [...document.querySelectorAll('[data-testid="share-card-titles"]')].map(e => e.parentElement).find(p => p && p.getBoundingClientRect().right < 0); if (!el) return null; const b = el.getBoundingClientRect(); return { w: b.width, h: b.height, r: b.right }; });
-    const want = await pp.evaluate(() => window.__tasksFixture.archived[0].name);
-    if (OUT) await pp.screenshot({ path: join(OUT, `phone-share-${theme}-${mode}.png`) });
-    record(pvp, 'native share preview', {
-      cardAspect: !!card && Math.abs(card.h / card.w - 1920 / 1080) < 0.01,
-      titlesPainted: cardTitles.length >= 3 && cardTitles.every(t => t.w >= 20 && t.h >= 4),
-      newestFirst: cardTitles[0]?.t === want,
-      notePainted: !!note?.painted && note.text.includes('分享面板'),
-      noSave: saveBtn === 0,
-      shareButton: !!shareBtn?.painted && shareBtn.text === '分享图片',
-      // the off-screen capture card: laid out at 1080 physical px wide (logical 1080 / devicePixelRatio), outside the viewport
-      captureCard: !!shot && Math.abs(shot.w * 2 - 1080) < 1 && Math.abs(shot.h * 2 - 1920) < 1 && shot.r < 0,
-    }, { card: card && `${r1(card.w)}x${r1(card.h)}`, titles: cardTitles.length });
-    await pp.locator(tid('dash-share-dialog-close')).first().click();
-    await pp.evaluate(() => { window.__anetDashNativeCard = false; });
-    await pp.evaluate(() => document.querySelector('[data-testid="dash-phone"]')?.scrollTo?.(0, 900));
     if (OUT) {
       await pp.locator(tid('dash-recent-expand')).first().click().catch(() => {});
       await pp.waitForTimeout(200);

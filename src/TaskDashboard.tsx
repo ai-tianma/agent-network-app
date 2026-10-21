@@ -6,8 +6,8 @@ import { useTranslation } from './i18n-react';
 // 拿去发社交媒体」;设计稿通过后加了主角「最近完成的任务是什么」。
 // 桌面:一行四个大数字(进场数字滚动)→ 整行「最近完成」时间线(新完成的滑进来,点一行开详情)→
 //       近 30 天柱图 + 完成榜 → 全年热力图 + 按项目。
-// 手机:单列 ——「今天完成」大卡 → 最近完成 5 行 + 展开 → 三个小数 → 柱图 → 完成榜 → 按项目 → 近 6 个月;
-//       底部常驻「生成分享图」。不是把桌面挤窄。
+// 手机:单列 ——「今天完成」大卡 → 最近完成 5 行 + 展开 → 三个小数 → 柱图 → 完成榜 → 按项目 → 近 6 个月。
+//       不是把桌面挤窄。
 // 数据:Hub 有 stats(capability,#2168)就问 Hub(真完成时刻、含归档、按可见范围);否则本机从整张表(含归档,
 //       按 cursor 翻页)估,用 updatedAt 的地方标「近似」。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -144,15 +144,8 @@ export default function TaskDashboard(props: Props) {
   const [period, setPeriodState] = useState<DashPeriod>(lastPeriod);
   const setPeriod = (p: DashPeriod) => { lastPeriod = p; setPeriodState(p); };
   const { data, tagSnapshot, error, reload } = useDashData(props.cfg, period, props.statsCapable, props.items, props.projectFilter);
-  const [sharing, setSharing] = useState(false);
   const periods = DASH_PERIODS.map(key => ({ key, label: tr(PERIOD_KEY[key]) }));
   const periodSeg = <Segmented s={props.s} items={periods} value={period} onChange={setPeriod} testID="dash-period" />;
-  const shareButton = (
-    <Pressable accessibilityRole="button" onPress={() => setSharing(true)} style={({ pressed }) => [c.shareBtn, pressed && { opacity: 0.85 }]} testID="dash-share">
-      <Ionicons name="image-outline" size={16} color={colors.onAccent} />
-      <Text style={c.shareBtnText} numberOfLines={1}>{tr('dash.share')}</Text>
-    </Pressable>
-  );
   if (!data) {
     return (
       <View style={c.center} testID="dash-loading">
@@ -168,8 +161,7 @@ export default function TaskDashboard(props: Props) {
   const view = { ...props, data, tagSnapshot, period, c };
   return (
     <View style={{ flex: 1 }} testID="task-dashboard" {...({ dataSet: { dashSource: data.source } } as object)}>
-      {props.phone ? <DashPhone {...view} periodSeg={periodSeg} onShare={() => setSharing(true)} /> : <DashDesktop {...view} periodSeg={periodSeg} shareButton={shareButton} />}
-      {sharing ? <ShareDialog {...view} onClose={() => setSharing(false)} /> : null}
+      {props.phone ? <DashPhone {...view} periodSeg={periodSeg} /> : <DashDesktop {...view} periodSeg={periodSeg} />}
     </View>
   );
 }
@@ -411,7 +403,7 @@ function DashboardProject(props: Props) {
   return <View style={{ minWidth: 150, maxWidth: 280 }}><SelectField testID="dash-project" value={props.projectFilter ?? null} touch={props.phone} title={tr('tasks.copy.30')} noneLabel={tr('tagStats.allProjects')} placeholder={tr('tagStats.allProjects')} options={[{ id: 'none', label: tr('tasks.copy.31') }, ...props.projects.filter(p => !p.archived).map(p => ({ id: p.id, label: p.name, color: p.color }))]} onPick={props.onProject} /></View>;
 }
 
-function DashDesktop(props: ViewProps & { periodSeg: React.ReactNode; shareButton: React.ReactNode }) {
+function DashDesktop(props: ViewProps & { periodSeg: React.ReactNode }) {
   const { data, c, period } = props;
   const last30 = data.daily.slice(-30);
   const sum30 = last30.reduce((a, d) => a + d.n, 0);
@@ -425,7 +417,6 @@ function DashDesktop(props: ViewProps & { periodSeg: React.ReactNode; shareButto
         <DashboardProject {...props} />
         <View style={{ flex: 1 }} />
         <Notes data={data} c={c} />
-        {props.shareButton}
       </View>
       <View style={c.heroRow}>{heroes(props)}</View>
       <View style={[c.card, c.recentCard]} testID="dash-recent-card">
@@ -458,7 +449,7 @@ function DashDesktop(props: ViewProps & { periodSeg: React.ReactNode; shareButto
   );
 }
 
-function DashPhone(props: ViewProps & { periodSeg: React.ReactNode; onShare: () => void }) {
+function DashPhone(props: ViewProps & { periodSeg: React.ReactNode }) {
   const { data, c, period } = props;
   const [expanded, setExpanded] = useState(false);
   const today = useCountUp(data.todayDone);
@@ -512,10 +503,6 @@ function DashPhone(props: ViewProps & { periodSeg: React.ReactNode; onShare: () 
           <Streaks data={data} c={c} />
         </View>
       </ScrollView>
-      <Pressable accessibilityRole="button" onPress={props.onShare} style={c.phoneCta} testID="dash-share">
-        <Ionicons name="image-outline" size={18} color={colors.onAccent} />
-        <Text style={c.phoneCtaText}>{tr('dash.share')}</Text>
-      </Pressable>
     </View>
   );
 }
@@ -750,7 +737,7 @@ const makeDashStyles = () => {
     shareBtnText: { color: colors.onAccent, fontSize: 13, fontWeight: weight.strong },
     ghostBtn: { height: 36, paddingHorizontal: spacing.lg, borderRadius: radius.control, backgroundColor: colors.inputBg, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     ghostText: { color: colors.text, fontSize: 13, fontWeight: weight.strong },
-    phoneBody: { paddingHorizontal: spacing.lg, paddingBottom: 110, gap: spacing.md },
+    phoneBody: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
     phoneHero: { borderRadius: radius.surface, padding: 18, backgroundColor: '#0c1a3a', overflow: 'hidden' },
     phoneHeroLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 13 },
     phoneHeroValue: { color: '#ffffff', fontSize: 64, lineHeight: 72, fontWeight: weight.strong, fontVariant: ['tabular-nums'] },
@@ -763,8 +750,6 @@ const makeDashStyles = () => {
     phoneKpiValue: { color: colors.text, fontSize: 22, fontWeight: weight.strong, marginTop: 2, fontVariant: ['tabular-nums'] },
     expand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: spacing.sm },
     expandText: { color: colors.accent, fontSize: 13, fontWeight: weight.medium },
-    phoneCta: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg, height: 50, borderRadius: radius.control, backgroundColor: colors.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-    phoneCtaText: { color: colors.onAccent, fontSize: 15, fontWeight: weight.strong },
     dialogFoot: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
     previewBox: { alignSelf: 'center', borderRadius: radius.thumb, overflow: 'hidden', backgroundColor: colors.subtleFill, flexShrink: 0 },
     fieldLabel: { color: colors.textMuted, fontSize: typeScale.small },

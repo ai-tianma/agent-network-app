@@ -398,10 +398,6 @@
       "kind": "stub",
       "secs": 32
     },
-    "test-share-card/drive.mjs": {
-      "kind": "stub",
-      "secs": 36
-    },
     "test-shortcuts-settings/drive.mjs": {
       "kind": "stub",
       "secs": 20
