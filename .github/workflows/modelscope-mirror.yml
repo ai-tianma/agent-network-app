@@ -155,9 +155,24 @@ jobs:
           REQUESTED_TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
-          newest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
-            | awk '/^desktop-v[0-9]+\.[0-9]+\.[0-9]+$/' | sort -V | tail -1)
+          # 🔴 「查不到最新版本」和「这个 tag 不是最新版本」是两件事，只有后者才该跳过派发。
+          #    0.2.282 实测：releases 列表那次没返回内容 ⇒ $newest 为空 ⇒ 旧代码把
+          #    `tag != newest` 读成「不是最新的」⇒ **静默跳过了 iOS 派发**，那一版
+          #    一度没有 TestFlight build。所以这里查不到就重试，再查不到就报错，
+          #    让 run 变红等人看 —— 而不是安静地什么都不做。
+          newest=''
+          for attempt in 1 2 3; do
+            newest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
+              | awk '/^desktop-v[0-9]+\.[0-9]+\.[0-9]+$/' | sort -V | tail -1)
+            [ -n "$newest" ] && break
+            echo "attempt $attempt: could not list the published desktop releases (empty) — retrying"
+            sleep 5
+          done
+          if [ -z "$newest" ]; then
+            echo "::error::could not determine the newest published desktop release (the listing stayed empty) — refusing to guess, and refusing to silently skip the iOS dispatch"
+            exit 1
+          fi
           tag="${REQUESTED_TAG:-$newest}"
           if [ "$tag" != "$newest" ]; then
             echo "tag $tag is not the newest desktop release ($newest); not dispatching iOS"
