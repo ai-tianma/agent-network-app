@@ -25,11 +25,15 @@ export const DUE_PANEL_WIDTH = 308;
 type Time = { hh: number; mm: number; ss: number };
 const pad = (n: number) => String(n).padStart(2, '0');
 
-export default function TaskDuePicker({ value, onChange, allowTime, pointer, sheet, idBase, error, anchorAt, onDismiss }: {
+export default function TaskDuePicker({ value, onChange, allowTime, pointer, sheet, idBase, error, anchorAt, onDismiss, requireTime = false, fieldLabel, placeholder }: {
   value: string;
   onChange: (due: string) => void;
   /** Hub 能存时刻(capabilities 里有 due_datetime)。 */
   allowTime: boolean;
+  /** 单次执行等必须指定时刻的字段:不提供全天和日期-only快捷项。 */
+  requireTime?: boolean;
+  fieldLabel?: string;
+  placeholder?: string;
   /** 鼠标界面:弹层贴着字段 + 键盘操作;否则手机底部面板。 */
   pointer: boolean;
   sheet: boolean;
@@ -52,9 +56,10 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
   dismiss.current = onDismiss;
   useEffect(() => { if (anchorAt && !open) dismiss.current?.(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const today = localDateOf(Date.now());
+  const withTime = allowTime || requireTime;
   const initial = dueToLocal(value);
   const [date, setDate] = useState<string>(initial?.date ?? today);
-  const [allDay, setAllDay] = useState<boolean>(!initial?.time);
+  const [allDay, setAllDay] = useState<boolean>(!requireTime && !initial?.time);
   const [time, setTime] = useState<Time>(initial?.time ?? { hh: 18, mm: 0, ss: 0 });
   const [timeText, setTimeText] = useState({ hh: pad(time.hh), mm: pad(time.mm), ss: pad(time.ss) });
   const [month, setMonth] = useState(() => { const [y, m] = (initial?.date ?? today).split('-').map(Number); return { y, m }; });
@@ -64,7 +69,7 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
     const d = l?.date ?? today;
     const t = l?.time ?? { hh: 18, mm: 0, ss: 0 };
     setDate(d);
-    setAllDay(!l?.time);
+    setAllDay(!requireTime && !l?.time);
     setTime(t);
     setTimeText({ hh: pad(t.hh), mm: pad(t.mm), ss: pad(t.ss) });
     const [y, m] = d.split('-').map(Number);
@@ -79,7 +84,7 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
     if (y !== month.y || m !== month.m) setMonth({ y, m });
   };
   const commit = () => {
-    onChange(allowTime && !allDay ? dueFromLocal(date, time) : date);
+    onChange(withTime && (requireTime || !allDay) ? dueFromLocal(date, time) : date);
     setOpen(false);
   };
 
@@ -152,12 +157,12 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
           );
         })}
       </View>
-      {allowTime ? (
+      {withTime ? (
         <View style={styles.timeRow} testID={`${idBase}-time`}>
-          <Pressable accessibilityRole="checkbox" {...a11yState({ checked: allDay })} onPress={() => setAllDay(a => !a)} style={[f.row, { gap: 6 }]} testID={`${idBase}-allday`}>
+          {!requireTime ? <Pressable accessibilityRole="checkbox" {...a11yState({ checked: allDay })} onPress={() => setAllDay(a => !a)} style={[f.row, { gap: 6 }]} testID={`${idBase}-allday`}>
             <Ionicons name={allDay ? 'checkbox' : 'square-outline'} size={16} color={allDay ? colors.accent : colors.textMuted} />
             <Text style={{ color: colors.text, fontSize: typeScale.small + 1 }}>{tr('tasks.copy.179')}</Text>
-          </Pressable>
+          </Pressable> : null}
           <View style={[f.row, { gap: 4, opacity: allDay ? 0.35 : 1 }]} pointerEvents={allDay ? 'none' : 'auto'}>
             {(['hh', 'mm', 'ss'] as const).map((part, i) => (
               <View key={part} style={[f.row, { gap: 4 }]}>
@@ -178,7 +183,7 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
           </View>
         </View>
       ) : null}
-      {anchorAt ? (
+      {anchorAt && !requireTime ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {dueShortcuts(today).map(o => (
             <Pressable key={o.key} onPress={() => { onChange(o.value); setOpen(false); }} style={[s.chip, { height: 28 }, value === o.value && s.chipOn]} testID={`${idBase}-${o.key}`} accessibilityRole="button">
@@ -206,7 +211,7 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
   // 桌面:贴着字段下沿;放不下就翻到上面;左边和字段左边对齐,右边夹进窗口。
   // 上下都放不下(矮窗口,字段在中间 —— 详情里项目 / 母任务挪到标题下以后更常见):放到字段左边、竖直居中,
   // 不再夹到窗口顶上把字段本身盖住。
-  const panelH = (allowTime ? 452 : 404) + (anchorAt ? 40 : 0);
+  const panelH = (withTime ? 452 : 404) + (anchorAt && !requireTime ? 40 : 0);
   const place = duePanelPlacement(anchor, { width: win.width, height: win.height }, { width: DUE_PANEL_WIDTH, height: panelH });
   const left = place.left;
   const top = place.top;
@@ -234,13 +239,13 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
       <View ref={fieldRef} collapsable={false}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={label ? tr('tasks.copy.185', { v0: label }) : tr('tasks.copy.186')}
+          accessibilityLabel={fieldLabel ? `${fieldLabel}${label ? `：${label}` : ''}` : label ? tr('tasks.copy.185', { v0: label }) : tr('tasks.copy.186')}
           onPress={begin}
           style={[f.input, f.row, error ? { borderColor: colors.failed } : null]}
           testID={idBase}
         >
           <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
-          <Text style={{ flex: 1, color: label ? colors.text : colors.textMuted, fontSize: typeScale.body }} numberOfLines={1} testID={`${idBase}-value`}>{label || tr('tasks.copy.187')}</Text>
+          <Text style={{ flex: 1, color: label ? colors.text : colors.textMuted, fontSize: typeScale.body }} numberOfLines={1} testID={`${idBase}-value`}>{label || placeholder || tr('tasks.copy.187')}</Text>
           {value ? (
             <Pressable accessibilityRole="button" accessibilityLabel={tr('tasks.copy.188')} onPress={() => onChange('')} hitSlop={8} testID={`${idBase}-x`}>
               <Ionicons name="close-circle" size={16} color={colors.textMuted} />
@@ -248,7 +253,7 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
           ) : null}
         </Pressable>
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+      {!requireTime ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {dueShortcuts(today).map(o => (
           <Pressable key={o.key} onPress={() => onChange(o.value)} style={[s.chip, { height: 28 }, value === o.value && s.chipOn]} testID={`${idBase}-${o.key}`} accessibilityRole="button">
             <Text style={[s.chipText, value === o.value && s.chipTextOn]}>{validationText(o.label)}</Text>
@@ -259,7 +264,7 @@ export default function TaskDuePicker({ value, onChange, allowTime, pointer, she
             <Text style={s.chipText}>{tr('tasks.copy.183')}</Text>
           </Pressable>
         ) : null}
-      </View>
+      </View> : null}
       {error ? <Text style={s.err} accessibilityRole="alert">{error}</Text> : null}
       {modal}
     </View>
@@ -276,4 +281,3 @@ const makePickerStyles = () => StyleSheet.create({
   timeBox: { width: 40, height: 32, borderWidth: 1, borderRadius: radius.item, textAlign: 'center', fontSize: 14, padding: 0 },
   footBtn: { height: 32, justifyContent: 'center' },
 });
-

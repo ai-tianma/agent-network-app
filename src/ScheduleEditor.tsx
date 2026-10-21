@@ -49,6 +49,8 @@ import { colors, radius, spacing, type as fontSize, weight } from './theme';
 import { elevated } from './elevation';
 import { scheduledTaskActions } from './scheduled-task-actions';
 import TaskDescriptionEditor from './TaskDescriptionEditor';
+import TaskDuePicker from './TaskDuePicker';
+import { schedulePickerValue } from './schedule-date-time';
 import { contentDirty, SCHEDULE_CONTENT_MAX } from './schedule-content-edit';
 import { runDisplay, runDurationText, runFailureText, runIsOpen } from './schedule-run-result';
 import { describeMisfire, describeSchedule, formatAbsolute, scheduleStatusMeta } from './scheduled-view-model';
@@ -79,7 +81,7 @@ const toLocalDateTimeInput = (value: string) => {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return '';
   const pad = (part: number) => String(part).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
 const intervalFormValue = (seconds: number): { every: string; unit: IntervalUnit } => {
@@ -435,7 +437,20 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
         <Label text="优先级"><View style={styles.segment}>{(['high','normal','low'] as const).map((value) => <Pressable key={value} onPress={() => setPriority(value)} style={[styles.segmentItem, priority === value && styles.segmentActive]}><Text style={priority === value ? styles.segmentTextActive : styles.segmentText}>{value === 'high' ? '高' : value === 'low' ? '低' : '普通'}</Text></Pressable>)}</View></Label>
         <Label text="类型"><View style={styles.segment}>{(['once','interval','daily','weekly'] as const).map((x, i) => <Pressable key={x} onPress={() => setKind(x)} style={[styles.segmentItem, kind === x && styles.segmentActive]}><Text style={kind === x ? styles.segmentTextActive : styles.segmentText}>{['单次','间隔','每天','每周'][i]}</Text></Pressable>)}</View></Label>
         <Label text="错过执行"><View style={styles.segment}>{(['catch_up_once','skip'] as const).map((policy) => <Pressable key={policy} onPress={() => setMisfirePolicy(policy)} style={[styles.segmentItem, misfirePolicy === policy && styles.segmentActive]}><Text style={misfirePolicy === policy ? styles.segmentTextActive : styles.segmentText}>{policy === 'catch_up_once' ? '补跑一次' : '跳过本次'}</Text></Pressable>)}</View><Text style={styles.meta}>{misfirePolicy === 'catch_up_once' ? '适合新闻抓取；恢复后最多补跑一次' : '错过后等待下一周期'}</Text></Label>
-        {kind === 'once' && <Label text="执行时间（ISO 或 YYYY-MM-DDTHH:mm）"><TextInput style={styles.input} autoCapitalize="none" value={when} onChangeText={v => { setWhen(v); setAdjustedFrom(null); }} placeholder="2026-08-10T09:00" placeholderTextColor={colors.textMuted} />{timeHint ? <Text testID="schedule-form-time-hint" style={styles.timeHint}>{timeHint}</Text> : null}</Label>}
+        {kind === 'once' && <Label text="执行时间（本地时间）">
+          <TaskDuePicker
+            value={schedulePickerValue(when)}
+            onChange={v => { setWhen(v); setAdjustedFrom(null); }}
+            allowTime
+            requireTime
+            pointer={pointerUi()}
+            sheet={!pointerUi()}
+            idBase="schedule-form-run-at"
+            fieldLabel="执行时间"
+            placeholder="选择日期和时间"
+          />
+          {timeHint ? <Text testID="schedule-form-time-hint" style={styles.timeHint}>{timeHint}</Text> : null}
+        </Label>}
         <Label text="时区（IANA）"><TextInput style={styles.input} autoCapitalize="none" value={timezone} onChangeText={setTimezone} placeholder="Asia/Shanghai" placeholderTextColor={colors.textMuted} /></Label>
         {kind === 'interval' && <Label text="固定间隔"><TextInput style={styles.input} keyboardType="number-pad" value={every} onChangeText={setEvery} /><View style={[styles.segment, { marginTop: spacing.sm }]}>{(['seconds','minutes','hours','days'] as const).map((value, index) => <Pressable key={value} onPress={() => setUnit(value)} style={[styles.segmentItem, unit === value && styles.segmentActive]}><Text style={unit === value ? styles.segmentTextActive : styles.segmentText}>{['秒','分钟','小时','天'][index]}</Text></Pressable>)}</View></Label>}
         {(kind === 'daily' || kind === 'weekly') && <Label text="时间"><TextInput style={styles.input} value={clock} onChangeText={setClock} placeholder="09:00" placeholderTextColor={colors.textMuted} /></Label>}

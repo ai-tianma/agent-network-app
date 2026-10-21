@@ -214,7 +214,11 @@ const nonCreateWrites = () => writes.filter(w => !(w.method === 'POST' && w.path
   ck('B: completed schedule offers only 复制', boxes.map(b => b.label).join() === '复制', boxes.map(b => b.label).join());
   await page.locator('[data-testid="schedule-copy"]').click();
   await form(page).waitFor({ timeout: 10000 });
-  const when = await page.getByPlaceholder('2026-08-10T09:00').inputValue();
+  // 「执行时间」现在是日期时间选择器（#990），旧的 ISO placeholder 输入框没有了。
+  // 读选择器显示的值：'YYYY-MM-DD HH:MM:SS'（本地时间）—— 与旧的 '2026-08-10T09:00'
+  // 一样是本地时刻，断言的意图不变。
+  const whenText = await page.locator('[data-testid="schedule-form-run-at-value"]').innerText();
+  const when = whenText.replace(' ', 'T');
   ck('B: one-shot time moved into the future', new Date(when).getTime() > Date.now(), when);
   const hint = page.locator('[data-testid="schedule-form-time-hint"]');
   // Below the form's scroll fold at 1200×800: scroll it in first, or the clip test reads the scroll offset, not the layout.
