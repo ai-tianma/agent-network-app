@@ -16,6 +16,7 @@ export const agentOrgTranslations = {
   'agentOrg.noOwner': ['没有负责人', 'No owner'],
   'agentOrg.back': ['全部部门', 'All departments'],
   'agentOrg.readOnly': ['部门树和 Agent 的归属来自 Hub；有管理员或部门负责人权限可在这里调整。', 'The department tree and agent placement come from the Hub; admins and department heads can adjust them here.'],
+  'agentOrg.independent': ['Agent 归属与人类部门是两个独立的：只有在这里显式指定才算归属，负责人属于哪个部门不会把 Agent 带过去。', 'Agent placement is independent of the human departments: only an explicit choice here counts; an agent is never carried into a department by its owner.'],
   'agentOrg.demoTitle': ['调整结构', 'Adjust structure'],
   'agentOrg.demoHint': ['调整会直接写入 Hub；需要管理员或部门负责人权限。', 'Changes are saved to the Hub. Requires admin or department-head access.'],
   'agentOrg.demoPickAgent': ['选择 Agent', 'Choose an agent'],

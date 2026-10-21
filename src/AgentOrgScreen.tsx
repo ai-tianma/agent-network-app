@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
+import { Text } from './ui-text';
+import { colors, spacing, type as typeScale } from './theme';
 import type { HubConfig } from './api';
 import { loadAgentOrg, moveAgentDepartment } from './agent-org-api';
 import { agentCount, agentsDirectlyIn, orgTree, placeAgents, type AgentOrgData, type DemoMove, type PlacedAgent } from './agent-org-model';
@@ -127,6 +129,8 @@ function DepartmentTree(p: { data: AgentOrgData; placed: PlacedAgent[]; onFocus:
   const { t } = useTranslation();
   const rows = flattenTree(orgTree(p.data));
   const footer = !p.data.directory ? t('agentOrg.directoryMissing') : !p.data.departmentsApi ? t('agentOrg.noTree') : t('agentOrg.readOnly');
+  // #1976 —— 人类部门树与 Agent 归属是两件事:Agent 只认显式归属,不按负责人部门推断。
+  const independent = p.data.agentDepartmentSupported ? t('agentOrg.independent') : '';
   return (
     <SettingsGroup footer={footer} testID="agent-org-departments">
       {rows.length ? rows.map(row => (
@@ -145,6 +149,9 @@ function DepartmentTree(p: { data: AgentOrgData; placed: PlacedAgent[]; onFocus:
           value={t('agentOrg.agentsCount', { count: agentCount(p.placed, p.data, null) })}
           onPress={() => p.onFocus(null)}
         />
+      ) : null}
+      {independent ? (
+        <Text testID="agent-org-independent-note" style={{ color: colors.textMuted, fontSize: typeScale.small, marginTop: spacing.sm }}>{independent}</Text>
       ) : null}
     </SettingsGroup>
   );

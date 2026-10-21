@@ -22,6 +22,15 @@ export type AgentOrgData = {
   directory: boolean;
   /** GET /api/networks/:id/departments 有响应。false 时部门是从通讯录摊平的。 */
   departmentsApi: boolean;
+  /**
+   * Hub 支持「显式给 Agent 设部门」(nodes.department_id)。
+   *
+   * #1976(admin 2026-10-21:「Agent 组织架构和人类组织架构是两个独立的」):
+   * true ⇒ Agent 放哪个部门**只由显式设置**决定,没有显式归属就是「未归属」,
+   * **不再**从「负责人在哪个部门」推断 —— 人类的部门树不该决定 Agent 的位置。
+   * false ⇒ 老 Hub 没有显式归属这回事,保留旧的推断口径(此时树本身也是从通讯录摊平的)。
+   */
+  agentDepartmentSupported: boolean;
 };
 
 export type DemoMove = { nodeId: string; departmentId: string | null };
@@ -55,9 +64,14 @@ export function placeAgents(data: AgentOrgData, moves: readonly DemoMove[]): Pla
     const nodeId = agent.nodeId.trim();
     if (!nodeId || byNode.has(nodeId)) return;
     const explicit = agent.departmentId !== undefined ? sourceDepartment(data, agent.departmentId) : null;
+    // #1976 —— 两种口径:
+    //   * Hub 支持显式归属:只认显式的;没有显式归属 ⇒ 未归属。**不从负责人部门推断。**
+    //   * 老 Hub(不支持):没有显式归属这回事 ⇒ 退回「按负责人部门推断」的老口径。
     const source = agent.departmentId !== undefined
       ? explicit
-      : (owner ? sourceDepartment(data, owner.departmentId) : null);
+      : (data.agentDepartmentSupported
+        ? null
+        : (owner ? sourceDepartment(data, owner.departmentId) : null));
     byNode.set(nodeId, {
       nodeId,
       alias: agent.alias.trim() || nodeId,

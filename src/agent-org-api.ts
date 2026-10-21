@@ -16,6 +16,8 @@ export type DirectoryPage = {
   unowned: OrgAgent[];
   hasMore: boolean;
   nextOffset: number | null;
+  /** #1976 —— Hub 支持显式给 Agent 设部门。没有这一格 = 老 Hub(客户端保留旧的推断口径)。 */
+  agentDepartmentSupported: boolean;
 };
 
 function agentOf(value: unknown): OrgAgent | null {
@@ -69,7 +71,7 @@ function personOf(value: unknown): DirectoryPerson | null {
 
 /** 缺字段、垃圾项丢掉,不把整页判死。 */
 export function parseDirectoryPage(json: unknown): DirectoryPage {
-  if (!json || typeof json !== 'object') return { people: [], unowned: [], hasMore: false, nextOffset: null };
+  if (!json || typeof json !== 'object') return { people: [], unowned: [], hasMore: false, nextOffset: null, agentDepartmentSupported: false };
   const row = json as Record<string, unknown>;
   const people = Array.isArray(row.people) ? row.people.flatMap(item => { const person = personOf(item); return person ? [person] : []; }) : [];
   return {
@@ -77,6 +79,7 @@ export function parseDirectoryPage(json: unknown): DirectoryPage {
     unowned: agentsOf(row.agents_without_owner),
     hasMore: row.has_more === true,
     nextOffset: typeof row.next_offset === 'number' && Number.isFinite(row.next_offset) ? row.next_offset : null,
+    agentDepartmentSupported: row.agent_department_supported === true,
   };
 }
 
@@ -101,13 +104,15 @@ async function getJson(cfg: HubConfig, path: string): Promise<{ status: number; 
   }
 }
 
-type DirectoryRead = { missing: true } | { missing: false; owners: OrgOwner[]; unowned: OrgAgent[]; deptNames: Map<string, string> };
+type DirectoryRead = { missing: true } | { missing: false; owners: OrgOwner[]; unowned: OrgAgent[]; deptNames: Map<string, string>; agentDepartmentSupported: boolean };
 
 async function readDirectory(cfg: HubConfig, networkId: string): Promise<DirectoryRead> {
   const owners = new Map<string, OrgOwner>();
   const deptNames = new Map<string, string>();
   let unowned: OrgAgent[] = [];
   let offset = 0;
+  // #1976 —— 能力位只看第一页(顶层字段,每页都一样)。
+  let agentDepartmentSupported = false;
   for (let page = 0; page < DIRECTORY_MAX_PAGES; page++) {
     const path = `/api/requirements/people/directory?network_id=${encodeURIComponent(networkId)}&limit=${DIRECTORY_PAGE_LIMIT}&offset=${offset}`;
     const res = await getJson(cfg, path);
@@ -116,7 +121,7 @@ async function readDirectory(cfg: HubConfig, networkId: string): Promise<Directo
     if (res.status < 200 || res.status >= 300) throw new Error(`directory HTTP ${res.status}`);
     if (res.body && typeof res.body === 'object' && (res.body as { ok?: unknown }).ok === false) throw new Error('directory not ok');
     const parsed = parseDirectoryPage(res.body);
-    if (offset === 0) unowned = parsed.unowned;
+    if (offset === 0) { unowned = parsed.unowned; agentDepartmentSupported = parsed.agentDepartmentSupported; }
     for (const person of parsed.people) {
       if (person.departmentId && person.departmentName && !deptNames.has(person.departmentId)) deptNames.set(person.departmentId, person.departmentName);
       if (owners.has(person.userId)) continue;
@@ -125,7 +130,7 @@ async function readDirectory(cfg: HubConfig, networkId: string): Promise<Directo
     if (!parsed.hasMore || parsed.nextOffset === null || parsed.nextOffset <= offset) break;
     offset = parsed.nextOffset;
   }
-  return { missing: false, owners: [...owners.values()], unowned, deptNames };
+  return { missing: false, owners: [...owners.values()], unowned, deptNames, agentDepartmentSupported };
 }
 
 function flatDepartments(names: Map<string, string>, owners: readonly OrgOwner[]): Department[] {
@@ -204,5 +209,7 @@ export async function loadAgentOrg(cfg: HubConfig, networkId: string): Promise<A
     unowned: directory.missing ? [] : directory.unowned,
     directory: !directory.missing,
     departmentsApi: !org.missing,
+    // #1976 —— 目录接口说「不支持显式 Agent 部门」时,Agent 的位置退回旧的推断口径。
+    agentDepartmentSupported: !directory.missing && directory.agentDepartmentSupported,
   };
 }

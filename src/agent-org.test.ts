@@ -16,28 +16,52 @@ const dept = (id: string, name: string, parent: string | null = null, sort = 0):
 const owner = (userId: string, departmentId: string | null, agents: OrgOwner['agents'], displayName = ''): OrgOwner => ({
   userId, username: userId, displayName, departmentId, agents,
 });
+// #1976 —— 现在的 Hub 支持显式 Agent 部门(agentDepartmentSupported: true):
+// Agent 只认**显式**归属,不再从「负责人在哪个部门」推断。老 Hub 没有这一格,
+// 客户端保留旧的推断口径(legacyData)。
 const data = (patch: Partial<AgentOrgData> = {}): AgentOrgData => ({
   departments: [dept('eng', '工程'), dept('fe', '前端', 'eng', 1)],
   owners: [owner('u1', 'eng', [{ nodeId: 'n1', alias: '阿尔法' }], '爱丽丝')],
   unowned: [{ nodeId: 'n2', alias: '孤岛' }],
   directory: true,
   departmentsApi: true,
+  agentDepartmentSupported: true,
   ...patch,
 });
+const legacyData = (patch: Partial<AgentOrgData> = {}): AgentOrgData =>
+  data({ agentDepartmentSupported: false, ...patch });
 
 {
   const placed = placeAgents(data(), []);
-  ck('负责人名下的 Agent 落在负责人的部门', placed.find(a => a.nodeId === 'n1')?.departmentId === 'eng' && placed.find(a => a.nodeId === 'n1')?.ownerName === '爱丽丝' && placed.find(a => a.nodeId === 'n1')?.demo === false);
+  // #1976 —— Agent 归属与人类部门是两个独立的:负责人属于「工程」并不会把它的 Agent 带进「工程」。
+  ck('🔴 有负责人的 Agent 也不会自动进负责人的部门', placed.find(a => a.nodeId === 'n1')?.departmentId === null && placed.find(a => a.nodeId === 'n1')?.ownerName === '爱丽丝');
+  ck('老 Hub（不支持显式归属）仍按负责人部门推断', (() => {
+    const legacy = placeAgents(legacyData(), []).find(a => a.nodeId === 'n1');
+    return legacy?.departmentId === 'eng' && legacy?.demo === false;
+  })());
+  ck('显式归属的 Agent 落在它自己的部门', (() => {
+    const explicit = placeAgents(data({ owners: [owner('u1', 'eng', [{ nodeId: 'n1', alias: '阿尔法', departmentId: 'fe' }], '爱丽丝')] }), []);
+    return explicit.find(a => a.nodeId === 'n1')?.departmentId === 'fe';
+  })());
   ck('没有负责人的 Agent 未归属', placed.find(a => a.nodeId === 'n2')?.departmentId === null && placed.find(a => a.nodeId === 'n2')?.ownerName === null);
-  ck('直接归属算在本部门', agentCount(placed, data(), 'eng') === 1 && agentsDirectlyIn(placed, 'eng').length === 1 && agentCount(placed, data(), 'fe') === 0);
-  const nested = data({ owners: [owner('u1', 'fe', [{ nodeId: 'n1', alias: '阿尔法' }])] });
+  ck('显式归属算在本部门', (() => {
+    const d = data({ owners: [owner('u1', 'eng', [{ nodeId: 'n1', alias: '阿尔法', departmentId: 'eng' }], '爱丽丝')] });
+    const pl = placeAgents(d, []);
+    return agentCount(pl, d, 'eng') === 1 && agentsDirectlyIn(pl, 'eng').length === 1 && agentCount(pl, d, 'fe') === 0;
+  })());
+  const nested = data({ owners: [owner('u1', 'fe', [{ nodeId: 'n1', alias: '阿尔法', departmentId: 'fe' }])] });
   const nestedPlaced = placeAgents(nested, []);
   ck('父部门计入下级 Agent', agentCount(nestedPlaced, nested, 'eng') === 1 && agentsDirectlyIn(nestedPlaced, 'eng').length === 0 && agentsDirectlyIn(nestedPlaced, 'fe').length === 1);
-  const moved = placeAgents(data(), [{ nodeId: 'n1', departmentId: 'fe' }, { nodeId: 'n1', departmentId: 'missing' }]);
-  const n1 = moved.find(a => a.nodeId === 'n1')!;
-  ck('未知的演示目标算未归属,并标成演示', n1.departmentId === null && n1.demo === true && n1.ownerName === '爱丽丝' && n1.sourceDepartmentId === 'eng');
-  const same = placeAgents(data(), [{ nodeId: 'n1', departmentId: 'eng' }]).find(a => a.nodeId === 'n1')!;
-  ck('移回原部门不算演示', same.departmentId === 'eng' && same.demo === false);
+  // #1976 —— 没有显式归属的 Agent,它的「原部门」就是未归属;把它移进某个部门是一次真实的改动。
+  const movedUnknown = placeAgents(data(), [{ nodeId: 'n1', departmentId: 'missing' }]).find(a => a.nodeId === 'n1')!;
+  ck('未知的演示目标算未归属', movedUnknown.departmentId === null && movedUnknown.ownerName === '爱丽丝' && movedUnknown.sourceDepartmentId === null);
+  const movedReal = placeAgents(data(), [{ nodeId: 'n1', departmentId: 'fe' }]).find(a => a.nodeId === 'n1')!;
+  ck('移进真实部门算一次改动(演示),并记下原部门是未归属', movedReal.departmentId === 'fe' && movedReal.demo === true && movedReal.sourceDepartmentId === null);
+  const explicitSame = placeAgents(
+    data({ owners: [owner('u1', 'eng', [{ nodeId: 'n1', alias: '阿尔法', departmentId: 'eng' }], '爱丽丝')] }),
+    [{ nodeId: 'n1', departmentId: 'eng' }],
+  ).find(a => a.nodeId === 'n1')!;
+  ck('移回原部门不算演示', explicitSame.departmentId === 'eng' && explicitSame.demo === false);
   const owned = placeAgents(data({ unowned: [{ nodeId: 'n1', alias: '不该赢' }, { nodeId: 'n2', alias: '孤岛' }] }), []);
   ck('同一节点负责人优先于未归属名单', owned.filter(a => a.nodeId === 'n1').length === 1 && owned.find(a => a.nodeId === 'n1')?.alias === '阿尔法');
   const foreign = placeAgents(data({ owners: [owner('u9', 'gone', [{ nodeId: 'n9', alias: '外部门' }])] }), []);
@@ -90,13 +114,17 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
   const calls = await withFetch(url => {
     if (url.includes('departments')) return json(200, { departments: [dept('eng', '工程'), dept('fe', '前端', 'eng')], members: [] });
     const offset = Number(new URL(url).searchParams.get('offset'));
-    if (offset === 0) return json(200, { ok: true, people: [{ user_id: 'u1', username: 'alice', display_name: '爱丽丝', department: { id: 'eng', name: '工程' }, agents: [{ node_id: 'n1', alias: '阿尔法' }] }], agents_without_owner: [{ node_id: 'n0', alias: '第一页' }], has_more: true, next_offset: 200 });
+    if (offset === 0) return json(200, { ok: true, agent_department_supported: true, people: [{ user_id: 'u1', username: 'alice', display_name: '爱丽丝', department: { id: 'eng', name: '工程' }, agents: [{ node_id: 'n1', alias: '阿尔法' }] }], agents_without_owner: [{ node_id: 'n0', alias: '第一页' }], has_more: true, next_offset: 200 });
     return json(200, { ok: true, people: [{ user_id: 'u2', username: 'bob', display_name: '', department: { id: 'missing', name: '不在树上' }, agents: [{ node_id: 'n2', alias: '贝塔' }] }, { user_id: 'u1', username: 'alice', agents: [{ node_id: 'n9', alias: '不合并' }] }], agents_without_owner: [{ node_id: 'n8', alias: '后页不收' }], has_more: false, next_offset: null });
   }, async () => {
     const org = await loadAgentOrg(cfg, 'net 1');
     const placed = org ? placeAgents(org, []) : [];
     ck('翻页合并负责人,未归属只取第一页', !!org && org.owners.length === 2 && org.unowned.length === 1 && org.unowned[0].nodeId === 'n0' && org.departmentsApi && org.directory);
-    ck('不在树上的部门按未归属', placed.find(a => a.nodeId === 'n2')?.departmentId === null && placed.find(a => a.nodeId === 'n1')?.departmentId === 'eng');
+  // #1976 —— 顶层能力位决定用哪套口径。
+  ck('通讯录声明支持显式 Agent 部门时,按独立口径', !!org && org.agentDepartmentSupported === true);
+  ck('通讯录没声明时,按老的推断口径', parseDirectoryPage({ people: [], agents_without_owner: [], has_more: false, next_offset: null }).agentDepartmentSupported === false);
+    // #1976 —— 独立口径下,没有显式归属的 Agent 一律未归属(负责人/通讯录里的部门不再决定它)。
+    ck('不在树上的部门按未归属', placed.find(a => a.nodeId === 'n2')?.departmentId === null && placed.find(a => a.nodeId === 'n1')?.departmentId === null);
     ck('重复的人保留先读到的 Agent', !placed.some(a => a.nodeId === 'n9'));
   });
   ck('只 GET 部门树和通讯录', calls.every(c => c.method === 'GET' && !c.url.includes('POST')) && calls.filter(c => c.url.includes('directory')).length === 2 && calls.every(c => c.url.startsWith('https://hub.example/')));
