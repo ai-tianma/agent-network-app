@@ -462,7 +462,11 @@ jobs:
       # 这里在构建之前先清掉同 tag 的**草稿**(已发布的不动:它带着已下载的资产,
       # 删掉会毁掉用户的更新记录),让重跑变成「更新同一个 release」。
       - name: Remove stale draft releases for this tag (idempotent release creation)
-        if: inputs.publish == true
+        # #2064: 只有 macOS job 拥有「建草稿」的权力。两个矩阵 job 同时在开始时清理、
+        # 结束时各建一个同 tag 草稿，0.2.287 就这样得到了两个 draft
+        # (420936057 只有 darwin 资产 / 420938453 只有 windows 资产)，
+        # verify-draft 取到第一个后报 "draft is missing ANet_0.2.287_x64-setup.exe"。
+        if: inputs.publish == true && runner.os == 'macOS'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -488,6 +492,37 @@ jobs:
             exit 1
           fi
 
+      # 一个 tag 只能有一个 release 对象。非 macOS 平台不建 release，而是等 macOS job
+      # 把草稿和它的 darwin 资产传上去，然后按 releaseId 追加自己的资产。
+      - name: Wait for the single draft release created by the macOS job
+        if: inputs.publish == true && runner.os != 'macOS'
+        id: draft
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          tag="desktop-v$version"
+          mac_asset="ANet_${version}_aarch64.app.tar.gz"
+          for attempt in $(seq 1 120); do
+            id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+              --jq ".[] | select(.tag_name == \"$tag\" and .draft == true) | .id" | head -1)
+            if [ -n "$id" ]; then
+              has_mac=$(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" \
+                --jq ".[] | select(.name == \"$mac_asset\") | .id" | head -1)
+              if [ -n "$has_mac" ]; then
+                echo "id=$id" >> "$GITHUB_OUTPUT"
+                echo "using the draft release $id created by the macOS job"
+                exit 0
+              fi
+            fi
+            echo "waiting for the macOS draft release with $mac_asset (attempt $attempt/120)"
+            sleep 15
+          done
+          echo "::error::no macOS draft release for $tag after 30 minutes; refusing to create a second release object"
+          exit 1
+
       - uses: tauri-apps/tauri-action@944946e3e4cac6603d1fe8f514171e9ecd3c78aa # v1
         if: inputs.publish == true
         env:
@@ -503,6 +538,8 @@ jobs:
           # Empty on Windows and Linux, so those jobs keep using bun. The path
           # has no spaces: tauri-action splits this input on spaces.
           tauriScript: ${{ runner.os == 'macOS' && format('bash {0}/retry-macos-dmg.sh', runner.temp) || '' }}
+          # Empty on macOS: that job is the only one allowed to create the release.
+          releaseId: ${{ runner.os == 'macOS' && '' || steps.draft.outputs.id }}
           tagName: desktop-v__VERSION__
           releaseName: ANet Desktop v__VERSION__
           releaseBody: |-
@@ -2064,6 +2101,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # #2064: 两个同 tag 草稿会让这件事看起来像「资产没编出来」。先点清数量。
+      - name: Require exactly one draft release for this tag
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          tag="desktop-v$version"
+          count=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq "[.[] | select(.tag_name == \"$tag\" and .draft == true)] | length")
+          echo "draft releases for $tag: $count"
+          if [ "$count" != "1" ]; then
+            echo "::error::expected exactly one draft release for $tag, found $count"
+            exit 1
+          fi
+
       - name: Require selected platform draft assets, updater entries, and checksums
         env:
           GH_TOKEN: ${{ github.token }}
