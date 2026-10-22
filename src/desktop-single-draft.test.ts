@@ -183,7 +183,7 @@ ck('分支名 resolve 失败 → fail-closed', (() => {
 // 8. include_linux 变化时连旧 manifest 一起回收 + 创建草稿前先过 exact-commit 门
 ck('回收 .deb 时同时删掉旧 latest.json', (() => {
   const deleted: number[] = [];
-  prepareReleaseDraft({
+  const result = prepareReleaseDraft({
     version: '0.2.287',
     listReleases: () => [{ id: 21, tag_name: tag, draft: true, target_commitish: 'main' }],
     listAssets: () => [[
@@ -195,7 +195,25 @@ ck('回收 .deb 时同时删掉旧 latest.json', (() => {
     includeLinux: false,
     log: () => {},
   });
-  return deleted.includes(31) && deleted.includes(32) && deleted.includes(33);
+  return deleted.join(',') === '31,32,33'
+    && JSON.stringify(result.removedAssets) === JSON.stringify([
+      { id: 31, name: 'ANet_0.2.287_amd64.deb' },
+      { id: 32, name: 'ANet_0.2.287_amd64.deb.sig' },
+      { id: 33, name: 'latest.json' },
+    ]);
+})());
+ck('include_linux=false 时即使只剩 latest.json 也回收并如实返回 removedAssets', (() => {
+  const deleted: number[] = [];
+  const result = prepareReleaseDraft({
+    version: '0.2.287',
+    listReleases: () => [{ id: 22, tag_name: tag, draft: true, target_commitish: 'main' }],
+    listAssets: () => [[{ id: 34, name: 'latest.json' }]],
+    deleteAsset: (id: number) => { deleted.push(id); return {}; },
+    includeLinux: false,
+    log: () => {},
+  });
+  return deleted.join(',') === '34'
+    && JSON.stringify(result.removedAssets) === JSON.stringify([{ id: 34, name: 'latest.json' }]);
 })());
 ck('创建/复用 release 之前先跑 exact-merged-commit 门',
   /prepare-release:[\s\S]{0,900}- name: Require exact merged commit[\s\S]{0,1200}node scripts\/prepare-desktop-release\.mjs/.test(wf));

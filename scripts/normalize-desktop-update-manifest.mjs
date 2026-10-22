@@ -32,6 +32,12 @@ export const latestJsonAssetName = 'latest.json';
 export const publicDownloadUrl = (repository, tag, name) =>
   `https://github.com/${repository}/releases/download/${tag}/${name}`;
 
+export const latestJsonUploadArgs = ({ repository, releaseId, file }) => [
+  'api', '-X', 'POST',
+  `https://uploads.github.com/repos/${repository}/releases/${releaseId}/assets?name=${latestJsonAssetName}`,
+  '-H', 'Content-Type: application/octet-stream', '--input', file,
+];
+
 /** 只认本仓本次发布标签下的公开下载链接；其它的（含 asset API URL）都不算。 */
 export const isPublicDownloadUrl = (url, { repository, tag }) => {
   if (typeof url !== 'string' || url.length === 0) return false;
@@ -196,7 +202,7 @@ export async function normalizeReleaseManifest({
     for (const assetId of existingAssetIds) gh(['api', '-X', 'DELETE', `repos/${repo}/releases/assets/${assetId}`]);
     // 二进制资产上传端点在 uploads.github.com（api.github.com 会 404）。
     // 必须用完整的 uploads.github.com URL；`gh api --hostname` 不会改写路径前缀。
-    gh(['api', '-X', 'POST', `https://uploads.github.com/repos/${repo}/releases/${releaseId}/assets?name=${latestJsonAssetName}`, '-H', 'Content-Type: application/octet-stream', '--input', file], { inherit: true });
+    gh(latestJsonUploadArgs({ repository: repo, releaseId, file }), { inherit: true });
   },
   anonymousCheck = (urls) => assertAnonymousDownloads(urls, { fetchImpl }),
   log = (line) => console.log(line),

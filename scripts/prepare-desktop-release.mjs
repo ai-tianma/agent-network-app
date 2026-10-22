@@ -133,20 +133,20 @@ export function prepareReleaseDraft({
     const pages = listAssets(plan.releaseId);
     const assets = (Array.isArray(pages) ? pages : []).flat();
     const stale = staleAssetsFor(assets, { includeLinux });
-    for (const asset of stale) {
-      log(`${tag}: removing stale asset ${asset.name} (id ${asset.id}) because include_linux=${includeLinux}`);
+    // include_linux=false 时旧 latest.json 可能仍带 linux 条目，即使 .deb/.sig
+    // 已被上一次失败尝试删掉也必须独立回收，让本次构建重写它。
+    const staleManifests = includeLinux
+      ? []
+      : assets.filter((candidate) => candidate?.name === 'latest.json')
+        .map((asset) => ({ id: asset.id, name: asset.name }));
+    const removedAssets = [...stale, ...staleManifests];
+    for (const asset of removedAssets) {
+      const reason = asset.name === 'latest.json' ? 'so this run rewrites it' : `because include_linux=${includeLinux}`;
+      log(`${tag}: removing stale asset ${asset.name} (id ${asset.id}) ${reason}`);
       deleteAsset(asset.id);
     }
-    if (stale.length > 0) {
-      // 旧 latest.json 里还带着 linux 条目：删掉资产但不删 manifest，verify-draft 会报
-      // "Linux updater entries present but Linux was not selected"。让本次构建重写它。
-      for (const asset of assets.filter((candidate) => candidate?.name === 'latest.json')) {
-        log(`${tag}: removing stale latest.json (id ${asset.id}) so this run rewrites it`);
-        deleteAsset(asset.id);
-      }
-    }
-    log(`${tag}: reusing draft release ${plan.releaseId}${stale.length ? ` after removing ${stale.length} stale asset(s)` : ''}`);
-    return { action: 'reuse', tag, releaseId: plan.releaseId, removedAssets: stale };
+    log(`${tag}: reusing draft release ${plan.releaseId}${removedAssets.length ? ` after removing ${removedAssets.length} stale asset(s)` : ''}`);
+    return { action: 'reuse', tag, releaseId: plan.releaseId, removedAssets };
   }
   const created = createRelease(tag, `ANet Desktop v${version}`);
   if (!Number.isInteger(created?.id)) throw new Error(`${tag}: created release has no numeric id`);
