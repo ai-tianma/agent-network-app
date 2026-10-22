@@ -112,6 +112,10 @@ const measureTree = () => {
 };
 
 const checkPage = async (page, name, theme) => {
+  // 先等内容（卡片或树任一）出现再分流：只判「树在不在」会因为树比子页容器晚一拍照样落到卡片分支，
+  // 于是又量出 0 卡片——这正是 CI 上复现的那条。8 s 是上限，不是放宽断言。
+  await page.locator('[data-testid="settings-kit-card"], [data-testid="agent-org-tree"]')
+    .first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
   if (await page.locator(TREE).count()) {
     await page.locator(TREE_ROW).first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(150);
