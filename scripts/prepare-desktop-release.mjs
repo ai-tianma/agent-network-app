@@ -125,6 +125,14 @@ export function prepareReleaseDraft({
       log(`${tag}: removing stale asset ${asset.name} (id ${asset.id}) because include_linux=${includeLinux}`);
       deleteAsset(asset.id);
     }
+    if (stale.length > 0) {
+      // 旧 latest.json 里还带着 linux 条目：删掉资产但不删 manifest，verify-draft 会报
+      // "Linux updater entries present but Linux was not selected"。让本次构建重写它。
+      for (const asset of assets.filter((candidate) => candidate?.name === 'latest.json')) {
+        log(`${tag}: removing stale latest.json (id ${asset.id}) so this run rewrites it`);
+        deleteAsset(asset.id);
+      }
+    }
     log(`${tag}: reusing draft release ${plan.releaseId}${stale.length ? ` after removing ${stale.length} stale asset(s)` : ''}`);
     return { action: 'reuse', tag, releaseId: plan.releaseId, removedAssets: stale };
   }

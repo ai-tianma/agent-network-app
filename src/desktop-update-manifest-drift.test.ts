@@ -106,6 +106,29 @@ try {
 } catch (error) { missingDownload = String(error); }
 check('a missing browser download URL is rejected', missingDownload.includes('missing browser download URL'));
 
+// 发布前 normalize 已经把平台 URL 换成 releases/download/<tag>/<file>；drift guard 必须接受。
+const publicTag = 'desktop-v0.2.33-1';
+const publicish = {
+  ...generatedManifest,
+  platforms: {
+    'windows-x86_64': { ...generatedManifest.platforms['windows-x86_64'], url: `https://github.com/${repo}/releases/download/${publicTag}/win.exe` },
+    'darwin-aarch64': { ...generatedManifest.platforms['darwin-aarch64'], url: `https://github.com/${repo}/releases/download/${publicTag}/mac.tar.gz` },
+  },
+};
+const accepted = normalizeGeneratedManifestAssetUrls(publicish, { assets: releaseAssets }, { repository: repo, tag: publicTag });
+check('already-normalized public urls are accepted as-is',
+  canonicalJson(accepted) === canonicalJson(publicish));
+
+let ghostFile = '';
+try {
+  normalizeGeneratedManifestAssetUrls(
+    { ...publicish, platforms: { ...publicish.platforms, 'windows-x86_64': { url: `https://github.com/${repo}/releases/download/${publicTag}/ghost.exe`, signature: 's' } } },
+    { assets: releaseAssets },
+    { repository: repo, tag: publicTag },
+  );
+} catch (error) { ghostFile = String(error); }
+check('a public url naming a missing file is rejected', ghostFile.includes('does not have exactly once'));
+
 const workflow = readFileSync('.github/workflows/desktop-update-manifest-drift.yml', 'utf8').replace(/\r\n?/g, '\n');
 check('guard can be dispatched immediately after deployment', /workflow_dispatch:/.test(workflow));
 check('guard also runs on a fixed schedule', /schedule:[\s\S]*cron:/.test(workflow));

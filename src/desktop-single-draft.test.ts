@@ -149,5 +149,26 @@ ck('复用指向分支名的草稿 → 允许（留给 verify-draft 比对）', 
   return result.action === 'reuse' && result.releaseId === 7;
 })());
 
+// 8. include_linux 变化时连旧 manifest 一起回收 + 创建草稿前先过 exact-commit 门
+ck('回收 .deb 时同时删掉旧 latest.json', (() => {
+  const deleted: number[] = [];
+  prepareReleaseDraft({
+    version: '0.2.287',
+    listReleases: () => [{ id: 21, tag_name: tag, draft: true, target_commitish: 'main' }],
+    listAssets: () => [[
+      { id: 31, name: 'ANet_0.2.287_amd64.deb' },
+      { id: 32, name: 'ANet_0.2.287_amd64.deb.sig' },
+      { id: 33, name: 'latest.json' },
+    ]],
+    deleteAsset: (id: number) => { deleted.push(id); return {}; },
+    includeLinux: false,
+    log: () => {},
+  });
+  return deleted.includes(31) && deleted.includes(32) && deleted.includes(33);
+})());
+ck('创建/复用 release 之前先跑 exact-merged-commit 门',
+  /prepare-release:[\s\S]{0,900}- name: Require exact merged commit[\s\S]{0,1200}node scripts\/prepare-desktop-release\.mjs/.test(wf));
+ck('prepare 的 checkout 有完整历史', /prepare-release:[\s\S]{0,400}fetch-depth: 0/.test(wf));
+
 console.log(`\n${p}/${t} passed`);
 if (p !== t) process.exit(1);

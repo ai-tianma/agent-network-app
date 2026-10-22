@@ -16,7 +16,15 @@ const sorted = (value) => {
 
 export const canonicalJson = (value) => JSON.stringify(sorted(value));
 
-export const normalizeGeneratedManifestAssetUrls = (manifest, release) => {
+const PUBLIC_DOWNLOAD = (repository, tag, name) => `https://github.com/${repository}/releases/download/${tag}/${name}`;
+
+/**
+ * 发布前的 normalize 会把平台 URL 从 asset API URL 换成 `releases/download/<tag>/<file>`
+ * 形式的最终公开链接（见 scripts/normalize-desktop-update-manifest.mjs）。drift guard
+ * 比较的正是「发布后读到的 manifest」，所以这里必须同样接受已经规范化的 URL：
+ * 已经是本 release 的公开下载链接 → 原样保留；否则仍按 asset API URL 唯一映射。
+ */
+export const normalizeGeneratedManifestAssetUrls = (manifest, release, { repository = '', tag = '' } = {}) => {
   if (!manifest?.platforms || typeof manifest.platforms !== 'object' || Array.isArray(manifest.platforms)) {
     throw new Error('release manifest: platforms must be an object');
   }
@@ -25,6 +33,15 @@ export const normalizeGeneratedManifestAssetUrls = (manifest, release) => {
   const platforms = Object.fromEntries(Object.entries(manifest.platforms).map(([name, entry]) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.url !== 'string') {
       throw new Error(`release manifest: ${name} has no asset API URL`);
+    }
+    const publicPrefix = repository && tag ? PUBLIC_DOWNLOAD(repository, tag, '') : '';
+    if (publicPrefix && entry.url.startsWith(publicPrefix) && !entry.url.slice(publicPrefix.length).includes('/')) {
+      const fileName = entry.url.slice(publicPrefix.length);
+      const exists = release.assets.filter((asset) => asset?.name === fileName);
+      if (exists.length !== 1) {
+        throw new Error(`release manifest: ${name} points at ${fileName}, which this release does not have exactly once`);
+      }
+      return [name, entry];
     }
     const matches = release.assets.filter((asset) => asset?.url === entry.url);
     if (matches.length === 0) {
@@ -84,7 +101,7 @@ export async function verifyDesktopUpdateManifest({
     `release ${tag} latest.json`,
     false,
   );
-  const normalizedGenerated = normalizeGeneratedManifestAssetUrls(generated, release);
+  const normalizedGenerated = normalizeGeneratedManifestAssetUrls(generated, release, { repository, tag });
   if (canonicalJson(deployed) !== canonicalJson(normalizedGenerated)) {
     throw new Error(`desktop updater drift: deployed manifest differs from ${tag} release asset`);
   }
