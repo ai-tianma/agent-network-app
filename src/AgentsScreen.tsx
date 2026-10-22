@@ -36,6 +36,9 @@ import { fetchStatus, fetchUserMessages, takeStatusPrefetch, type HubConfig, typ
   fetchTasks,
 } from './api';
 import { loadSessionsCache, saveSessionsCache } from './storage';
+import RegisteredAgentsSection from './RegisteredAgentsSection';
+import { useAgentDirectory } from './agent-directory-hook';
+import { registeredAgentRows } from './registered-agents';
 import { colors, onThemeChange, radius, spacing, statusColor, themeMode, type, weight } from './theme';
 import { shadowOnly } from './elevation';
 import { ds, fs, listText, uiScale } from './ui-scale';
@@ -156,6 +159,10 @@ export default function AgentsScreen({
     </Text>
   );
   const [sessions, setSessions] = useState<Session[]>(preview?.sessions ?? []);
+  // #725: registered nodes with no session are a separate read-only block. They are
+  // NOT list rows: the list is Session-shaped and a synthetic status would look online.
+  const agentDirectory = useAgentDirectory(cfg, !preview);
+  const [registeredCollapsed, setRegisteredCollapsed] = useState(false);
   const [loading, setLoading] = useState(!preview);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -468,6 +475,13 @@ export default function AgentsScreen({
     }),
     [tabbedSessions, activeFilter, query, pinnedAliases, floatInput, activityByAlias],
   );
+  // #725: only rows that prove a registered identity, minus aliases the list already
+  // shows as real sessions (double-rendering the same name would be worse than hiding it).
+  const registeredRows = useMemo(() => {
+    const sessionAliases = new Set(sessions.map(s => s.alias));
+    return registeredAgentRows(agentDirectory.rows, { query, match: pinyinMatch })
+      .filter(row => !sessionAliases.has(row.alias));
+  }, [agentDirectory.rows, sessions, query]);
   const shownCount = countShown(sections);
   const shownSections = useMemo(() => applyCollapsed(sections, collapsed, query), [sections, collapsed, query]);
   // 更紧凑 (two-pane): tell the nav rail where the first row is and how tall rows are, so rail item n
@@ -1083,7 +1097,14 @@ export default function AgentsScreen({
         </View>
       }
       renderItem={({ item }) => (compact ? renderCompactRow(item) : renderPhoneRow(item))}
-      ListHeaderComponent={groupsVisible || peopleShown.visible || (compact && managedDepts.ids.length) ? (<>
+      ListHeaderComponent={registeredRows.length > 0 || groupsVisible || peopleShown.visible || (compact && managedDepts.ids.length) ? (<>
+        <RegisteredAgentsSection
+          rows={registeredRows}
+          loaded={agentDirectory.loaded}
+          collapsed={registeredCollapsed}
+          onToggle={() => setRegisteredCollapsed(v => !v)}
+          compact={compact}
+        />
         {compact && managedDepts.ids.length ? (
           // 「管理本部门」:只给部门负责人,放在「人员」上方(RFC-040 §6)。只在桌面侧栏(compact)出现 —— 手机在「设置」里。
           <Pressable testID="manage-dept-entry" accessibilityRole="button" accessibilityLabel={t('dept.manage')} onPress={() => setManageDeptOpen(true)}

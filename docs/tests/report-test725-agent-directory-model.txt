@@ -67,3 +67,30 @@ real ACL (no-grant/grant/revoke), pagination and Hub-version behaviour are unpro
 /sapi/status full projection is heavy (no light+node_id for all rows), so wiring it
 into the 10 s AgentsScreen poll without caching would be a cost regression and is not
 done here. UI wiring, the old-product red control and normal CI remain open.
+
+UI slice: read-only "registered but not started" block
+-----------------------------------------------------
+Wired into the Agents list (`src/AgentsScreen.tsx`) as a separate, collapsible block
+above the sections, not as Session rows:
+
+- `src/registered-agents.ts` — pure view model: only registered rows whose association
+  is `no_session_record` or `unknown`; hint is 「未启动（Hub无会话记录）」 only for the
+  certain case, otherwise 「会话关联未确认」; rows carry `actionable: false` and no
+  status/online/lifecycle fields; identity-less rows are dropped so they cannot
+  duplicate; search reuses the list's injected matcher (pinyin).
+- `src/agent-directory-hook.ts` — loads the directory on mount and every 120 s (NOT the
+  10 s status poll: the full status projection is much heavier); a failed read keeps
+  the previous rows and never becomes "nothing registered"; each read has its own
+  generation and stale replies are dropped.
+- `src/RegisteredAgentsSection.tsx` — grey dot (never a green online dot), 「只读」 chip,
+  no chat open, no start/stop/restart/adopt; collapsed state is local.
+- `AgentsScreen` filters out aliases that already render as real sessions, so the same
+  name never appears twice.
+
+Targeted verification: `src/registered-agents.test.ts` 9/9 (offline); `npx tsc --noEmit
+-p tsconfig.build.json` clean against the app's own dependencies.
+
+Not claimed: no device/simulator or web screenshot was produced (no UI automation exists
+for this list), the HTTP ACL fixtures (no-grant/grant/revoke) and the old sessions-only
+red control are still missing, and normal CI on this head has not finished. #725 stays
+in doing.
