@@ -72,6 +72,12 @@ export function setPooledHttpEnabled(on: boolean): void {
 
 const NOT_SENT = 'pooled_fetch/not_sent: ';
 const MAYBE_SENT = 'pooled_fetch/maybe_sent: ';
+const TOO_LARGE = 'pooled_fetch/too_large: ';
+const CANCELLED = 'pooled_fetch/cancelled';
+let pooledSequence = 0;
+
+/** RequestInit plus the native-only body cap (bytes) enforced before buffering. */
+export type PooledFetchInit = RequestInit & { maxBytes?: number };
 const IDEMPOTENT = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**
@@ -82,6 +88,9 @@ const IDEMPOTENT = new Set(['GET', 'HEAD', 'OPTIONS']);
  */
 export function pooledErrorAction(error: unknown, method: string): { fallback: true } | { fallback: false; error: unknown } {
   const text = typeof error === 'string' ? error : error instanceof Error ? error.message : '';
+  // A capped or cancelled native request must never be replayed through the plugin (a POST would
+  // be sent twice and the cap would be bypassed).
+  if (text.startsWith(TOO_LARGE) || text.startsWith(CANCELLED)) return { fallback: false, error: text };
   if (text.startsWith(NOT_SENT)) return { fallback: true };
   if (text.startsWith(MAYBE_SENT)) {
     return IDEMPOTENT.has(method.toUpperCase()) ? { fallback: true } : { fallback: false, error: text.slice(MAYBE_SENT.length) };
@@ -120,13 +129,22 @@ async function pooledFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   const req = new Request(input, init);
   const buffer = await req.arrayBuffer();
   for (const [key, value] of req.headers) if (!headers.get(key)) headers.set(key, value);
+  const maxBytes = (init as PooledFetchInit | undefined)?.maxBytes;
+  const requestId = `pooled-${++pooledSequence}-${Date.now()}`;
   const request = {
     method: req.method,
     url: req.url,
     headers: Array.from(headers.entries()),
     data: buffer.byteLength ? Array.from(new Uint8Array(buffer)) : null,
+    // The Request object does not carry the redirect policy into the IPC request; without this the
+    // native client follows 3xx even for callers that asked redirect:'error' (Codex P2).
+    redirect: init?.redirect ?? 'follow',
+    // Per-request body cap enforced by the native client while streaming, before it buffers.
+    ...(typeof maxBytes === 'number' ? { maxBytes } : {}),
+    requestId,
   };
-  const { invoke } = await import('@tauri-apps/api/core');
+  const tauri = await import('@tauri-apps/api/core');
+  const { invoke } = tauri;
   if (signal?.aborted) throw new Error(ERROR_REQUEST_CANCELLED);
   const sent = invoke<ArrayBuffer | Uint8Array | null>('pooled_fetch', { request }).catch((error: unknown) => {
     const action = pooledErrorAction(error, req.method);
@@ -135,7 +153,12 @@ async function pooledFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   });
   const raw = signal
     ? await new Promise<ArrayBuffer | Uint8Array | null>((resolve, reject) => {
-      const onAbort = () => reject(new Error(ERROR_REQUEST_CANCELLED));
+      const onAbort = () => {
+        // Aborting the JS wrapper alone leaves the Rust request running: cancel the actual request
+        // so a timed-out avatar POST cannot commit after the UI said it failed (Codex P2).
+        void invoke('pooled_fetch_cancel', { requestId }).catch(() => {});
+        reject(new Error(ERROR_REQUEST_CANCELLED));
+      };
       signal.addEventListener('abort', onAbort, { once: true });
       sent.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
     })

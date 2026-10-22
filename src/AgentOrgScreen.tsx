@@ -8,7 +8,7 @@ import DialogFrame from './DialogFrame';
 import { listenEscapeClose } from './escape-close';
 import type { HubConfig } from './api';
 import { loadAgentOrg, moveAgentDepartment } from './agent-org-api';
-import { agentCount, agentsDirectlyIn, orgTree, placeAgents, type AgentOrgData, type DemoMove, type PlacedAgent } from './agent-org-model';
+import { agentCount, agentsDirectlyIn, orgTree, parentCandidates, placeAgents, type AgentOrgData, type DemoMove, type PlacedAgent } from './agent-org-model';
 import { childrenOf, deptPathLabel, flattenTree, subtreeIds, type Department } from './org-model';
 import { createDepartment, updateDepartment, OrgRequestError } from './org-api';
 import { SettingsButton, SettingsChoiceRow, SettingsGroup, SettingsRow } from './settings-kit';
@@ -182,8 +182,11 @@ function DepartmentEditor(p: { cfg: HubConfig; networkId: string; data: AgentOrg
   useEffect(() => listenEscapeClose(close), [p.onClose]);
   const tree = orgTree(p.data);
   const excluded = p.editor.dept ? subtreeIds(tree, p.editor.dept.id) : new Set<string>();
+  // Codex P2: the picker must not offer parents the caller cannot create under (RFC-040 viewer_can);
+  // the network root is owner/admin-only, so a department head cannot select it.
+  const allowedParents = parentCandidates(p.data, p.editor.dept);
   const validName = !!name.trim() && [...name.trim()].length <= 40;
-  const validParent = !parent || (!excluded.has(parent) && p.data.departments.some(d => d.id === parent));
+  const validParent = parent === null ? allowedParents.root : allowedParents.departmentIds.has(parent);
   const save = async () => {
     if (pending.current || !validName || !validParent) return;
     pending.current = true;
@@ -223,8 +226,8 @@ function DepartmentEditor(p: { cfg: HubConfig; networkId: string; data: AgentOrg
       <Text style={styles.note}>{t('agentOrg.parentDepartment')}</Text>
       <Text testID="agent-org-department-parent-value" style={styles.note}>{parent ? deptPathLabel(tree, parent) : t('agentOrg.networkRoot')}</Text>
       <View style={styles.search}><TextInput value={query} onChangeText={setQuery} accessibilityLabel={t('agentOrg.searchOptions')} placeholder={t('agentOrg.searchOptions')} placeholderTextColor={colors.textMuted} style={styles.searchInput} testID="agent-org-department-parent-search" /></View>
-      <SettingsChoiceRow label={t('agentOrg.networkRoot')} selected={parent === null} disabled={busy || !!saved} onPress={() => setParent(null)} testID="agent-org-parent-root" />
-      {rows.filter(row => deptPathLabel(tree, row.dept.id).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(row => <SettingsChoiceRow key={row.dept.id} label={deptPathLabel(tree, row.dept.id)} selected={parent === row.dept.id} disabled={busy || !!saved} onPress={() => setParent(row.dept.id)} testID={`agent-org-parent-${row.dept.id}`} />)}
+      {allowedParents.root ? <SettingsChoiceRow label={t('agentOrg.networkRoot')} selected={parent === null} disabled={busy || !!saved} onPress={() => setParent(null)} testID="agent-org-parent-root" /> : null}
+      {rows.filter(row => allowedParents.departmentIds.has(row.dept.id)).filter(row => deptPathLabel(tree, row.dept.id).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(row => <SettingsChoiceRow key={row.dept.id} label={deptPathLabel(tree, row.dept.id)} selected={parent === row.dept.id} disabled={busy || !!saved} onPress={() => setParent(row.dept.id)} testID={`agent-org-parent-${row.dept.id}`} />)}
     </> : null}
     {error ? <Text accessibilityRole="alert" testID="agent-org-department-error" style={[styles.note, { color: colors.failed }]}>{error}</Text> : null}
   </DialogFrame>;

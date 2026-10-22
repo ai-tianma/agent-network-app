@@ -1,6 +1,7 @@
 // 纯逻辑单测(bun/node 可跑·无 RN 依赖)。run: bun src/lib/avatar-resolve.test.ts
 // R1 avatar 解析链回归(通信龙 07-31 验收:双向 + 同一份数据里的正向对照)。
-import { planAvatarFile, poolFileNameForAlias, poolIndexForAlias, POOL_SIZE, KNOWN_BUNDLED_FILES, canEditAvatar, validateCustomAvatarUrl } from './avatar-resolve';
+import { readFileSync } from 'node:fs';
+import { planAvatarFile, poolFileNameForAlias, poolIndexForAlias, POOL_SIZE, KNOWN_BUNDLED_FILES, canEditAvatar, validateCustomAvatarUrl, isRelativeOrSameHub, isLegacyAvatarApiRoute } from './avatar-resolve';
 
 let p = 0, t = 0;
 const ck = (n: string, c: boolean) => { t++; if (c) { p++; console.log('✅', n); } else console.log('❌', n); };
@@ -47,6 +48,13 @@ ck('G3 空 alias → 不可编辑', canEditAvatar('', hub([NODE])) === false && 
 ck('H1 绝对 https 通过', (() => { const r = validateCustomAvatarUrl(' https://cdn/a.png '); return r.ok && r.url === 'https://cdn/a.png'; })());
 ck('H2 相对路径拒(URL 字段只收绝对·相对走池选择器)', validateCustomAvatarUrl('/avatars/avatar-01.webp').ok === false);
 ck('H3 空/空格/含凭据 拒', validateCustomAvatarUrl('').ok === false && validateCustomAvatarUrl('http://a b').ok === false && validateCustomAvatarUrl('https://u:p@h/x.png').ok === false);
+
+// ── I: legacy avatar API route 只拦相对/同 Hub URL(Codex P2)────────────────────
+ck('I1 同 Hub 的 /api/files 与 avatar 路由被识别', isRelativeOrSameHub('https://hub.example/api/files/x.png', 'https://hub.example') && isLegacyAvatarApiRoute('https://hub.example/api/files/x.png'));
+ck('I2 相对路径算 Hub 路由,协议相对的不算', isRelativeOrSameHub('/api/files/x.png', 'https://hub.example') && !isRelativeOrSameHub('//evil.example/api/files/x.png', 'https://hub.example'));
+ck('I3 外部 origin 的 API-like path 不误伤', !isRelativeOrSameHub('https://cdn.example/x/api/files/a.png', 'https://hub.example') && !isRelativeOrSameHub('https://cdn.example/api/users/u/avatar/v.png', 'https://hub.example'));
+ck('I4 相对路径仍被识别为 avatar API route', isLegacyAvatarApiRoute('/api/files/f_1') && isLegacyAvatarApiRoute('/api/users/u/avatar/v.png'));
+ck('I5 端口/协议不同的同主机不算同 Hub', !isRelativeOrSameHub('http://hub.example/api/files/x.png', 'https://hub.example') && !isRelativeOrSameHub('https://hub.example:8443/api/files/x.png', 'https://hub.example'));
 ck('H4 file:// 等非 http(s) 拒(手机 ImagePicker 本地 URI 挡在这)', validateCustomAvatarUrl('file:///data/x.jpg').ok === false);
 
 // ── set-but-unresolvable:node-backed 设了个 App 没打包的相对文件 → none(=pill·对齐网页 404) ──
@@ -59,6 +67,9 @@ ck('E2 POOL_SIZE=20 且 KNOWN_BUNDLED_FILES 含全部池图+命名', POOL_SIZE =
 ck('E3 poolIndexForAlias 稳定 in [0,20)·同 alias 同值', (() => { const i = poolIndexForAlias(SESS); return i === poolIndexForAlias(SESS) && i >= 0 && i < 20; })());
 ck('E4 poolFileNameForAlias 形如 avatar-NN.webp', /^avatar-\d{2}\.webp$/.test(poolFileNameForAlias(SESS)));
 ck('E5 djb2 ≠ 恒定(不同 alias 能分到不同池位)', new Set(['a', 'bb', 'ccc', '马', 'grok'].map(poolIndexForAlias)).size > 1);
+
+const renderer = readFileSync(new URL('../UserAvatarImage.tsx', import.meta.url), 'utf8');
+ck('I6 渲染层只用 origin 判据拦 Hub 自有路由', renderer.includes('isRelativeOrSameHub(value, hubUrl)') && renderer.includes('isLegacyAvatarApiRoute(value)') && !renderer.includes("value.startsWith('/') || /\\/api/"));
 
 console.log(`\n${p}/${t} passed`);
 if (p !== t) { if (typeof process !== 'undefined') process.exit(1); }

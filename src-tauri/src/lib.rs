@@ -1098,6 +1098,7 @@ pub fn run() {
             tray::tray_panel_hide,
             chat_notify::show_chat_notification,
             hub_http::pooled_fetch,
+            hub_http::pooled_fetch_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

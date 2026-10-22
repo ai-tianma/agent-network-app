@@ -102,6 +102,33 @@ for (const phase of ['pick', 'prepare', 'upload'] as const) {
   if (phase === 'upload') deps.upload = async () => { deactivate(); return path; };
   check('disposed editor stops after ' + phase, await uploadUserAvatarWith(cfg, 'user-a', deps) === undefined);
 }
+{
+  const disposed: string[] = [];
+  const { deps } = fixture(); deps.dispose = image => { disposed.push(image.uri); };
+  await uploadUserAvatarWith(cfg, 'user-a', deps);
+  check('picker cache copy disposed after a successful upload (picked + prepared)', disposed.length === 2 && disposed.every(uri => uri === image.uri));
+}
+{
+  const disposed: string[] = [];
+  const { deps } = fixture(); deps.dispose = image => { disposed.push(image.uri); };
+  deps.prepare = async () => { throw new Error('decode failed'); };
+  await assert.rejects(uploadUserAvatarWith(cfg, 'user-a', deps), /decode failed/);
+  check('picker cache copy disposed when preparation fails', disposed.length === 1 && disposed[0] === image.uri);
+}
+{
+  const disposed: string[] = [];
+  const { deps } = fixture(); deps.dispose = image => { disposed.push(image.uri); };
+  deps.upload = async () => { throw new Error('upload failed'); };
+  await assert.rejects(uploadUserAvatarWith(cfg, 'user-a', deps), /upload failed/);
+  check('picker cache copy disposed when upload fails', disposed.length === 2);
+}
+{
+  const disposed: string[] = [];
+  const { deps, deactivate } = fixture(); deps.dispose = image => { disposed.push(image.uri); };
+  deps.pick = async () => { deactivate(); return image; };
+  check('superseded pick is disposed without preparing', await uploadUserAvatarWith(cfg, 'user-a', deps) === undefined && disposed.length === 1);
+}
+
 const source = (name: string) => readFileSync(new URL(name, import.meta.url), 'utf8');
 const editor = source('./UserAvatarEditor.tsx');
 const local = source('./user-avatar-local.ts');
@@ -114,4 +141,5 @@ check('picker is single-file cached non-base64', local.includes('multiple: false
 check('native manipulation uses URI and releases decoded images', local.includes('const uri = image.uri') && local.includes('ImageManipulator.manipulate(uri).resize(size)') && local.includes('ref.release()') && local.includes('context.release()'));
 check('protected renderer uses leases, ephemeral native bytes, no attachment cache', picture.includes('acquireUserAvatarWith(') && picture.includes('writeAsStringAsync') && picture.includes('deleteAsync') && !picture.includes('downloadAttachmentWith') && !picture.includes('getInfoAsync'));
 check('settings preview supplies current token', editor.includes('hubUrl={cfg.serverUrl} token={cfg.token}'));
+check('picker cache cleanup is wired into the real upload lifecycle', local.includes('export async function disposePickedImage') && local.includes('FileSystem.deleteAsync(uri, { idempotent: true })') && editor.includes('dispose: disposePickedImage') && source('./user-avatar-upload.ts').includes('await deps.dispose?.(image)'));
 console.log(`${n}/${n} passed`);

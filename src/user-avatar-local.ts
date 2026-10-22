@@ -44,6 +44,14 @@ export function uploadLocalUserAvatar(cfg: HubConfig, userId: string, image: Pic
   });
 }
 
+/** Remove an Expo picker cache copy on native. Web blobs are revoked by pickUserAvatar. */
+export async function disposePickedImage(image: PickedImage | null | undefined): Promise<void> {
+  if (!image || Platform.OS === 'web') return;
+  const uri = image.uri;
+  if (!uri.startsWith('file://')) return;
+  await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+}
+
 export async function pickUserAvatar(): Promise<PickedImage | null> {
   const result = await DocumentPicker.getDocumentAsync({ type: USER_AVATAR_TYPES, multiple: false, copyToCacheDirectory: true, base64: false });
   if (result.canceled || !result.assets?.length) return null;

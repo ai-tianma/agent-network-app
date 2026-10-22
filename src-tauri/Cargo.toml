@@ -19,10 +19,11 @@ reqwest = { version = "0.13", default-features = false, features = ["native-tls"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", features = ["sync"] }
 tauri = { version = "2", features = ["tray-icon", "image-png"] } # 0.2.76: 系统栏托盘 + include_image!(PNG)
 # Hub requests over one pooled client (src/hub_http.rs). Same reqwest line and features as
 # tauri-plugin-http below, so TLS / proxy / gzip behave identically — only the pool is new.
-reqwest_pool = { package = "reqwest", version = "0.12", default-features = false, features = ["rustls-tls", "http2", "charset", "macos-system-configuration", "gzip"] }
+reqwest_pool = { package = "reqwest", version = "0.12", default-features = false, features = ["rustls-tls", "http2", "charset", "macos-system-configuration", "gzip", "stream"] }
 tauri-plugin-http = { version = "2", features = ["gzip"] } # 2026-09-16: hub 对 Accept-Encoding: gzip 压缩 JSON,reqwest 要开 gzip 才会请求并解压
 tauri-plugin-process = "2"
 tauri-plugin-updater = "2"

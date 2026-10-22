@@ -105,6 +105,24 @@ export function agentCount(placed: readonly PlacedAgent[], data: AgentOrgData, d
   return placed.filter(a => a.departmentId !== null && ids.has(a.departmentId)).length;
 }
 
+/** Which "parent department" targets the caller may pick in the create/reparent dialog.
+ *  Hub (RFC-040) exposes viewer_can only to scoped callers: owner/admin get manage+create_child
+ *  on every department, a department head only create_child on departments they manage.
+ *  - no viewer_can anywhere (old Hub / tree flattened from the directory): keep the legacy list
+ *  - otherwise: only create_child departments; network root only when the caller can manage
+ *    (owner/admin), because a department head cannot create at the root.
+ *  `editing` excludes its own subtree so a department can never be re-parented into itself. */
+export function parentCandidates(data: AgentOrgData, editing?: Department): { root: boolean; departmentIds: Set<string> } {
+  const permissioned = data.departments.some(d => d.viewer_can && typeof d.viewer_can === 'object');
+  if (!data.departmentsApi || !permissioned) {
+    return { root: true, departmentIds: new Set(data.departments.map(d => d.id)) };
+  }
+  const root = data.departments.some(d => d.viewer_can?.manage === true);
+  const departmentIds = new Set(data.departments.filter(d => d.viewer_can?.create_child === true).map(d => d.id));
+  if (editing) for (const id of subtreeIds(orgTree(data), editing.id)) departmentIds.delete(id);
+  return { root, departmentIds };
+}
+
 export function orgTree(data: Pick<AgentOrgData, 'departments'>): OrgData {
   return { departments: data.departments, members: [] };
 }

@@ -5,7 +5,7 @@ import { appFetch } from './app-fetch';
 import { userAvatarPath } from './user-avatar-upload';
 import { acquireUserAvatarWith, fetchUserAvatarBytes, type AvatarResource } from './user-avatar-download';
 import { bytesToBase64 } from './voice-wav';
-import { validateCustomAvatarUrl } from './lib/avatar-resolve';
+import { isLegacyAvatarApiRoute, isRelativeOrSameHub, validateCustomAvatarUrl } from './lib/avatar-resolve';
 
 let sequence = 0;
 async function loadAvatar(url: string, token: string): Promise<AvatarResource> {
@@ -43,6 +43,8 @@ export default function UserAvatarImage({ value, hubUrl, token, ...props }: Omit
   }, [key, avatar?.path, hubUrl, token, value]);
   if (avatar) return local?.key === key ? <Image {...props} source={{ uri: local.uri }} /> : null;
   // Protected/legacy API routes must not fall through to unauthenticated external image loading.
-  if (value.startsWith('/') || /\/api\/(?:files\/|users\/[^/?#]*\/avatar)/i.test(value) || !validateCustomAvatarUrl(value).ok) return null;
+  // Only relative or same-Hub URLs can be those routes; an external origin is a normal image (Codex P2).
+  const hubRoute = isRelativeOrSameHub(value, hubUrl) && (value.startsWith('/') || isLegacyAvatarApiRoute(value));
+  if (hubRoute || !validateCustomAvatarUrl(value).ok) return null;
   return <Image {...props} source={{ uri: value }} />;
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { acquireUserAvatarWith, fetchUserAvatarBytes, type AvatarResource } from './user-avatar-download';
+import { MAX_USER_AVATAR_BYTES } from './user-avatar-upload';
 
 const cfg = { serverUrl: 'https://hub.example.test', token: 'fixture-token' };
 const path = '/api/users/user-a/avatar/version_1.png';
@@ -65,15 +66,30 @@ const fetcher = (async (url, init) => {
 }) as typeof fetch;
 assert.deepEqual(await fetchUserAvatarBytes(fetcher, cfg.serverUrl + path, cfg.token), png); n++;
 check('credential is a header only; network cache/redirects disabled', (requests[0].headers as Record<string, string>).Authorization === `Bearer ${cfg.token}`
-  && requests[0].cache === 'no-store' && requests[0].redirect === 'error');
+  && requests[0].cache === 'no-store' && requests[0].redirect === 'error'
+  && (requests[0] as RequestInit & { maxBytes?: number }).maxBytes === MAX_USER_AVATAR_BYTES);
 for (const status of [401, 403, 404, 500]) {
   await assert.rejects(fetchUserAvatarBytes((async () => new Response('denied', { status })) as typeof fetch, cfg.serverUrl + path, cfg.token), new RegExp(`http_${status}`)); n++;
 }
 for (const body of [new Uint8Array(), new TextEncoder().encode('<html>login</html>')]) {
   await assert.rejects(fetchUserAvatarBytes((async () => new Response(body)) as typeof fetch, cfg.serverUrl + path, cfg.token), /invalid_png/); n++;
 }
-for (const width of [0, 513]) {
-  view.setUint32(16, width);
-  await assert.rejects(fetchUserAvatarBytes((async () => new Response(png)) as typeof fetch, cfg.serverUrl + path, cfg.token), /invalid_size/); n++;
+for (const status of [301, 302, 307, 308]) {
+  await assert.rejects(fetchUserAvatarBytes((async () => new Response('', { status })) as typeof fetch, cfg.serverUrl + path, cfg.token), new RegExp(`http_${status}`)); n++;
 }
+const overCapStream = () => {
+  let produced = 0;
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (produced > MAX_USER_AVATAR_BYTES) { controller.close(); return; }
+      const chunk = new Uint8Array(64 * 1024);
+      produced += chunk.length;
+      controller.enqueue(chunk);
+    },
+  });
+};
+await assert.rejects(fetchUserAvatarBytes((async () => new Response(overCapStream())) as typeof fetch, cfg.serverUrl + path, cfg.token), /too_large/);
+check('missing Content-Length cannot lift the 8 MiB stream cap', true);
+await assert.rejects(fetchUserAvatarBytes((async () => new Response(overCapStream(), { headers: { 'Content-Length': '24' } })) as typeof fetch, cfg.serverUrl + path, cfg.token), /too_large/);
+check('forged small Content-Length cannot lift the 8 MiB stream cap', true);
 console.log(`${n}/${n} passed`);

@@ -1,6 +1,6 @@
 // Agent 组织架构:点设置入口必须打开页面;部门树和负责人是 Hub 数据;调整结构写 Hub(PUT),失败回滚。
 import { existsSync, readFileSync } from 'node:fs';
-import { agentCount, agentsDirectlyIn, placeAgents, type AgentOrgData, type OrgOwner } from './agent-org-model';
+import { agentCount, agentsDirectlyIn, parentCandidates, placeAgents, type AgentOrgData, type OrgOwner } from './agent-org-model';
 import { DIRECTORY_MAX_PAGES, loadAgentOrg, moveAgentDepartment, parseDirectoryPage } from './agent-org-api';
 import { agentOrgTranslations } from './i18n-agent-org';
 import type { Department } from './org-model';
@@ -275,6 +275,21 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
       ck(`department failure ${status} preserves status/code, never succeeds`, caught instanceof OrgRequestError && caught.status === status && caught.code === error);
     });
   }
+}
+
+{
+  const mk = (id: string, parent_id: string | null = null, viewer_can?: { manage?: boolean; create_child?: boolean }): Department => ({ id, name: id, parent_id, leader_user_id: null, sort: 0, member_count: 0, ...(viewer_can ? { viewer_can } : {}) });
+  const data = (departments: Department[], departmentsApi = true): AgentOrgData => ({ departments, owners: [], unowned: [], directory: true, departmentsApi, agentDepartmentSupported: false });
+  const admin = parentCandidates(data([mk('a', null, { manage: true, create_child: true }), mk('b', null, { manage: true, create_child: true })]));
+  ck('parent picker: owner/admin can pick root and every department', admin.root && admin.departmentIds.has('a') && admin.departmentIds.has('b'));
+  const head = parentCandidates(data([mk('own', null, { manage: false, create_child: true }), mk('other', null, { manage: false, create_child: false })]));
+  ck('parent picker: department head cannot pick root and only sees create_child departments', !head.root && head.departmentIds.has('own') && !head.departmentIds.has('other'));
+  const old = parentCandidates(data([mk('a'), mk('b')]));
+  ck('parent picker: old Hub without viewer_can keeps the legacy list', old.root && old.departmentIds.size === 2);
+  const editing = parentCandidates(data([mk('p', null, { manage: true, create_child: true }), mk('c', 'p', { manage: true, create_child: true }), mk('d', null, { manage: true, create_child: true })]), mk('p', null, { manage: true, create_child: true }));
+  ck('parent picker: editing excludes itself and its subtree but keeps siblings', editing.departmentIds.has('d') && !editing.departmentIds.has('p') && !editing.departmentIds.has('c'));
+  const pickerSource = readFileSync(new URL('./AgentOrgScreen.tsx', import.meta.url), 'utf8');
+  ck('parent picker: UI filters root and department rows through parentCandidates', pickerSource.includes('parentCandidates(p.data, p.editor.dept)') && pickerSource.includes('allowedParents.root ?') && pickerSource.includes('allowedParents.departmentIds.has(row.dept.id)'));
 }
 
 console.log(`${p}/${t} passed`);

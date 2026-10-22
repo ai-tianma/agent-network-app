@@ -10,7 +10,7 @@ import { colors, avatarRadius, radius } from './theme';
 import { useTranslation } from './i18n-react';
 import { t } from './i18n';
 import './i18n-user-avatar';
-import { pickUserAvatar, prepareUserAvatar, uploadLocalUserAvatar } from './user-avatar-local';
+import { disposePickedImage, pickUserAvatar, prepareUserAvatar, uploadLocalUserAvatar } from './user-avatar-local';
 import { uploadUserAvatarWith, UserAvatarFileError, UserAvatarUnsupportedError, userAvatarPath } from './user-avatar-upload';
 import UserAvatarImage from './UserAvatarImage';
 
@@ -62,7 +62,7 @@ function Editor({ cfg }: { cfg: HubConfig }) {
     try {
       const avatar = await uploadUserAvatarWith(cfg, user.id, {
         pick: pickUserAvatar, prepare: prepareUserAvatar,
-        upload: uploadLocalUserAvatar, active: () => live.current,
+        upload: uploadLocalUserAvatar, active: () => live.current, dispose: disposePickedImage,
         stage: value => { if (live.current) setStage(`userAvatar.${value}`); },
       });
       if (live.current && avatar !== undefined) { setUser({ ...user, avatar }); setMessage('userAvatar.saved'); }

@@ -29,15 +29,55 @@ export async function acquireUserAvatarWith(cfg: Pick<HubConfig, 'serverUrl' | '
   } };
 }
 
+/** Read at most `max` bytes from a response body, cancelling the stream as soon as it overflows.
+ *  Content-Length is advisory (missing or forged headers must not raise the cap). */
+async function readCappedBytes(response: Response, max: number): Promise<Uint8Array> {
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > max) throw new Error('avatar_download_too_large');
+    return bytes;
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel().catch(() => {});
+      throw new Error('avatar_download_too_large');
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
+}
+
 export async function fetchUserAvatarBytes(fetcher: typeof fetch, url: string, token: string): Promise<Uint8Array> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 30_000);
   try {
-    const response = await fetcher(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', redirect: 'error', signal: ctrl.signal });
+    let response: Response;
+    try {
+      response = await fetcher(url, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', redirect: 'error', signal: ctrl.signal,
+        // Native pooled_fetch enforces this while streaming, before it buffers the body.
+        maxBytes: MAX_USER_AVATAR_BYTES,
+      } as RequestInit & { maxBytes: number });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/too_large/.test(message)) throw new Error('avatar_download_too_large');
+      throw error;
+    }
     if (response.status !== 200) throw new Error(`avatar_download_http_${response.status}`);
+    if (response.redirected) throw new Error('avatar_download_redirected');
     const length = Number(response.headers.get('Content-Length'));
-    if (length > MAX_USER_AVATAR_BYTES) throw new Error('avatar_download_too_large');
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (Number.isFinite(length) && length > MAX_USER_AVATAR_BYTES) throw new Error('avatar_download_too_large');
+    const bytes = await readCappedBytes(response, MAX_USER_AVATAR_BYTES);
     if (bytes.length < 24 || bytes.length > MAX_USER_AVATAR_BYTES
         || ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte)
         || String.fromCharCode(...bytes.slice(12, 16)) !== 'IHDR') throw new Error('avatar_download_invalid_png');

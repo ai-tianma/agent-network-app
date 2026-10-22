@@ -126,6 +126,27 @@ export function canEditAvatar(alias: string | null | undefined, hub: HubAvatarSt
 /** Client-side validate a custom avatar URL before PUT — mirror hub #550
  *  (avatar-validate.ts): absolute http(s) only (relative pool paths are set via
  *  the pool picker, not this field). Rejects early to avoid a doomed round-trip. */
+/** True for a site-relative path ("/x", not "//host/x") or a URL on the Hub's own origin.
+ *  Protected avatar endpoints only exist on the Hub; an external origin that happens to
+ *  contain "/api/files/" is just a normal image URL and must not be blocked (Codex P2). */
+export function isRelativeOrSameHub(value: string, hubUrl: string): boolean {
+  const u = (value || '').trim();
+  if (!u) return false;
+  if (u.startsWith('/') && !u.startsWith('//')) return true;
+  try {
+    const url = new URL(u);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    return url.origin === new URL(hubUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
+/** Paths that only the Hub can serve with the caller's bearer token. */
+export function isLegacyAvatarApiRoute(value: string): boolean {
+  return /\/api\/(?:files\/|users\/[^/?#]*\/avatar)/i.test(value || '');
+}
+
 export function validateCustomAvatarUrl(
   raw: string,
 ): { ok: true; url: string } | { ok: false; reason: string } {

@@ -47,6 +47,9 @@ ck('pooled_fetch keeps ONE client for the process (not a builder per request)', 
 const poolDep = cargoToml.match(/reqwest_pool = \{[^\n]*\}/)?.[0] ?? '';
 // Same TLS / proxy / gzip as tauri-plugin-http's defaults + our gzip, so only the pooling changes.
 ck('pooled client uses the plugin\'s reqwest line and features', /version = "0\.12"/.test(poolDep) && ['rustls-tls', 'http2', 'charset', 'macos-system-configuration', 'gzip'].every(f => poolDep.includes(`"${f}"`)));
+ck('pooled transport applies the caller\'s redirect policy (3xx not followed for redirect:error)', /\.redirect\(redirect_policy\(/.test(hubHttpSource) && /"error" \| "manual" => reqwest_pool::redirect::Policy::none\(\)/.test(hubHttpSource));
+ck('pooled body cap is enforced while streaming before buffering', /rename = "maxBytes"/.test(hubHttpSource) && /response\.chunk\(\)\.await/.test(hubHttpSource) && /read_body\(response, request\.max_bytes\)/.test(hubHttpSource) && /"stream"/.test(poolDep));
+ck('native abort cancels the running request, not only the JS wrapper', /hub_http::pooled_fetch_cancel,/.test(libSource) && /fn pooled_fetch_cancel/.test(hubHttpSource) && /select\(Box::pin\(work\), rx\)/.test(hubHttpSource));
 
 const settingsModel = readFileSync(new URL('./settings-model.ts', import.meta.url), 'utf8');
 const settingsScreen = readFileSync(new URL('./SettingsScreen.tsx', import.meta.url), 'utf8');
@@ -95,6 +98,30 @@ try {
     && new TextDecoder().decode(new Uint8Array(sent.data)) === '{"a":1}');
   ck('desktop pooled response is readable as JSON', res.ok && (await res.json()).n === 1);
   ck('pooled path never touches the per-request plugin client', !calls.some(c => c.cmd.startsWith('plugin:http|')));
+  ck('pooled request carries a cancellable id and the redirect policy', /^pooled-/.test(sent.requestId) && sent.redirect === 'follow');
+
+  calls.length = 0;
+  await appFetch('http://h/api/users/u/avatar/v.png', { redirect: 'error', maxBytes: 8 * 1024 * 1024 } as RequestInit & { maxBytes: number });
+  const guarded = calls.find(c => c.cmd === 'pooled_fetch')?.args?.request;
+  ck('redirect:error and maxBytes reach the native request', guarded?.redirect === 'error' && guarded?.maxBytes === 8 * 1024 * 1024);
+
+  calls.length = 0;
+  let finishSlow: ((value: unknown) => void) | null = null;
+  answer = (cmd: string) => cmd === 'pooled_fetch' ? new Promise(resolve => { finishSlow = resolve; }) : null;
+  const aborting = new AbortController();
+  const slow = appFetch('http://h/slow', { signal: aborting.signal });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  aborting.abort();
+  let aborted: unknown = null;
+  try { await slow; } catch (error) { aborted = error; }
+  const cancelCall = calls.find(c => c.cmd === 'pooled_fetch_cancel');
+  const slowRequestId = calls.find(c => c.cmd === 'pooled_fetch')?.args?.request?.requestId;
+  ck('abort rejects the caller and cancels the native request id', String(aborted) === 'Error: Request cancelled' && !!cancelCall && cancelCall.args.requestId === slowRequestId);
+  finishSlow?.(null);
+  // Restore the default frame answer for the tests below (a leftover pending answer would hang them).
+  answer = (cmd: string) => cmd === 'pooled_fetch' ? frame({ status: 200, statusText: 'OK', url: 'http://h/api/status', headers: [['content-type', 'application/json']] }, '{"ok":true}') : null;
+
+  ck('body-cap and cancel errors never fall back to the plugin', ['pooled_fetch/too_large: body exceeds 8388608 bytes', 'pooled_fetch/cancelled'].every(message => pooledErrorAction(message, 'POST').fallback === false));
 
   calls.length = 0;
   const bodyless = await appFetch('http://h/api/status');

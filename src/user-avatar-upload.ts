@@ -50,17 +50,28 @@ export async function uploadUserAvatarWith(cfg: HubConfig, userId: string, deps:
   upload: (cfg: HubConfig, userId: string, image: PickedImage) => Promise<string>;
   active: () => boolean;
   stage: (stage: 'preparing' | 'uploading') => void;
+  /** Delete an Expo picker cache copy after the upload lifecycle (success, failure, or superseded). */
+  dispose?: (image: PickedImage) => void | Promise<void>;
 }): Promise<string | undefined> {
   const image = await deps.pick();
-  if (!image || !deps.active()) return undefined;
-  validateUserAvatarFile(image);
-  deps.stage('preparing');
-  const prepared = await deps.prepare(image);
-  validateUserAvatarFile(prepared);
-  if (!deps.active()) return undefined;
-  deps.stage('uploading');
-  const avatar = await deps.upload(cfg, userId, prepared);
-  if (!deps.active()) return undefined;
-  if (userAvatarPath(avatar)?.userId !== userId) throw new HubRequestError('avatar_receipt_mismatch', 0);
-  return avatar;
+  if (!image) return undefined;
+  if (!deps.active()) { await deps.dispose?.(image); return undefined; }
+  let prepared: PickedImage | undefined;
+  try {
+    validateUserAvatarFile(image);
+    deps.stage('preparing');
+    prepared = await deps.prepare(image);
+    validateUserAvatarFile(prepared);
+    if (!deps.active()) return undefined;
+    deps.stage('uploading');
+    const avatar = await deps.upload(cfg, userId, prepared);
+    if (!deps.active()) return undefined;
+    if (userAvatarPath(avatar)?.userId !== userId) throw new HubRequestError('avatar_receipt_mismatch', 0);
+    return avatar;
+  } finally {
+    // The picker copy (copyToCacheDirectory:true) and, when we never handed it to the uploader,
+    // the manipulated copy too. Both deleteAsync calls are idempotent.
+    await deps.dispose?.(image);
+    if (prepared) await deps.dispose?.(prepared);
+  }
 }
