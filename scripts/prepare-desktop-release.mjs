@@ -17,6 +17,25 @@ import { fileURLToPath } from 'node:url';
 
 const DEFAULT_REPOSITORY = 'sleep2agi/agent-network-app';
 
+export const extractReleaseBody = (workflowText, version) => {
+  if (typeof workflowText !== 'string') throw new Error('workflow text is required');
+  const lines = workflowText.split('\n');
+  const start = lines.findIndex((line) => /^\s{10}releaseBody: \|-\s*$/.test(line));
+  if (start < 0) throw new Error('releaseBody block not found in the release workflow');
+  const indent = (lines[start].match(/^\s*/) ?? [''])[0].length;
+  const body = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === '') { body.push(''); continue; }
+    const currentIndent = (line.match(/^\s*/) ?? [''])[0].length;
+    if (currentIndent <= indent) break;
+    body.push(line.slice(indent + 2));
+  }
+  const text = body.join('\n').replaceAll('__VERSION__', version).trim();
+  if (!text) throw new Error('releaseBody block is empty');
+  return text;
+};
+
 export const planReleaseDraft = (releases, tag) => {
   if (!tag) throw new Error('tag is required');
   if (!Array.isArray(releases)) throw new Error('releases must be an array');
@@ -37,12 +56,38 @@ const gh = (args, { parse = true } = {}) => {
   return parse ? JSON.parse(result.stdout) : result.stdout;
 };
 
+export const staleAssetsFor = (assets, { includeLinux }) => {
+  if (!Array.isArray(assets)) throw new Error('assets must be an array');
+  if (includeLinux) return [];
+  // 上一次 include_linux=true 的失败尝试会留下 .deb / .deb.sig；这次不编 Linux 时必须清掉，
+  // 否则 verify-draft 会看到「Linux assets present but Linux was not selected」。
+  return assets
+    .filter((asset) => /_amd64\.deb(?:\.sig)?$/.test(asset?.name ?? ''))
+    .map((asset) => ({ id: asset.id, name: asset.name }));
+};
+
 export function prepareReleaseDraft({
   repository = process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
   version,
+  commit = '',
+  includeLinux = true,
+  body = '',
   run = (args) => gh(args),
-  listReleases = () => run(['api', `repos/${repository}/releases?per_page=100`, '--paginate']),
-  createRelease = (tag, name) => run(['api', '-X', 'POST', `repos/${repository}/releases`, '-f', `tag_name=${tag}`, '-f', `name=${name}`, '-F', 'draft=true']),
+  // --slurp 让分页结果是一个数组的数组；直接 JSON.parse 多页拼接会炸（gh 的手册明确要求）。
+  listReleases = () => {
+    const pages = run(['api', `repos/${repository}/releases?per_page=100`, '--paginate', '--slurp']);
+    return (Array.isArray(pages) ? pages : []).flat();
+  },
+  listAssets = (releaseId) => run(['api', `repos/${repository}/releases/${releaseId}/assets?per_page=100`, '--paginate', '--slurp']),
+  deleteAsset = (assetId) => run(['api', '-X', 'DELETE', `repos/${repository}/releases/assets/${assetId}`]),
+  createRelease = (tag, name) => run([
+    'api', '-X', 'POST', `repos/${repository}/releases`,
+    '-f', `tag_name=${tag}`,
+    '-f', `name=${name}`,
+    '-F', 'draft=true',
+    ...(commit ? ['-f', `target_commitish=${commit}`] : []),
+    ...(body ? ['-f', `body=${body}`] : []),
+  ]),
   log = (line) => console.log(line),
 } = {}) {
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version ?? '')) throw new Error(`version is required (got ${JSON.stringify(version)})`);
@@ -53,20 +98,34 @@ export function prepareReleaseDraft({
     throw new Error(`${tag}: ${plan.reason} (release ids: ${plan.releaseIds.join(', ')}) — bump the version instead of reusing this tag`);
   }
   if (plan.action === 'reuse') {
-    log(`${tag}: reusing draft release ${plan.releaseId}`);
-    return { action: 'reuse', tag, releaseId: plan.releaseId };
+    const pages = listAssets(plan.releaseId);
+    const assets = (Array.isArray(pages) ? pages : []).flat();
+    const stale = staleAssetsFor(assets, { includeLinux });
+    for (const asset of stale) {
+      log(`${tag}: removing stale asset ${asset.name} (id ${asset.id}) because include_linux=${includeLinux}`);
+      deleteAsset(asset.id);
+    }
+    log(`${tag}: reusing draft release ${plan.releaseId}${stale.length ? ` after removing ${stale.length} stale asset(s)` : ''}`);
+    return { action: 'reuse', tag, releaseId: plan.releaseId, removedAssets: stale };
   }
   const created = createRelease(tag, `ANet Desktop v${version}`);
   if (!Number.isInteger(created?.id)) throw new Error(`${tag}: created release has no numeric id`);
-  log(`${tag}: created draft release ${created.id}`);
-  return { action: 'create', tag, releaseId: created.id };
+  log(`${tag}: created draft release ${created.id} targeting ${commit || '(default branch)'}`);
+  return { action: 'create', tag, releaseId: created.id, removedAssets: [] };
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 if (isMain) {
   try {
     const version = process.env.VERSION || JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
-    const result = prepareReleaseDraft({ version });
+    const workflowText = readFileSync(new URL('../.github/workflows/release-desktop-auto-update.yml', import.meta.url), 'utf8');
+    const includeLinux = (process.env.INCLUDE_LINUX ?? 'true') === 'true';
+    const result = prepareReleaseDraft({
+      version,
+      commit: process.env.TARGET_COMMITISH || '',
+      includeLinux,
+      body: extractReleaseBody(workflowText, version),
+    });
     const line = `release_id=${result.releaseId}\n`;
     if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, line);
     console.log(line.trim());

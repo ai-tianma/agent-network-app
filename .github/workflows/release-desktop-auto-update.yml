@@ -53,14 +53,22 @@ jobs:
           set -euo pipefail
           version=$(node -p 'require("./package.json").version')
           export VERSION="$version"
+          export TARGET_COMMITISH="${{ inputs.commit }}"
+          export INCLUDE_LINUX="${{ inputs.include_linux }}"
           node scripts/prepare-desktop-release.mjs
 
   build-release:
     needs: [prepare-release]
-    if: inputs.publish == true
+    # publish=false 是「只构建 + smoke，不建 release」的 dry run：prepare-release 会跳过，
+    # 这个 job 必须照常跑，否则 Build signed bundles without uploading a release 那套永远不执行。
+    if: inputs.publish == false || needs.prepare-release.result == 'success'
     environment: macos-signing
     strategy:
       fail-fast: false
+      # 所有矩阵行现在写同一个 release（同一个 releaseId）：并发跑会让多个 tauri-action
+      # 同时改 latest.json，后写的覆盖先写的。串行化是最小、可解释的修法；
+      # 真正的一次写入者由 normalize-updater-manifest 收口。
+      max-parallel: 1
       matrix:
         # Linux is opt-in, not a skipped matrix job that delays the primary pair.
         # When requested it still uses the production updater/signing/retention gates.

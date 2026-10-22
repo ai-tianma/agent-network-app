@@ -194,7 +194,8 @@ export async function normalizeReleaseManifest({
       return result.stdout;
     };
     for (const assetId of existingAssetIds) gh(['api', '-X', 'DELETE', `repos/${repo}/releases/assets/${assetId}`]);
-    gh(['api', '-X', 'POST', `repos/${repo}/releases/${releaseId}/assets?name=latest.json`, '-H', 'Content-Type: application/octet-stream', '--input', file], { inherit: true });
+    // 二进制资产上传端点在 uploads.github.com（api.github.com 会 404）。
+    gh(['api', '--hostname', 'uploads.github.com', '-X', 'POST', `repos/${repo}/releases/${releaseId}/assets?name=${latestJsonAssetName}`, '-H', 'Content-Type: application/octet-stream', '--input', file], { inherit: true });
   },
   anonymousCheck = (urls) => assertAnonymousDownloads(urls, { fetchImpl }),
   log = (line) => console.log(line),

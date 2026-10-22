@@ -11,7 +11,12 @@
 // 「谁先谁后」的等待窗口。这些断言读工作流文本 + prepare 的纯函数，和仓库里
 // 既有 macOS DMG / 发布说明测试同一风格。
 import { readFileSync } from 'node:fs';
-import { planReleaseDraft } from '../scripts/prepare-desktop-release.mjs';
+import {
+  extractReleaseBody,
+  planReleaseDraft,
+  prepareReleaseDraft,
+  staleAssetsFor,
+} from '../scripts/prepare-desktop-release.mjs';
 
 let p = 0, t = 0;
 const ck = (n: string, c: boolean) => { t++; if (c) { p++; console.log(`PASS: ${n}`); } else console.log(`FAIL: ${n}`); };
@@ -49,6 +54,54 @@ ck('已发布 → 拒绝复用该 tag',
   planReleaseDraft([{ id: 13, tag_name: tag, draft: false }], tag).reason === 'already-published');
 ck('别的 tag 不影响判定',
   planReleaseDraft([{ id: 14, tag_name: 'desktop-v0.2.286', draft: true }], tag).action === 'create');
+
+// 5. 分页 / commit / 说明 / 旧资产回收（exact-review 4351263301/304/322/338）
+ck('release 列表用 --slurp 分页再摊平', (() => {
+  const calls: string[][] = [];
+  prepareReleaseDraft({
+    version: '0.2.287',
+    listReleases: () => {
+      calls.push(['slurp']);
+      return [{ id: 1, tag_name: 'desktop-v0.2.287', draft: true }];
+    },
+    listAssets: () => [[{ id: 3, name: 'ANet_0.2.287_x64_en-US.msi' }]],
+    log: () => {},
+  });
+  return calls.length === 1;
+})());
+
+ck('建草稿带 target_commitish 与用户可见说明', (() => {
+  let args: string[] = [];
+  prepareReleaseDraft({
+    version: '0.2.287',
+    commit: 'a'.repeat(40),
+    body: 'What is new in 0.2.287:\n- x',
+    listReleases: () => [],
+    run: (a: string[]) => { args = a; return { id: 99 }; },
+    log: () => {},
+  });
+  return args.includes('target_commitish=' + 'a'.repeat(40)) && args.some((a) => a.startsWith('body='));
+})());
+
+ck('include_linux=false 时回收 .deb/.deb.sig', JSON.stringify(staleAssetsFor([
+  { id: 1, name: 'ANet_0.2.287_amd64.deb' },
+  { id: 2, name: 'ANet_0.2.287_amd64.deb.sig' },
+  { id: 3, name: 'ANet_0.2.287_x64_en-US.msi' },
+], { includeLinux: false })) === JSON.stringify([
+  { id: 1, name: 'ANet_0.2.287_amd64.deb' },
+  { id: 2, name: 'ANet_0.2.287_amd64.deb.sig' },
+]));
+ck('include_linux=true 时不动 .deb', staleAssetsFor([{ id: 1, name: 'x_amd64.deb' }], { includeLinux: true }).length === 0);
+
+ck('从 workflow 解出 releaseBody 并替换 __VERSION__',
+  extractReleaseBody(wf, '0.2.287').startsWith('Signed and notarized update'));
+
+// 6. dry run 仍能构建 + updater 写入串行 + 二进制上传走 uploads host
+ck('publish=false 的 dry run 仍会跑 build matrix',
+  /build-release:[\s\S]{0,400}if: inputs\.publish == false \|\| needs\.prepare-release\.result == 'success'/.test(wf));
+ck('矩阵串行写同一个 latest.json', /max-parallel: 1/.test(wf));
+ck('二进制资产上传走 uploads.github.com',
+  readFileSync(new URL('../scripts/normalize-desktop-update-manifest.mjs', import.meta.url), 'utf8').includes("'--hostname', 'uploads.github.com'"));
 
 console.log(`\n${p}/${t} passed`);
 if (p !== t) process.exit(1);
