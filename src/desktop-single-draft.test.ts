@@ -138,15 +138,45 @@ ck('复用指向别的 SHA 的草稿 → fail-closed', (() => {
     return false;
   } catch (error) { return String(error).includes('targets'); }
 })());
-ck('复用指向分支名的草稿 → 允许（留给 verify-draft 比对）', (() => {
+ck('复用指向 ref 的草稿，ref resolve 到本次 SHA → 允许', (() => {
   const result = prepareReleaseDraft({
     version: '0.2.287',
     commit: 'b'.repeat(40),
     listReleases: () => [{ id: 7, tag_name: tag, draft: true, target_commitish: 'main' }],
     listAssets: () => [[]],
+    run: (args: string[]) => {
+      if (!args.some((arg) => arg.includes('/commits/main'))) throw new Error(`unexpected gh call: ${args.join(' ')}`);
+      return { sha: 'b'.repeat(40) };
+    },
     log: () => {},
   });
   return result.action === 'reuse' && result.releaseId === 7;
+})());
+ck('复用指向 ref 的草稿，ref resolve 到别的 SHA → fail-closed', (() => {
+  try {
+    prepareReleaseDraft({
+      version: '0.2.287',
+      commit: 'b'.repeat(40),
+      listReleases: () => [{ id: 7, tag_name: tag, draft: true, target_commitish: 'main' }],
+      listAssets: () => [[]],
+      resolveCommit: () => 'c'.repeat(40),
+      log: () => {},
+    });
+    return false;
+  } catch (error) { return String(error).includes('targets'); }
+})());
+ck('复用指向 ref 的草稿，ref resolve 失败 → fail-closed', (() => {
+  try {
+    prepareReleaseDraft({
+      version: '0.2.287',
+      commit: 'b'.repeat(40),
+      listReleases: () => [{ id: 7, tag_name: tag, draft: true, target_commitish: 'missing-ref' }],
+      listAssets: () => [[]],
+      resolveCommit: () => { throw new Error('not found'); },
+      log: () => {},
+    });
+    return false;
+  } catch (error) { return String(error).includes('not found'); }
 })());
 
 // 8. include_linux 变化时连旧 manifest 一起回收 + 创建草稿前先过 exact-commit 门
@@ -165,6 +195,20 @@ ck('回收 .deb 时同时删掉旧 latest.json', (() => {
     log: () => {},
   });
   return deleted.includes(31) && deleted.includes(32) && deleted.includes(33);
+})());
+ck('deb/sig 已不存在时仍回收旧 latest.json', (() => {
+  const deleted: number[] = [];
+  prepareReleaseDraft({
+    version: '0.2.287',
+    listReleases: () => [{ id: 22, tag_name: tag, draft: true, target_commitish: 'main' }],
+    listAssets: () => [[{ id: 34, name: 'latest.json' }]],
+    deleteAsset: (id: number) => { deleted.push(id); return {}; },
+    resolveCommit: () => 'b'.repeat(40),
+    commit: 'b'.repeat(40),
+    includeLinux: false,
+    log: () => {},
+  });
+  return JSON.stringify(deleted) === JSON.stringify([34]);
 })());
 ck('创建/复用 release 之前先跑 exact-merged-commit 门',
   /prepare-release:[\s\S]{0,900}- name: Require exact merged commit[\s\S]{0,1200}node scripts\/prepare-desktop-release\.mjs/.test(wf));

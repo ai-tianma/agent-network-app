@@ -81,6 +81,14 @@ export function prepareReleaseDraft({
   includeLinux = true,
   body = '',
   run = (args) => gh(args),
+  resolveCommit = (ref) => {
+    const resolved = run(['api', `repos/${repository}/commits/${encodeURIComponent(ref)}`]);
+    const sha = typeof resolved === 'string' ? resolved.trim() : resolved?.sha;
+    if (!/^[0-9a-f]{40}$/.test(sha ?? '')) {
+      throw new Error(`could not resolve target_commitish ${JSON.stringify(ref)} to a 40-character SHA`);
+    }
+    return sha;
+  },
   // --slurp 让分页结果是一个数组的数组；直接 JSON.parse 多页拼接会炸（gh 的手册明确要求）。
   listReleases = () => {
     const pages = run(['api', `repos/${repository}/releases?per_page=100`, '--paginate', '--slurp']);
@@ -108,30 +116,29 @@ export function prepareReleaseDraft({
   }
   if (plan.action === 'reuse') {
     // 复用必须对得上本次要发的 commit：指向别的 commit 的草稿会让 verify-draft 与资产错配。
-    // 草稿的 target_commitish 通常还是分支名（tauri-action 建草稿时就是这样），
-    // 只有它真的是 40 位 SHA 时才有可比性；分支名不参与判定，只在日志里留痕。
+    // tauri-action 常把 target_commitish 留成分支名，因此 ref 必须先 resolve 成 SHA；
+    // 无法解析或不等于本次 commit 都在任何昂贵 build 之前 fail-closed。
     const reused = (Array.isArray(releases) ? releases : []).find((release) => release?.id === plan.releaseId);
     const target = reused?.target_commitish;
-    if (commit && typeof target === 'string' && /^[0-9a-f]{40}$/.test(target) && target !== commit) {
-      throw new Error(`${tag}: draft ${plan.releaseId} targets ${target}, not ${commit}`);
-    }
-    if (commit && typeof target === 'string' && target.length > 0 && !/^[0-9a-f]{40}$/.test(target)) {
-      log(`${tag}: draft ${plan.releaseId} target_commitish is "${target}" (a ref, not a SHA) — commit check deferred to verify-draft`);
+    if (commit) {
+      if (typeof target !== 'string' || target.length === 0) {
+        throw new Error(`${tag}: draft ${plan.releaseId} has no target_commitish to compare with ${commit}`);
+      }
+      const resolvedTarget = /^[0-9a-f]{40}$/.test(target) ? target : resolveCommit(target);
+      if (resolvedTarget !== commit) {
+        throw new Error(`${tag}: draft ${plan.releaseId} targets ${target} (${resolvedTarget}), not ${commit}`);
+      }
+      if (resolvedTarget !== target) log(`${tag}: draft ${plan.releaseId} target_commitish ${target} resolved to ${resolvedTarget}`);
     }
     const pages = listAssets(plan.releaseId);
     const assets = (Array.isArray(pages) ? pages : []).flat();
-    const stale = staleAssetsFor(assets, { includeLinux });
+    const stale = [
+      ...staleAssetsFor(assets, { includeLinux }),
+      ...(!includeLinux ? assets.filter((asset) => asset?.name === 'latest.json') : []),
+    ];
     for (const asset of stale) {
       log(`${tag}: removing stale asset ${asset.name} (id ${asset.id}) because include_linux=${includeLinux}`);
       deleteAsset(asset.id);
-    }
-    if (stale.length > 0) {
-      // 旧 latest.json 里还带着 linux 条目：删掉资产但不删 manifest，verify-draft 会报
-      // "Linux updater entries present but Linux was not selected"。让本次构建重写它。
-      for (const asset of assets.filter((candidate) => candidate?.name === 'latest.json')) {
-        log(`${tag}: removing stale latest.json (id ${asset.id}) so this run rewrites it`);
-        deleteAsset(asset.id);
-      }
     }
     log(`${tag}: reusing draft release ${plan.releaseId}${stale.length ? ` after removing ${stale.length} stale asset(s)` : ''}`);
     return { action: 'reuse', tag, releaseId: plan.releaseId, removedAssets: stale };
