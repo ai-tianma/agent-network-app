@@ -4,6 +4,7 @@ import {
   assertAnonymousDownloads,
   fileNameFromPublicUrl,
   isPublicDownloadUrl,
+  latestJsonUploadArgs,
   normalizeManifestAssetUrls,
   normalizeReleaseManifest,
   publicDownloadUrl,
@@ -33,6 +34,12 @@ const assets = [
   { id: 4, name: assetNames.msi, url: apiAssetUrl(4), browser_download_url: publicDownloadUrl(repository, tag, assetNames.msi) },
 ];
 const release = { id: Number(releaseId), tag_name: tag, draft: true, assets };
+
+const uploadArgs = latestJsonUploadArgs({ repository, releaseId, file: '/tmp/latest.json' });
+check('upload targets the full uploads.github.com API URL',
+  uploadArgs.includes(`https://uploads.github.com/repos/${repository}/releases/${releaseId}/assets?name=latest.json`));
+check('upload does not use gh --hostname (which becomes api.uploads.github.com)',
+  !uploadArgs.includes('--hostname'));
 
 const generatedManifest = {
   version: '0.2.287',

@@ -164,6 +164,13 @@ const fetchLatestJson = async (fetchImpl, release, token, repository, tag) => {
   return { asset, bytes, manifest: JSON.parse(bytes.toString('utf8')) };
 };
 
+export const latestJsonUploadArgs = ({ repository, releaseId, file }) => [
+  'api', '-X', 'POST',
+  `https://uploads.github.com/repos/${repository}/releases/${releaseId}/assets?name=${latestJsonAssetName}`,
+  '-H', 'Content-Type: application/octet-stream',
+  '--input', file,
+];
+
 /** 匿名 HEAD：公共下载链接必须真的能拿到（跟随重定向，2xx 且带长度）。 */
 export const assertAnonymousDownloads = async (urls, { fetchImpl = fetch } = {}) => {
   const unique = [...new Set(urls)];
@@ -194,8 +201,9 @@ export async function normalizeReleaseManifest({
       return result.stdout;
     };
     for (const assetId of existingAssetIds) gh(['api', '-X', 'DELETE', `repos/${repo}/releases/assets/${assetId}`]);
-    // 二进制资产上传端点在 uploads.github.com（api.github.com 会 404）。
-    gh(['api', '--hostname', 'uploads.github.com', '-X', 'POST', `repos/${repo}/releases/${releaseId}/assets?name=${latestJsonAssetName}`, '-H', 'Content-Type: application/octet-stream', '--input', file], { inherit: true });
+    // 二进制资产上传端点必须用完整 uploads.github.com URL；`--hostname` 会拼成
+    // api.uploads.github.com，反而上传到不存在的主机。
+    gh(latestJsonUploadArgs({ repository: repo, releaseId, file }), { inherit: true });
   },
   anonymousCheck = (urls) => assertAnonymousDownloads(urls, { fetchImpl }),
   log = (line) => console.log(line),

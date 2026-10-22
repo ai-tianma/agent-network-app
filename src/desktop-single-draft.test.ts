@@ -102,10 +102,11 @@ ck('从 workflow 解出 releaseBody 并替换 __VERSION__',
 
 // 6. dry run 仍能构建 + updater 写入串行 + 二进制上传走 uploads host
 ck('publish=false 的 dry run 仍会跑 build matrix',
-  /build-release:[\s\S]{0,400}if: inputs\.publish == false \|\| needs\.prepare-release\.result == 'success'/.test(wf));
+  /build-release:[\s\S]{0,400}if: always\(\) && \(inputs\.publish == false \|\| needs\.prepare-release\.result == 'success'\)/.test(wf));
 ck('矩阵串行写同一个 latest.json', /max-parallel: 1/.test(wf));
-ck('二进制资产上传走 uploads.github.com',
-  readFileSync(new URL('../scripts/normalize-desktop-update-manifest.mjs', import.meta.url), 'utf8').includes("'--hostname', 'uploads.github.com'"));
+ck('二进制资产上传使用完整 uploads.github.com URL',
+  /https:\/\/uploads\.github\.com\/repos\//.test(readFileSync(new URL('../scripts/normalize-desktop-update-manifest.mjs', import.meta.url), 'utf8'))
+  && !readFileSync(new URL('../scripts/normalize-desktop-update-manifest.mjs', import.meta.url), 'utf8').includes("'--hostname', 'uploads.github.com'"));
 
 // 7. REQUESTED_COMMIT 校验 + target 一致性
 ck('REQUESTED_COMMIT 必须是 40 位小写 SHA', (() => {

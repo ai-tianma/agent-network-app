@@ -73,7 +73,7 @@ jobs:
     needs: [prepare-release]
     # publish=false 是「只构建 + smoke，不建 release」的 dry run：prepare-release 会跳过，
     # 这个 job 必须照常跑，否则 Build signed bundles without uploading a release 那套永远不执行。
-    if: inputs.publish == false || needs.prepare-release.result == 'success'
+    if: always() && (inputs.publish == false || needs.prepare-release.result == 'success')
     environment: macos-signing
     strategy:
       fail-fast: false
