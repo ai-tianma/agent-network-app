@@ -507,6 +507,12 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.285:
+            - 改进：Agent 组织架构页打开后直接落在有 Agent 的部门，若都为空则显示「未归属」；左侧部门树加图标与层级缩进，计数不再被截断，列表可滚动。
+            - 改进：部门右栏显示直属 Agent 数量与成员搜索（名称、负责人、节点 ID），列表带头像，空态与「没有匹配」分开显示；「调整结构」收成默认收起的折叠面板，说明文字移到页面底部整行。
+            - 改进：调度页「筛选节点」改成紧凑弹窗，可搜名称、拼音或节点 ID 并一键清除，顶部固定「全部节点」，重名节点补显节点 ID，每行显示头像与该节点的计划数。
+            - 修复：共存节点不支持交由 daemon 管理时，显示明确拒绝提示，保留原启动方式，无需停止节点或会话（需 Hub 返回对应安全错误码）。
+
             What's new in 0.2.284:
             - 改进：定时任务卡片重新梳理信息层级，任务名称、执行状态和计划时间更容易一眼分清。
             - 改进：「下次执行」与「上次执行」按真实执行数据显示时间和结果摘要，方便判断计划何时运行、最近一次是否成功。

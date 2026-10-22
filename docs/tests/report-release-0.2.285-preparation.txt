@@ -1,0 +1,29 @@
+0.2.285 release preparation — 2026-10-22
+
+Owner instruction: release now, do not over-test. Only the independently ready
+client refusal-copy fix #1014 is included. Skill plaza #1015 remains queued and
+is NOT included; #1016/#1017 and their Hub/runtime dependencies are excluded.
+
+Source base: b9a3e1ec9e7f7a2677790632501f0edba5ed7151 (main, merged #1014).
+Existing post-merge checks reused: unit 39709840315, desktop 39709840310,
+scrub 39709840252, receipt 39709840268 — successful. No new full-suite,
+browser, export, Docker, npm-ci or native acceptance was run locally.
+
+Versions: 0.2.285 in all eight version-bearing files; Android versionCode 2285.
+Cargo.lock changes only the agent-network-desktop root package version.
+Release notes accurately state that the new refusal copy requires the Hub to
+return the corresponding safe error code. No adoption support is added.
+Online changelog generator preserved real published_at metadata; no date was
+invented for the not-yet-published 0.2.285.
+
+Targeted checks:
+- bun src/version-consistency.test.ts: 14/14 PASS
+- bun src/changelog-bundled.test.ts: 7/7 PASS
+- bun src/changelog-model.test.ts: 55/55 PASS
+- git diff --check: PASS
+
+Release remains pending ordinary exact-head CI/merge and signed builds.
+Use the final merged main SHA for Android and desktop. Audit the signed draft
+before publication; mirror after publication. iOS is last, after Android APK
+publication and desktop Latest/mirror verification. Formal App Store submission
+is separate and still requires reviewer-access and metadata evidence.
