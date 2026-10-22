@@ -482,7 +482,8 @@ jobs:
           bash -n "$RUNNER_TEMP/retry-macos-dmg.sh"
           chmod +x "$RUNNER_TEMP/retry-macos-dmg.sh"
 
-      # 草稿的唯一性由 prepare-release 保证：这里不再按 tag 删除或创建 release。
+      # #1035(0.2.287 双草稿事故) 与 #1034 的最终形态：草稿的唯一性由 prepare-release 单点保证；
+      # 这里（每个 matrix job 内）不再按 tag 删除或创建 release，也不再等别的平台先建。
       - uses: tauri-apps/tauri-action@944946e3e4cac6603d1fe8f514171e9ecd3c78aa # v1
         if: inputs.publish == true
         env:
@@ -2060,6 +2061,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # #2064: 两个同 tag 草稿会让这件事看起来像「资产没编出来」。先点清数量。
+      - name: Require exactly one draft release for this tag
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          tag="desktop-v$version"
+          count=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq "[.[] | select(.tag_name == \"$tag\" and .draft == true)] | length")
+          echo "draft releases for $tag: $count"
+          if [ "$count" != "1" ]; then
+            echo "::error::expected exactly one draft release for $tag, found $count"
+            exit 1
+          fi
+
       - name: Require selected platform draft assets, updater entries, and checksums
         env:
           GH_TOKEN: ${{ github.token }}

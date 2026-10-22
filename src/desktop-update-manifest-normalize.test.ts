@@ -264,7 +264,7 @@ check('release workflow declares the normalizer job', workflow.includes('normali
 check('release workflow has a single prepare-release job', workflow.includes('prepare-release:') && workflow.includes('node scripts/prepare-desktop-release.mjs'));
 check('build matrix depends on prepare-release', /build-release:\n\s+needs: \[prepare-release\]/.test(workflow));
 check('every matrix job uploads into the same release id', /releaseId: \$\{\{ needs\.prepare-release\.outputs\.release_id \}\}/.test(workflow));
-check('draft verification reads the release by id', /verify-draft:[\s\S]{0,900}RELEASE_ID: \$\{\{ needs\.prepare-release\.outputs\.release_id \}\}/.test(workflow));
+check('draft verification reads the release by id', /verify-draft:[\s\S]{0,2500}RELEASE_ID: \$\{\{ needs\.prepare-release\.outputs\.release_id \}\}/.test(workflow));
 check('normalizer reads the release by id', /normalize-updater-manifest:[\s\S]{0,1200}RELEASE_ID: \$\{\{ needs\.prepare-release\.outputs\.release_id \}\}/.test(workflow));
 check('build matrix no longer deletes drafts per job', !workflow.includes('Remove stale draft releases for this tag'));
 
