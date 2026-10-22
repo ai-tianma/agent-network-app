@@ -45,6 +45,8 @@ ck('releaseId 不再按 runner.os 条件分支',
 // 3. 验证阶段先把「同 tag 草稿数量」点清，避免误报成缺资产（#1035 保留）。
 ck('verify-draft 先断言恰好一个草稿',
   /- name: Require exactly one draft release for this tag/.test(wf) && /expected exactly one draft release/.test(wf));
+ck('草稿计数按 id 行数统计（跨页只得到一个整数，#1036）',
+  /--jq "\.\[\] \| select\(\.tag_name == \\"\$tag\\" and \.draft == true\) \| \.id" \| wc -l/.test(wf));
 ck('数量断言在资产断言之前',
   wf.indexOf('Require exactly one draft release for this tag') < wf.indexOf('Require selected platform draft assets, updater entries, and checksums'));
 
