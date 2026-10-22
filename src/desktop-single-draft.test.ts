@@ -34,5 +34,14 @@ ck('verify-draft 先断言恰好一个草稿',
 ck('数量断言在资产断言之前',
   wf.indexOf('Require exactly one draft release for this tag') < wf.indexOf('Require selected platform draft assets, updater entries, and checksums'));
 
+
+// 4. 数量断言的取数方式：`gh api --paginate --jq "… | length"` 每页各吐一个数字
+// （0.2.287 实测 "1\n0\n0"），和 "1" 比较永远失败——这正是 #1035 之后那单
+// verify-draft 挂掉的原因。必须数 id 的行数。
+ck('草稿计数按行数取（跨页只得到一个整数）',
+  /count=\$\(gh api[\s\S]{0,200}?\|\s*wc -l/.test(wf));
+ck('草稿计数不再直接比较 paginate 的 length 输出',
+  !/count=\$\(gh api[\s\S]{0,200}?\|\s*length"\)/.test(wf));
+
 console.log(`\n${p}/${t} passed`);
 if (p !== t) process.exit(1);

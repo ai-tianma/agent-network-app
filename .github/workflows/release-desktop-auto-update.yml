@@ -2110,8 +2110,10 @@ jobs:
           set -euo pipefail
           version=$(node -p 'require("./package.json").version')
           tag="desktop-v$version"
+          # --paginate 会按页各吐一个数字（0.2.287 实测是 "1\n0\n0"），拿它和 "1"
+          # 直接比较必然失败。这里改成数 id 的行数：跨页也只得到一个整数。
           count=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
-            --jq "[.[] | select(.tag_name == \"$tag\" and .draft == true)] | length")
+            --jq ".[] | select(.tag_name == \"$tag\" and .draft == true) | .id" | wc -l | tr -d ' ')
           echo "draft releases for $tag: $count"
           if [ "$count" != "1" ]; then
             echo "::error::expected exactly one draft release for $tag, found $count"
