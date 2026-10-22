@@ -2147,3 +2147,36 @@ jobs:
           cp "$apk" "$tmp/$name"
           gh release upload "desktop-v$version" "$tmp/$name" --clobber --repo "$GITHUB_REPOSITORY"
           echo "attached $name to desktop-v$version"
+
+  # 0.2.286 的真问题:tauri-action 生成的 latest.json 里，五个 platforms.url 是
+  #   https://api.github.com/repos/<repo>/releases/assets/<id>
+  # 而站点校验和普通 updater 认的是
+  #   https://github.com/<repo>/releases/download/<tag>/<file>
+  # 于是「资产都在、manifest 也在」的发布，客户端仍然可能拿不到包。
+  # 这里在 draft 阶段（APK 挂完之后、发布之前）把它映射成本 release 真实资产的
+  # browser_download_url，上传替换后**重新下载**断言五个 URL 都是公共下载链接、
+  # 且能匿名 HEAD 到内容。缺映射/歧义/非公开链接一律 fail-closed，不静默带坏 URL 发布。
+  normalize-updater-manifest:
+    needs: [attach-android-apk]
+    if: inputs.publish == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Normalize latest.json platform URLs to public download links
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # 与 attach-android-apk 同一个来源：这次发布的版本号就是 package.json 的版本。
+          version=$(node -p 'require("./package.json").version')
+          export RELEASE_TAG="desktop-v$version"
+          echo "normalizing $RELEASE_TAG"
+          # 脚本自己 fresh 回读 release assets、上传替换、再回读断言；任何一步不合预期即非零退出。
+          node scripts/normalize-desktop-update-manifest.mjs
