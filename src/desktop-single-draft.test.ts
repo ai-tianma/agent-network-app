@@ -103,11 +103,13 @@ ck('从 workflow 解出 releaseBody 并替换 __VERSION__',
   extractReleaseBody(wf, '0.2.287').startsWith('Signed and notarized update'));
 
 // 6. dry run 仍能构建 + updater 写入串行 + 二进制上传走 uploads host
-ck('publish=false 的 dry run 仍会跑 build matrix',
-  /build-release:[\s\S]{0,400}if: inputs\.publish == false \|\| needs\.prepare-release\.result == 'success'/.test(wf));
+ck('publish=false 的 dry run 仍会跑 build matrix（always() 保证 skipped prepare 不拖死 matrix）',
+  /build-release:[\s\S]{0,400}if: always\(\) && \(inputs\.publish == false \|\| needs\.prepare-release\.result == 'success'\)/.test(wf));
 ck('矩阵串行写同一个 latest.json', /max-parallel: 1/.test(wf));
-ck('二进制资产上传走 uploads.github.com',
-  readFileSync(new URL('../scripts/normalize-desktop-update-manifest.mjs', import.meta.url), 'utf8').includes("'--hostname', 'uploads.github.com'"));
+ck('二进制资产上传走完整 uploads.github.com URL（不用 gh api --hostname）', (() => {
+  const normalizeSrc = readFileSync(new URL('../scripts/normalize-desktop-update-manifest.mjs', import.meta.url), 'utf8');
+  return normalizeSrc.includes('https://uploads.github.com/repos/') && !normalizeSrc.includes("'--hostname', 'uploads.github.com'");
+})());
 
 // 7. REQUESTED_COMMIT 校验 + target 一致性
 ck('REQUESTED_COMMIT 必须是 40 位小写 SHA', (() => {
@@ -140,15 +142,42 @@ ck('复用指向别的 SHA 的草稿 → fail-closed', (() => {
     return false;
   } catch (error) { return String(error).includes('targets'); }
 })());
-ck('复用指向分支名的草稿 → 允许（留给 verify-draft 比对）', (() => {
+ck('复用指向分支名的草稿：resolve 成 SHA 后相等 → 允许', (() => {
   const result = prepareReleaseDraft({
     version: '0.2.287',
     commit: 'b'.repeat(40),
     listReleases: () => [{ id: 7, tag_name: tag, draft: true, target_commitish: 'main' }],
     listAssets: () => [[]],
+    resolveRef: () => ({ sha: 'b'.repeat(40) }),
     log: () => {},
   });
   return result.action === 'reuse' && result.releaseId === 7;
+})());
+ck('分支名 resolve 出的 SHA 不一致 → fail-closed', (() => {
+  try {
+    prepareReleaseDraft({
+      version: '0.2.287',
+      commit: 'b'.repeat(40),
+      listReleases: () => [{ id: 8, tag_name: tag, draft: true, target_commitish: 'main' }],
+      listAssets: () => [[]],
+      resolveRef: () => ({ sha: 'c'.repeat(40) }),
+      log: () => {},
+    });
+    return false;
+  } catch (error) { return String(error).includes('targets'); }
+})());
+ck('分支名 resolve 失败 → fail-closed', (() => {
+  try {
+    prepareReleaseDraft({
+      version: '0.2.287',
+      commit: 'b'.repeat(40),
+      listReleases: () => [{ id: 9, tag_name: tag, draft: true, target_commitish: 'gone' }],
+      listAssets: () => [[]],
+      resolveRef: () => { throw new Error('HTTP 404'); },
+      log: () => {},
+    });
+    return false;
+  } catch (error) { return String(error).includes('cannot resolve'); }
 })());
 
 // 8. include_linux 变化时连旧 manifest 一起回收 + 创建草稿前先过 exact-commit 门

@@ -87,6 +87,9 @@ export function prepareReleaseDraft({
     return (Array.isArray(pages) ? pages : []).flat();
   },
   listAssets = (releaseId) => run(['api', `repos/${repository}/releases/${releaseId}/assets?per_page=100`, '--paginate', '--slurp']),
+  // 草稿上的 target_commitish 通常是分支名（tauri-action 建草稿时就是这样）：
+  // 不能因为「不是 SHA」就跳过校验，而要先 resolve 成 SHA 再比对。
+  resolveRef = (ref) => run(['api', `repos/${repository}/commits/${encodeURIComponent(ref)}`]),
   deleteAsset = (assetId) => run(['api', '-X', 'DELETE', `repos/${repository}/releases/assets/${assetId}`]),
   createRelease = (tag, name) => run([
     'api', '-X', 'POST', `repos/${repository}/releases`,
@@ -108,15 +111,24 @@ export function prepareReleaseDraft({
   }
   if (plan.action === 'reuse') {
     // 复用必须对得上本次要发的 commit：指向别的 commit 的草稿会让 verify-draft 与资产错配。
-    // 草稿的 target_commitish 通常还是分支名（tauri-action 建草稿时就是这样），
-    // 只有它真的是 40 位 SHA 时才有可比性；分支名不参与判定，只在日志里留痕。
+    // target_commitish 多数时候是分支名，先 resolve 成 SHA 再比对；resolve 失败 → fail-closed。
     const reused = (Array.isArray(releases) ? releases : []).find((release) => release?.id === plan.releaseId);
     const target = reused?.target_commitish;
-    if (commit && typeof target === 'string' && /^[0-9a-f]{40}$/.test(target) && target !== commit) {
-      throw new Error(`${tag}: draft ${plan.releaseId} targets ${target}, not ${commit}`);
-    }
-    if (commit && typeof target === 'string' && target.length > 0 && !/^[0-9a-f]{40}$/.test(target)) {
-      log(`${tag}: draft ${plan.releaseId} target_commitish is "${target}" (a ref, not a SHA) — commit check deferred to verify-draft`);
+    if (commit && typeof target === 'string' && target.length > 0) {
+      let targetSha = target;
+      if (!/^[0-9a-f]{40}$/.test(targetSha)) {
+        try {
+          targetSha = String(resolveRef(target)?.sha ?? '');
+        } catch (error) {
+          throw new Error(`${tag}: cannot resolve draft ${plan.releaseId} target "${target}" to a commit (${error instanceof Error ? error.message : String(error)})`);
+        }
+      }
+      if (!/^[0-9a-f]{40}$/.test(targetSha)) {
+        throw new Error(`${tag}: draft ${plan.releaseId} target "${target}" did not resolve to a commit`);
+      }
+      if (targetSha !== commit) {
+        throw new Error(`${tag}: draft ${plan.releaseId} targets ${targetSha} (${target}), not ${commit}`);
+      }
     }
     const pages = listAssets(plan.releaseId);
     const assets = (Array.isArray(pages) ? pages : []).flat();
