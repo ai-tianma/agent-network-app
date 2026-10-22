@@ -1,0 +1,96 @@
+#725 directory model, local prerequisite only
+===========================================
+Base: app main b9a3e1ec9e7f7a2677790632501f0edba5ed7151.
+Source/contract review: requirement events 30442 and 30444.
+
+This slice adds a pure read-model and its tests. It is NOT wired to the reader,
+Agent list/search UI, or NodeDetailScreen and is NOT an end-to-end fix/release.
+
+Inputs must already be authorized Hub reads. A caller-generated scopeKey must
+bind the current account/auth epoch, requested scope and logical read generation.
+The model is not an authorization oracle and complete=true is a reader claim,
+not proof that HTTP collection really finished. The future reader must establish
+both facts and ignore obsolete requests before supplying these snapshots.
+
+Registered rows have a discriminated source, not an invented Session.status.
+Only exact (network_id, node_id) identities can consume a genuine session.
+Missing/ambiguous identity, unsuccessful or incomplete reads, or mismatched scope
+cannot establish no-session. Existing session-only rows are preserved. Unknown
+node records do not inherit a default network or an alias/hostname binding.
+Returned directory node facts exclude capabilities, config and online timestamps.
+No lifecycle request, persistence, network fetch, session write, or credential access.
+
+Targeted verification:
+docker run --rm --network none --read-only \
+  --mount type=bind,src=<worktree>,dst=/src,readonly --workdir /src \
+  --entrypoint bun \
+  sha256:ebabd0066419315ce1d7bbe899999b07beb1aa01b896b548b439c2d7682da028 \
+  --no-install src/agent-directory.test.ts
+
+23/23 cases cover nodes-only visibility/search, precise identity matching,
+cross-network/same-alias isolation, real session preservation, legacy identity,
+duplicate/ambiguous data, failed/incomplete/mismatched-scope reads, pinyin matcher
+injection, no invented runtime/capability fields and immutable inputs.
+
+This is a cached Bun image, not an npm-ci/frozen-lock Node 22 acceptance run.
+Its provided node wrapper cannot report a genuine Node 22 version (the --version
+probe exits nonzero), so no matching-runtime project typecheck is claimed.
+The fixture does not call existing AgentsScreen, so these passes do not prove
+the old sessions-only UI has been fixed or constitute an old-product red control.
+No full test suite, native/browser matrix, CI rerun or production probe was run.
+
+Remaining: authorized same-scope HTTP reader with explicit node identities;
+real HTTP ACL/no-grant/grant/revoke fixtures; list/search and read-only detail
+integration without green dots, fake last-online or implicit lifecycle actions;
+old-product negative control; normal exact-head CI/review and actual release.
+
+Reader slice (same branch, still no UI wiring)
+---------------------------------------------
+src/agent-directory-reader.ts reads the two authorized endpoints and nothing else:
+`GET /api/nodes` (no network filter) and `GET /api/status` (no `light=1`, because the
+light projection omits node_id unless one node is filtered, so it cannot establish
+identity). Bearer auth comes from the caller's HubConfig; this module never widens
+visibility and never mints a scope key — an empty expected scope fails closed.
+
+Only directory facts are copied (node_id, network_id, alias, node_name, runtime /
+alias, status, ids, updated_at, runtime). Capability flags, config snapshots and
+telemetry never enter the directory. Non-object rows are dropped. Non-2xx, ok:false,
+non-JSON, abort/timeout and thrown fetches all become `unavailable`; they never
+degrade into an empty list, so a failed read cannot become "no session".
+
+Targeted verification (offline, injected fetch):
+  docker run ... --entrypoint bun <image> --no-install src/agent-directory-reader.test.ts
+  12/12 passed
+
+Not covered / explicitly not claimed: no real Hub request was made in this slice, so
+real ACL (no-grant/grant/revoke), pagination and Hub-version behaviour are unproven;
+/sapi/status full projection is heavy (no light+node_id for all rows), so wiring it
+into the 10 s AgentsScreen poll without caching would be a cost regression and is not
+done here. UI wiring, the old-product red control and normal CI remain open.
+
+UI slice: read-only "registered but not started" block
+-----------------------------------------------------
+Wired into the Agents list (`src/AgentsScreen.tsx`) as a separate, collapsible block
+above the sections, not as Session rows:
+
+- `src/registered-agents.ts` — pure view model: only registered rows whose association
+  is `no_session_record` or `unknown`; hint is 「未启动（Hub无会话记录）」 only for the
+  certain case, otherwise 「会话关联未确认」; rows carry `actionable: false` and no
+  status/online/lifecycle fields; identity-less rows are dropped so they cannot
+  duplicate; search reuses the list's injected matcher (pinyin).
+- `src/agent-directory-hook.ts` — loads the directory on mount and every 120 s (NOT the
+  10 s status poll: the full status projection is much heavier); a failed read keeps
+  the previous rows and never becomes "nothing registered"; each read has its own
+  generation and stale replies are dropped.
+- `src/RegisteredAgentsSection.tsx` — grey dot (never a green online dot), 「只读」 chip,
+  no chat open, no start/stop/restart/adopt; collapsed state is local.
+- `AgentsScreen` filters out aliases that already render as real sessions, so the same
+  name never appears twice.
+
+Targeted verification: `src/registered-agents.test.ts` 9/9 (offline); `npx tsc --noEmit
+-p tsconfig.build.json` clean against the app's own dependencies.
+
+Not claimed: no device/simulator or web screenshot was produced (no UI automation exists
+for this list), the HTTP ACL fixtures (no-grant/grant/revoke) and the old sessions-only
+red control are still missing, and normal CI on this head has not finished. #725 stays
+in doing.
