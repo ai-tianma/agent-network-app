@@ -55,6 +55,36 @@ const extraStub = () => {
   };
 };
 
+// 「成员/团队」页现在读的是 Hub 的组织架构。harness 默认对所有未知路由回 generic {ok:true}，
+// 那样界面只剩 synthetic 的「未归属」一行，测试等于没测到真部门。这里补两份代表性夹具：
+// 一个具名部门（含子部门）＋一个具名成员（挂在部门下）＋一个未归属 Agent。
+// 走 harness 支持的 window.__routeOverride（只覆盖 GET 部门树与通讯录两页，其余照旧）。
+const orgFixture = () => {
+  const departments = [
+    { id: 'dept-rd', name: '示例研发部', parent_id: null, sort: 1 },
+    { id: 'dept-fe', name: '示例前端组', parent_id: 'dept-rd', sort: 1 },
+  ];
+  const directory = {
+    people: [
+      {
+        user_id: 'u_demo_lead', username: 'demo-lead', display_name: '示例成员',
+        department: { id: 'dept-rd', name: '示例研发部' },
+        agents: [{ node_id: 'n_demo_lead', alias: '示例-A' }],
+      },
+    ],
+    agents_without_owner: [{ node_id: 'n_demo_free', alias: '未归属示例' }],
+    has_more: false,
+    next_offset: null,
+    agent_department_supported: true,
+  };
+  window.__routeOverride = (u, _bodyText, method) => {
+    if ((method || 'GET') !== 'GET') return undefined;
+    if (/\/api\/networks\/[^/]+\/departments$/.test(u.pathname)) return { departments, members: [] };
+    if (u.pathname === '/api/requirements/people/directory') return directory;
+    return undefined;
+  };
+};
+
 // 在页内量:每张卡片的左右边距、每行的标签左边缘 / 高度 / › ✓ 右边缘 / 开关右边缘。
 const measure = () => {
   const W = window.innerWidth;
@@ -100,12 +130,35 @@ const table = [];
 const TREE = '[data-testid="agent-org-tree"]';
 const TREE_ROW = '[data-testid^="agent-org-dept-"][role="button"]';
 const measureTree = () => {
-  const visible = (el) => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0; };
+  const rect = (el) => el.getBoundingClientRect();
+  const visible = (el) => { const b = rect(el); return b.width > 0 && b.height > 0; };
+  // 与 harness 的 paintedText 同口径：标签自己 ≥1×1，且未被任何 overflow 祖先裁成不可见。
+  // 只查 textContent 会放过「有字但被裁掉/宽 0」的行——那正是 PR1022 两条 P2 之一。
+  const painted = (el) => {
+    const b = rect(el);
+    let w = b.width, h = b.height;
+    for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      const r = rect(a);
+      w = Math.min(w, Math.max(0, Math.min(b.right, r.right) - Math.max(b.left, r.left)));
+      h = Math.min(h, Math.max(0, Math.min(b.bottom, r.bottom) - Math.max(b.top, r.top)));
+    }
+    return { w, h, ok: w >= 1 && h >= 1 };
+  };
   const rows = [...document.querySelectorAll('[data-testid^="agent-org-dept-"][role="button"]')]
     .filter(visible)
     .map(el => {
       const label = el.querySelector('[data-testid$="-label"]');
-      return { id: el.getAttribute('data-testid'), h: el.getBoundingClientRect().height, text: (label?.textContent || '').trim() };
+      const p = label ? painted(label) : { w: 0, h: 0, ok: false };
+      return {
+        id: el.getAttribute('data-testid'),
+        h: rect(el).height,
+        text: (label?.textContent || '').trim(),
+        labelW: p.w,
+        labelH: p.h,
+        labelPainted: p.ok,
+      };
     });
   const tabBar = document.querySelector('[data-testid="mobile-tab-bar"]');
   return { rows, tabBar: !!tabBar && visible(tabBar) };
@@ -124,10 +177,15 @@ const checkPage = async (page, name, theme) => {
     const m = await page.evaluate(measureTree);
     const minH = m.rows.length ? Math.min(...m.rows.map(r => r.h)) : 0;
     const blank = m.rows.filter(r => !r.text).map(r => r.id);
-    table.push({ page: name, theme, layout: 'agent-org-tree', rows: m.rows.length, minRowH: minH, tabBar: m.tabBar });
+    const unpainted = m.rows.filter(r => !r.labelPainted).map(r => `${r.id} ${r.labelW.toFixed(1)}×${r.labelH.toFixed(1)}`);
+    // 夹具里的具名部门必须真的被量到：否则只测到 synthetic「未归属」行，等于没覆盖组织树。
+    const named = m.rows.find(r => r.id === 'agent-org-dept-dept-rd');
+    table.push({ page: name, theme, layout: 'agent-org-tree', rows: m.rows.map(r => ({ id: r.id, text: r.text, h: +r.h.toFixed(1), labelPainted: r.labelPainted, labelSize: `${r.labelW.toFixed(1)}×${r.labelH.toFixed(1)}` })), minRowH: minH, tabBar: m.tabBar });
     ck(`${theme} ${name}: 至少有部门/成员行`, m.rows.length > 0, String(m.rows.length));
     ck(`${theme} ${name}: 行高 ≥ 44(该页 departmentRow minHeight)`, m.rows.length > 0 && minH >= 44 - 0.5, `${minH.toFixed(1)} over ${m.rows.length}`);
     ck(`${theme} ${name}: 每行都有可读标签`, blank.length === 0, blank.join(',') || 'all labelled');
+    ck(`${theme} ${name}: 每行标签实际可见(未裁切)`, unpainted.length === 0, unpainted.join(' | ') || 'all painted');
+    ck(`${theme} ${name}: 夹具具名部门行被测量`, !!named && named.text === '示例研发部' && named.labelPainted, named ? `${named.text} ${named.labelW.toFixed(1)}×${named.labelH.toFixed(1)}` : 'missing agent-org-dept-dept-rd');
     ck(`${theme} ${name}: 没有底部 tab 栏`, !m.tabBar);
     return m;
   }
@@ -164,6 +222,7 @@ if (!DESKTOP_ONLY) for (const theme of ['light', 'dark']) {
   page.on('pageerror', e => errors.push(String(e).split('\n')[0]));
   await page.addInitScript(initScript, { theme });
   await page.addInitScript(extraStub);
+  await page.addInitScript(orgFixture);
   await page.goto(`${web.url}?safeAreaSim=32,0,24,0`);
   await page.getByText('示例-A', { exact: true }).first().waitFor({ timeout: 20000 });
   await page.evaluate(() => window.__anetLayoutSweep.setScreen({ name: 'settings' }));
@@ -259,11 +318,12 @@ if (!DESKTOP_ONLY) for (const theme of ['light', 'dark']) {
   const page = await ctx.newPage();
   await page.addInitScript(initScript, { theme: 'light' });
   await page.addInitScript(extraStub);
+  await page.addInitScript(orgFixture);
   await page.goto(`${web.url}?safeAreaSim=0,0,0,0`);
   await page.locator('[data-testid="desktop-rail"]').waitFor({ timeout: 20000 });
   await page.getByRole('tab', { name: '设置', exact: true }).click();
   // 桌面的设置是单独的窗口(desktop-settings-window.ts):桩记下开窗请求,这里把那个 URL 作为同一 context 的第二页打开。
-  const win = await openStubWindow(page, 'settings', [[initScript, { theme: 'light' }], [extraStub]]);
+  const win = await openStubWindow(page, 'settings', [[initScript, { theme: 'light' }], [extraStub], [orgFixture]]);
   ck('desktop: 点「设置」开的是设置窗口', !!win);
   if (win) {
     await win.setViewportSize({ width: 960, height: 720 });  // the window's own size (openSettingsWindow)
