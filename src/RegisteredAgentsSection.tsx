@@ -21,6 +21,10 @@ export default function RegisteredAgentsSection(props: {
 }) {
   const { rows, loaded, collapsed, onToggle, onExplain, compact } = props;
   if (!loaded || rows.length === 0) return null;
+  // 展开时也只铺前 8 条：这一组可能有几十个节点，全铺会把下面的 Agent 列表推走。
+  const VISIBLE = 8;
+  const shown = rows.slice(0, VISIBLE);
+  const hidden = rows.length - shown.length;
   return (
     <View testID="registered-agents-section">
       <Pressable
@@ -39,7 +43,7 @@ export default function RegisteredAgentsSection(props: {
           {rows.length}
         </Text>
       </Pressable>
-      {collapsed ? null : rows.map(row => (
+      {collapsed ? null : shown.map(row => (
         <Pressable
           key={row.key}
           testID={`registered-agent-${row.alias}`}
@@ -61,6 +65,11 @@ export default function RegisteredAgentsSection(props: {
           </View>
         </Pressable>
       ))}
+      {collapsed || hidden === 0 ? null : (
+        <Text selectable={false} testID="registered-agents-more" style={{ color: colors.textMuted, fontSize: 11, paddingHorizontal: spacing.md, paddingVertical: 6 }}>
+          还有 {hidden} 个已登记节点
+        </Text>
+      )}
     </View>
   );
 }

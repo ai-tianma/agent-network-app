@@ -162,7 +162,8 @@ export default function AgentsScreen({
   // #725: registered nodes with no session are a separate read-only block. They are
   // NOT list rows: the list is Session-shaped and a synthetic status would look online.
   const agentDirectory = useAgentDirectory(cfg, !preview);
-  const [registeredCollapsed, setRegisteredCollapsed] = useState(false);
+  // 默认折叠：49 个「已登记节点」铺在列表最前面会把真正的 Agent 顶到屏幕外（admin 2026-10-22 反馈）。
+  const [registeredCollapsed, setRegisteredCollapsed] = useState(true);
   const [loading, setLoading] = useState(!preview);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);

@@ -508,6 +508,9 @@ jobs:
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
+            What's new in 0.2.287:
+            - 修复：Agent 列表最上面的「已登记节点」默认折叠，展开时也只列前 8 个，不再把在线 Agent 挤出首屏（admin 反馈「这些东西放前面太碍事」）。
+
             What's new in 0.2.286:
             - 新增：Agent 列表新增「已注册但没有会话」的只读分区，把登记过但当前没有在线的节点单独列出，不再和在线会话混在一起；该分区不打开会话、不提供启停/接管入口（需要 Hub 返回已授权的目录数据，旧 Hub 下自动不显示）。
             - 修复：设置里「Agent 组织架构」子页的浏览器回归断言改成量新布局，团队页不再因为版面重写而误报。
