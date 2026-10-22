@@ -6,8 +6,10 @@ import { setLanguagePreference } from './i18n';
 
 let p = 0, t = 0;
 const ck = (name: string, ok: boolean) => { t++; if (ok) p++; console.log(`${ok ? 'PASS' : 'FAIL'}: ${name}`); };
-// Snapshot of publicLifecycleErrors in sleep2agi/agent-network server/src/node-lifecycle-read.ts (origin/main 07e537e3).
+// Snapshot of publicLifecycleErrors in sleep2agi/agent-network server/src/node-lifecycle-read.ts (07e537e3),
+// plus the exact copresence_adopt_v2 code proposed in Hub PR #2887 (board #2012).
 const HUB_CODES = [
+  'copresence_adopt_v2',
   'adopt_ack_rejected', 'adopt_active_binding_required', 'adopt_alias_invalid', 'adopt_alias_mismatch',
   'adopt_binding_revoked_during_start', 'adopt_binding_unavailable', 'adopt_codex_readopt_required',
   'adopt_config_env_invalid', 'adopt_config_invalid', 'adopt_config_network_mismatch',
@@ -39,6 +41,15 @@ for (const lang of ['zh', 'en'] as const) {
     seen.add(msg);
   }
   ck(`${lang} messages distinct`, seen.size === HUB_CODES.length);
+  const copresence = adoptionError('copresence_adopt_v2');
+  ck(`${lang} co-presence refusal explains the unsupported mode`, lang === 'zh'
+    ? copresence.includes('共存模式暂不支持') && copresence.includes('已被拒绝')
+    : copresence.includes('not currently supported for this co-presence mode') && copresence.includes('request was refused'));
+  ck(`${lang} co-presence refusal preserves the existing launch method`, lang === 'zh'
+    ? copresence.includes('保留现有启动方式') && copresence.includes('无需停止节点或会话')
+    : copresence.includes('Keep the existing launch method') && copresence.includes('no need to stop the node or session'));
+  ck(`${lang} suffixed code does not match the dedicated copy`, adoptionError('copresence_adopt_v2_extra') !== copresence);
+  ck(`${lang} refusal with sensitive details stays generic`, adoptionError('copresence_adopt_v2: /private/fixture') === generic);
   const unknown = adoptionError('adopt_brand_new_refusal');
   ck(`${lang} unknown code shown with generic text`, unknown.includes('adopt_brand_new_refusal') && unknown !== generic);
   ck(`${lang} hub masked code shown`, adoptionError('lifecycle_error').includes('lifecycle_error'));

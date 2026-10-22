@@ -9,6 +9,7 @@ const fix = '请在该节点机器上检查后重试。', fixEn = 'Check the nod
 const readopt = '请在节点机器上确认后重新收编。', readoptEn = 'Verify on the node machine, then adopt it again.';
 
 export const ADOPT_REFUSAL_COPY: Record<string, [string, string]> = {
+  copresence_adopt_v2: ['当前共存模式暂不支持交由 daemon 管理，收编请求已被拒绝。请保留现有启动方式，无需停止节点或会话。', 'Daemon adoption is not currently supported for this co-presence mode. The adoption request was refused. Keep the existing launch method; there is no need to stop the node or session.'],
   adopt_path_writable_by_others: ['工作目录或节点配置对其他用户可写，daemon 出于安全拒绝接管。在该机器上对工作目录、.anet、.anet/nodes、节点目录和 config.json 执行 chmod go-w 后重试。', 'The workspace or node config is writable by other users, so the daemon refused for safety. On that machine run chmod go-w on the workspace, .anet, .anet/nodes, the node directory and config.json, then retry.'],
   adopt_path_owner_mismatch: ['工作目录或节点配置的属主不是运行 daemon 的用户。请用 chown 改为 daemon 用户，或改用该用户的 daemon 收编。', 'The workspace or node config is not owned by the daemon user. chown it to that user, or adopt with a daemon running as its owner.'],
   adopt_path_not_regular: ['工作目录、.anet 或 config.json 是符号链接或类型不对。请改用真实目录和普通文件后重试。', 'The workspace, .anet or config.json is a symlink or the wrong file type. Use real directories and a regular file, then retry.'],

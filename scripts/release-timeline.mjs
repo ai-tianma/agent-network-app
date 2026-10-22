@@ -17,7 +17,8 @@
  *   ① 等派发 = release workflow run.created_at - 它之前最后一个已合并 PR 的 merged_at
  *   ② 排队   = run.run_started_at - run.created_at
  *   ③ 构建   = max(asset.created_at) - run.run_started_at
- *   ④ 发布   = published_at - release.created_at
+ *   ④ 产物→发布 = published_at - 最后一个 asset 的 created_at（不是 release.created_at：
+ *     产物就绪到发布之间才是用户真正等的那一段）
  *   端到端   = published_at - 最后一个已合并 PR 的 merged_at
  *   草稿（draft / 无 published_at）= 端到端 ∞，另报「release 对象 → 产物」延迟。
  *   重复 tag：同一 tag 出现多个 release 对象时逐行列出并标记 duplicate。
@@ -52,7 +53,14 @@ function resolveToken() {
     throw new Error("no GitHub token: set GITHUB_TOKEN, or run `gh auth login`");
   }
 }
-const TOKEN = resolveToken();
+let TOKEN = "";
+try {
+  TOKEN = resolveToken();
+} catch (error) {
+  // 没有 token 就干净地退出,不要给用户一整段栈。
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(2);
+}
 
 async function api(path) {
   const res = await fetch(`https://api.github.com${path}`, {

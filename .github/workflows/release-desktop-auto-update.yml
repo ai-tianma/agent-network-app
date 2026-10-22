@@ -476,6 +476,16 @@ jobs:
             gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
           done
           echo "idempotent-release: $tag has no stale draft left"
+          # 已经**发布**过的 tag,不许再发一次。
+          # 只删草稿还不够:重发同一个已发布版本时,tauri-action 仍可能再造一个新对象
+          # (desktop-v0.2.274 就是 published 09:33 + draft 09:45 并存)。
+          # 这里直接 fail-fast:要重发就 bump 版本号,别在同一个 tag 上叠第二条。
+          published=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq ".[] | select(.tag_name == \"$tag\" and .draft == false) | .id")
+          if [ -n "$published" ]; then
+            echo "::error::$tag 已经发布过了(release id: $published)。重发请先 bump 版本号。"
+            exit 1
+          fi
 
       - uses: tauri-apps/tauri-action@944946e3e4cac6603d1fe8f514171e9ecd3c78aa # v1
         if: inputs.publish == true

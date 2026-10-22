@@ -321,6 +321,10 @@
       "kind": "stub",
       "secs": 20
     },
+    "test-pending-integrations-screenshots/drive.mjs": {
+      "kind": "manual",
+      "why": "Optional Playwright screenshot harness for Hub/Daemon pending-integration UI review; run locally with WEB_DIR after expo web export, not the shared CI stub shards."
+    },
     "test-people-picker/drive.mjs": {
       "kind": "stub",
       "secs": 192
