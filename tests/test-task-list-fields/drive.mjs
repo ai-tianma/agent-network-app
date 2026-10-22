@@ -97,7 +97,9 @@ try {
  const hint=await time.getAttribute('title');
  ck('hover hint has local seconds and updater',/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(hint||'')&&(hint||'').includes('用户负责人'));
  const rel=await paintedBox(page,'task-time-r1-updated');
- ck('relative update',await time.textContent()==='3 min ago'&&!!rel?.painted,{painted:rel});
+ const relText=await time.textContent();
+ const updatedBy=await page.getByTestId('task-time-r1-updated-by').textContent();
+ ck('relative update',!!relText&&relText.startsWith('3 min ago ·')&&updatedBy==='用户负责人'&&!!rel?.painted,{painted:rel,text:relText,updatedBy});
  for(const id of ['created','updated']){
   const th=await page.getByTestId(`task-column-${id}`).boundingBox(),td=await page.getByTestId(`task-cell-r1-${id}`).boundingBox();
   ck(`${id} header cell aligned`,Math.abs(th.x-td.x)<1&&Math.abs(th.width-td.width)<1,{th,td});
