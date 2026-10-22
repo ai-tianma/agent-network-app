@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import {
   extractReleaseBody,
+  requireRequestedCommit,
   planReleaseDraft,
   prepareReleaseDraft,
   staleAssetsFor,
@@ -21,7 +22,10 @@ import {
 let p = 0, t = 0;
 const ck = (n: string, c: boolean) => { t++; if (c) { p++; console.log(`PASS: ${n}`); } else console.log(`FAIL: ${n}`); };
 
-const wf = readFileSync(new URL('../.github/workflows/release-desktop-auto-update.yml', import.meta.url), 'utf8');
+// Windows runner 上 git checkout 会用 CRLF，所有对 YAML 的文本断言必须先归一，
+// 否则 `/build-release:\n/` 这类断言只在 Linux 成立（#1034 的两条 Windows unit failure 就是这个）。
+const wf = readFileSync(new URL('../.github/workflows/release-desktop-auto-update.yml', import.meta.url), 'utf8')
+  .replace(/\r\n?/g, '\n');
 const tag = 'desktop-v0.2.287';
 
 // 1. 决策点唯一：prepare-release 创建/复用草稿，matrix job 不再自己建或删。
@@ -102,6 +106,48 @@ ck('publish=false 的 dry run 仍会跑 build matrix',
 ck('矩阵串行写同一个 latest.json', /max-parallel: 1/.test(wf));
 ck('二进制资产上传走 uploads.github.com',
   readFileSync(new URL('../scripts/normalize-desktop-update-manifest.mjs', import.meta.url), 'utf8').includes("'--hostname', 'uploads.github.com'"));
+
+// 7. REQUESTED_COMMIT 校验 + target 一致性
+ck('REQUESTED_COMMIT 必须是 40 位小写 SHA', (() => {
+  try { requireRequestedCommit('ABC123'); return false; } catch { return true; }
+})()
+  && requireRequestedCommit('a'.repeat(40)) === 'a'.repeat(40));
+ck('prepare 在 requireCommit 时拒绝缺 commit', (() => {
+  try { prepareReleaseDraft({ version: '0.2.287', requireCommit: true, commit: '', listReleases: () => [], log: () => {} }); return false; } catch { return true; }
+})());
+ck('建草稿把 target_commitish 写进请求', (() => {
+  let args: string[] = [];
+  prepareReleaseDraft({
+    version: '0.2.287',
+    commit: 'b'.repeat(40),
+    listReleases: () => [],
+    run: (a: string[]) => { args = a; return { id: 5 }; },
+    log: () => {},
+  });
+  return args.includes(`target_commitish=${'b'.repeat(40)}`);
+})());
+ck('复用指向别的 SHA 的草稿 → fail-closed', (() => {
+  try {
+    prepareReleaseDraft({
+      version: '0.2.287',
+      commit: 'b'.repeat(40),
+      listReleases: () => [{ id: 6, tag_name: tag, draft: true, target_commitish: 'c'.repeat(40) }],
+      listAssets: () => [[]],
+      log: () => {},
+    });
+    return false;
+  } catch (error) { return String(error).includes('targets'); }
+})());
+ck('复用指向分支名的草稿 → 允许（留给 verify-draft 比对）', (() => {
+  const result = prepareReleaseDraft({
+    version: '0.2.287',
+    commit: 'b'.repeat(40),
+    listReleases: () => [{ id: 7, tag_name: tag, draft: true, target_commitish: 'main' }],
+    listAssets: () => [[]],
+    log: () => {},
+  });
+  return result.action === 'reuse' && result.releaseId === 7;
+})());
 
 console.log(`\n${p}/${t} passed`);
 if (p !== t) process.exit(1);

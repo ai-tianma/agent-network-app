@@ -66,10 +66,18 @@ export const staleAssetsFor = (assets, { includeLinux }) => {
     .map((asset) => ({ id: asset.id, name: asset.name }));
 };
 
+export const requireRequestedCommit = (commit) => {
+  if (!/^[0-9a-f]{40}$/.test(commit ?? '')) {
+    throw new Error(`REQUESTED_COMMIT must be a 40-character lowercase SHA (got ${JSON.stringify(commit ?? '')})`);
+  }
+  return commit;
+};
+
 export function prepareReleaseDraft({
   repository = process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
   version,
   commit = '',
+  requireCommit = false,
   includeLinux = true,
   body = '',
   run = (args) => gh(args),
@@ -91,6 +99,7 @@ export function prepareReleaseDraft({
   log = (line) => console.log(line),
 } = {}) {
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version ?? '')) throw new Error(`version is required (got ${JSON.stringify(version)})`);
+  if (requireCommit) requireRequestedCommit(commit);
   const tag = `desktop-v${version}`;
   const releases = listReleases();
   const plan = planReleaseDraft(Array.isArray(releases) ? releases : [], tag);
@@ -98,6 +107,17 @@ export function prepareReleaseDraft({
     throw new Error(`${tag}: ${plan.reason} (release ids: ${plan.releaseIds.join(', ')}) — bump the version instead of reusing this tag`);
   }
   if (plan.action === 'reuse') {
+    // 复用必须对得上本次要发的 commit：指向别的 commit 的草稿会让 verify-draft 与资产错配。
+    // 草稿的 target_commitish 通常还是分支名（tauri-action 建草稿时就是这样），
+    // 只有它真的是 40 位 SHA 时才有可比性；分支名不参与判定，只在日志里留痕。
+    const reused = (Array.isArray(releases) ? releases : []).find((release) => release?.id === plan.releaseId);
+    const target = reused?.target_commitish;
+    if (commit && typeof target === 'string' && /^[0-9a-f]{40}$/.test(target) && target !== commit) {
+      throw new Error(`${tag}: draft ${plan.releaseId} targets ${target}, not ${commit}`);
+    }
+    if (commit && typeof target === 'string' && target.length > 0 && !/^[0-9a-f]{40}$/.test(target)) {
+      log(`${tag}: draft ${plan.releaseId} target_commitish is "${target}" (a ref, not a SHA) — commit check deferred to verify-draft`);
+    }
     const pages = listAssets(plan.releaseId);
     const assets = (Array.isArray(pages) ? pages : []).flat();
     const stale = staleAssetsFor(assets, { includeLinux });
@@ -122,7 +142,8 @@ if (isMain) {
     const includeLinux = (process.env.INCLUDE_LINUX ?? 'true') === 'true';
     const result = prepareReleaseDraft({
       version,
-      commit: process.env.TARGET_COMMITISH || '',
+      requireCommit: true,
+      commit: process.env.REQUESTED_COMMIT || '',
       includeLinux,
       body: extractReleaseBody(workflowText, version),
     });

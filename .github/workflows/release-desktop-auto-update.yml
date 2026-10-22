@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
           version=$(node -p 'require("./package.json").version')
           export VERSION="$version"
-          export TARGET_COMMITISH="${{ inputs.commit }}"
+          export REQUESTED_COMMIT="${{ inputs.commit }}"
           export INCLUDE_LINUX="${{ inputs.include_linux }}"
           node scripts/prepare-desktop-release.mjs
 
