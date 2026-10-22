@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { planReleaseDraft } from '../scripts/prepare-desktop-release.mjs';
 import {
   assertAnonymousDownloads,
   fileNameFromPublicUrl,
@@ -18,6 +19,7 @@ const check = (name: string, condition: boolean) => {
 
 const repository = 'sleep2agi/agent-network-app';
 const tag = 'desktop-v0.2.287';
+const releaseId = '420700001';
 const assetNames = {
   mac: 'ANet_0.2.287_aarch64.app.tar.gz',
   win: 'ANet_0.2.287_x64-setup.exe',
@@ -30,7 +32,7 @@ const assets = [
   { id: 3, name: assetNames.win, url: apiAssetUrl(3), browser_download_url: publicDownloadUrl(repository, tag, assetNames.win) },
   { id: 4, name: assetNames.msi, url: apiAssetUrl(4), browser_download_url: publicDownloadUrl(repository, tag, assetNames.msi) },
 ];
-const release = { draft: true, assets };
+const release = { id: Number(releaseId), tag_name: tag, draft: true, assets };
 
 const generatedManifest = {
   version: '0.2.287',
@@ -74,6 +76,14 @@ check('correct mapping reports the mapped assets', normalized.platforms.length =
 check('normalization does not mutate the input manifest',
   generatedManifest.platforms['darwin-aarch64'].url === apiAssetUrl(2));
 
+// draft 资产的 browser_download_url 常是 untagged-...：最终 URL 必须由 repo+tag+name 合成
+const untagged = normalizeManifestAssetUrls(generatedManifest, {
+  ...release,
+  assets: assets.map((asset) => (asset.id === 2 ? { ...asset, browser_download_url: 'https://github.com/sleep2agi/agent-network-app/releases/download/untagged-abc123/' + asset.name } : asset)),
+}, { repository, tag });
+check('untagged draft download url is replaced by the final tag url',
+  untagged.manifest.platforms['darwin-aarch64'].url === publicDownloadUrl(repository, tag, assetNames.mac));
+
 // 2) 缺映射
 expectThrow('missing asset mapping', () => normalizeManifestAssetUrls(
   { ...generatedManifest, platforms: { ...generatedManifest.platforms, 'linux-x86_64': { url: apiAssetUrl(99), signature: 'sig' } } },
@@ -109,12 +119,19 @@ expectThrow('public url with an extra query', () => normalizeManifestAssetUrls(
   { repository, tag },
 ), 'which this release does not have');
 
-// 7) 非公开 browser_download_url
-expectThrow('non-public browser download url', () => normalizeManifestAssetUrls(
+// 7) 非公开 browser_download_url：draft 阶段照常合成最终链接（这正是 draft 的常态）
+const synthesized = normalizeManifestAssetUrls(
   generatedManifest,
   { draft: true, assets: assets.map((asset) => (asset.id === 3 ? { ...asset, browser_download_url: apiAssetUrl(3) } : asset)) },
   { repository, tag },
-), 'browser download URL is not public');
+);
+check('a draft asset api browser url still yields the final tag url',
+  synthesized.manifest.platforms['windows-x86_64'].url === publicDownloadUrl(repository, tag, assetNames.win));
+expectThrow('an asset without a name cannot be synthesized', () => normalizeManifestAssetUrls(
+  generatedManifest,
+  { draft: true, assets: [{ id: 3, url: apiAssetUrl(3), browser_download_url: '' }] },
+  { repository, tag },
+), 'no browser download mapping');
 
 // 8) 结构错误
 expectThrow('platform without url', () => normalizeManifestAssetUrls(
@@ -150,9 +167,14 @@ check('anonymous check fails closed without a content-length', anonymousLength.i
 const manifestUrl = assets[0].url;
 let uploaded = 0;
 let currentManifest: unknown = generatedManifest;
+const releaseRequests: string[] = [];
 const fetchStub = (async (input: string | URL | Request, init?: RequestInit) => {
   const href = String(input);
-  if (href === `https://api.github.com/repos/${repository}/releases/tags/${tag}`) {
+  releaseRequests.push(href);
+  if (href.includes('/releases/tags/')) {
+    return new Response(JSON.stringify({ error: 'draft release must not be read through the tag endpoint' }), { status: 404 });
+  }
+  if (href === `https://api.github.com/repos/${repository}/releases/${releaseId}`) {
     return new Response(JSON.stringify(release), { status: 200, headers: { 'content-type': 'application/json' } });
   }
   if (href === manifestUrl) {
@@ -165,8 +187,10 @@ const logs: string[] = [];
 const summary = await normalizeReleaseManifest({
   repository,
   tag,
+  releaseId,
   fetchImpl: fetchStub,
-  upload: (file: string) => {
+  anonymousCheck: async () => { throw new Error('draft release must not be anonymously checked'); },
+  upload: ({ file }: { file: string }) => {
     uploaded++;
     currentManifest = JSON.parse(readFileSync(file, 'utf8'));
   },
@@ -174,8 +198,12 @@ const summary = await normalizeReleaseManifest({
 });
 check('end-to-end uploads the normalized manifest once', uploaded === 1);
 check('end-to-end reports the version', summary.version === '0.2.287');
+check('end-to-end reads the release by id, never by tag', releaseRequests.length > 0
+  && releaseRequests.every((href) => !href.includes('/releases/tags/'))
+  && releaseRequests.some((href) => href.endsWith(`/releases/${releaseId}`)));
+check('end-to-end does not anonymously check a draft', summary.anonymousChecked === false && summary.draft === true);
 check('end-to-end records a post-upload sha256', /^[0-9a-f]{64}$/.test(summary.afterSha256));
-check('end-to-end checks every platform url anonymously', summary.anonymous.length === 3);
+check('end-to-end leaves anonymous urls empty on a draft', summary.anonymous.length === 0);
 check('end-to-end logs version and sha256', logs.some((line) => line.includes('0.2.287') && line.includes(summary.afterSha256)));
 
 // 11) 幂等运行不上传
@@ -184,6 +212,7 @@ currentManifest = normalizeManifestAssetUrls(generatedManifest, release, { repos
 const idempotentRun = await normalizeReleaseManifest({
   repository,
   tag,
+  releaseId,
   fetchImpl: fetchStub,
   upload: () => { uploaded++; },
   log: () => {},
@@ -198,6 +227,7 @@ try {
   await normalizeReleaseManifest({
     repository,
     tag,
+    releaseId,
     fetchImpl: fetchStub,
     upload: () => { uploaded++; }, // 假装上传成功但内容没变
     log: () => {},
@@ -212,6 +242,7 @@ try {
   await normalizeReleaseManifest({
     repository,
     tag,
+    releaseId,
     fetchImpl: fetchStub,
     upload: () => { currentManifest = { ...publicManifest, version: '9.9.9' }; },
     log: () => {},
@@ -219,18 +250,34 @@ try {
 } catch (error) { versionDrift = String(error); }
 check('a version change during normalization fails', versionDrift.includes('version changed during normalization'));
 
-// 14) 缺少 tag → 失败
-let noTag = '';
+// 14) 缺少 release id → 失败（禁止退回 tag 端点）
+let noId = '';
 try {
-  await normalizeReleaseManifest({ repository, fetchImpl: fetchStub, log: () => {} });
-} catch (error) { noTag = String(error); }
-check('a missing release tag fails closed', noTag.includes('release tag is required'));
+  await normalizeReleaseManifest({ repository, tag, fetchImpl: fetchStub, log: () => {} });
+} catch (error) { noId = String(error); }
+check('a missing release id fails closed', noId.includes('release id is required'));
 
 // 15) 工作流接线：在 draft 阶段（attach-android-apk 之后）跑这个脚本
 const workflow = readFileSync('.github/workflows/release-desktop-auto-update.yml', 'utf8').replace(/\r\n?/g, '\n');
 const normalizeJob = workflow.slice(workflow.indexOf('normalize-updater-manifest:'));
 check('release workflow declares the normalizer job', workflow.includes('normalize-updater-manifest:'));
-check('normalizer runs after the APK attach', /normalize-updater-manifest:[\s\S]{0,200}needs: \[attach-android-apk\]/.test(workflow));
+check('release workflow has a single prepare-release job', workflow.includes('prepare-release:') && workflow.includes('node scripts/prepare-desktop-release.mjs'));
+check('build matrix depends on prepare-release', /build-release:\n\s+needs: \[prepare-release\]/.test(workflow));
+check('every matrix job uploads into the same release id', /releaseId: \$\{\{ needs\.prepare-release\.outputs\.release_id \}\}/.test(workflow));
+check('draft verification reads the release by id', /verify-draft:[\s\S]{0,900}RELEASE_ID: \$\{\{ needs\.prepare-release\.outputs\.release_id \}\}/.test(workflow));
+check('normalizer reads the release by id', /normalize-updater-manifest:[\s\S]{0,1200}RELEASE_ID: \$\{\{ needs\.prepare-release\.outputs\.release_id \}\}/.test(workflow));
+check('build matrix no longer deletes drafts per job', !workflow.includes('Remove stale draft releases for this tag'));
+
+// 16) prepare-release 的 0/1/2 drafts 与 published 判定
+check('no draft plans a create', planReleaseDraft([], tag).action === 'create');
+check('one draft is reused with its id', planReleaseDraft([{ id: 7, tag_name: tag, draft: true }], tag).action === 'reuse'
+  && planReleaseDraft([{ id: 7, tag_name: tag, draft: true }], tag).releaseId === 7);
+check('two drafts fail closed', planReleaseDraft([{ id: 7, tag_name: tag, draft: true }, { id: 8, tag_name: tag, draft: true }], tag).action === 'fail'
+  && planReleaseDraft([{ id: 7, tag_name: tag, draft: true }, { id: 8, tag_name: tag, draft: true }], tag).reason === 'multiple-drafts');
+check('a published release blocks the tag', planReleaseDraft([{ id: 9, tag_name: tag, draft: false }], tag).action === 'fail'
+  && planReleaseDraft([{ id: 9, tag_name: tag, draft: false }], tag).reason === 'already-published');
+check('other tags are ignored', planReleaseDraft([{ id: 1, tag_name: 'desktop-v0.2.286', draft: true }], tag).action === 'create');
+check('normalizer runs after the APK attach', /normalize-updater-manifest:[\s\S]{0,200}needs: \[prepare-release, attach-android-apk\]/.test(workflow));
 check('normalizer only runs for publish builds', /normalize-updater-manifest:[\s\S]{0,300}if: inputs\.publish == true/.test(workflow));
 check('normalizer runs this script', normalizeJob.slice(0, 2000).includes('node scripts/normalize-desktop-update-manifest.mjs'));
 check('normalizer passes the release tag', normalizeJob.slice(0, 2000).includes('RELEASE_TAG='));

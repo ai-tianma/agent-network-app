@@ -9,7 +9,11 @@
 // 平台 URL 映射成同一次发布里真实资产的 browser_download_url，并回读断言：
 //   * 缺映射 / 歧义 / 非公开 URL → 抛错（fail-closed），不静默留坏 URL；
 //   * 已经是公开下载链接时幂等，不上传、不改字节；
-//   * 上传替换后重新下载 latest.json，断言全部 URL 都是公共下载链接且可匿名访问。
+//   * draft 阶段**不做匿名访问检查**（草稿资产对外 404 是正常的），只校验鉴权元数据与
+//     最终 URL 语法；匿名 200 留到发布之后再验（desktop-update-manifest-drift.yml）；
+//   * draft 资产的 browser_download_url 常是 `untagged-...` 形状，因此最终 URL 由
+//     repository + tag + asset.name 合成，而不是照抄 browser_download_url；
+//   * release 一律按 release_id 鉴权查找，不用 `GET /releases/tags/{tag}`。
 
 import { createHash } from 'node:crypto';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -50,6 +54,9 @@ const isAssetApiUrl = (url, repository) =>
 export const normalizeManifestAssetUrls = (manifest, release, { repository, tag }) => {
   if (!isObject(manifest?.platforms)) throw new Error('release manifest: platforms must be an object');
   if (!Array.isArray(release?.assets)) throw new Error('release: assets must be an array');
+  // 发布中的 release 自带 tag_name；调用方没给就以它为准，避免合成出别的 tag 的链接。
+  if (!tag) tag = release?.tag_name;
+  if (typeof tag !== 'string' || tag.length === 0) throw new Error('release tag is required to synthesize download urls');
 
   const assets = release.assets.filter((asset) => isObject(asset));
   const byApiUrl = new Map();
@@ -91,9 +98,6 @@ export const normalizeManifestAssetUrls = (manifest, release, { repository, tag 
         throw new Error(`release manifest: ambiguous asset name ${fileName} for ${name}`);
       }
       asset = matches[0];
-      if (asset.browser_download_url !== entry.url) {
-        throw new Error(`release manifest: ${name} public url does not equal the asset download url`);
-      }
     } else if (isAssetApiUrl(entry.url, repository)) {
       const matches = byApiUrl.get(entry.url) ?? [];
       if (matches.length === 0) {
@@ -103,18 +107,22 @@ export const normalizeManifestAssetUrls = (manifest, release, { repository, tag 
         throw new Error(`release manifest: ambiguous browser download mapping for ${name}`);
       }
       asset = matches[0];
-      if (typeof asset.browser_download_url !== 'string' || asset.browser_download_url.length === 0) {
-        throw new Error(`release manifest: missing browser download URL for ${name}`);
+      // draft 资产的 browser_download_url 常为 untagged-...，不能当最终 URL 用：
+      // 由 repository + tag + asset.name 合成，并断言它确实是本 release 的公开链接。
+      const synthesized = publicDownloadUrl(repository, tag, asset.name);
+      if (!isPublicDownloadUrl(synthesized, { repository, tag })) {
+        throw new Error(`release manifest: cannot synthesize a public download URL for ${name}`);
       }
-      if (!isPublicDownloadUrl(asset.browser_download_url, { repository, tag })) {
-        throw new Error(`release manifest: ${name} browser download URL is not public (${asset.browser_download_url})`);
-      }
-      changed = true;
+      changed = changed || entry.url !== synthesized;
     } else {
       throw new Error(`release manifest: ${name} url is neither a public download link nor an asset API url (${entry.url})`);
     }
 
-    platforms[name] = { ...entry, url: asset.browser_download_url };
+    const finalUrl = isPublicDownloadUrl(entry.url, { repository, tag })
+      ? entry.url
+      : publicDownloadUrl(repository, tag, asset.name);
+    changed = changed || finalUrl !== entry.url;
+    platforms[name] = { ...entry, url: finalUrl };
     resolved.push({ name, asset: asset.name });
   }
 
@@ -175,32 +183,44 @@ export const assertAnonymousDownloads = async (urls, { fetchImpl = fetch } = {})
 export async function normalizeReleaseManifest({
   repository = DEFAULT_REPOSITORY,
   tag,
+  releaseId = '',
   token = '',
   fetchImpl = fetch,
-  upload = (file, releaseTag, repo) => {
-    const result = spawnSync('gh', ['release', 'upload', releaseTag, file, '--clobber', '--repo', repo], {
-      encoding: 'utf8',
-      stdio: 'inherit',
-    });
-    if (result.status !== 0) throw new Error(`gh release upload failed for ${releaseTag} (exit ${result.status})`);
+  upload = ({ file, releaseId, existingAssetIds = [], repository: repo }) => {
+    // 全程按 release id / asset id 操作，不按 tag 猜对象。
+    const gh = (args, options = {}) => {
+      const result = spawnSync('gh', args, { encoding: 'utf8', stdio: options.inherit ? 'inherit' : 'pipe' });
+      if (result.status !== 0) throw new Error(`gh ${args.join(' ')} failed (exit ${result.status})`);
+      return result.stdout;
+    };
+    for (const assetId of existingAssetIds) gh(['api', '-X', 'DELETE', `repos/${repo}/releases/assets/${assetId}`]);
+    gh(['api', '-X', 'POST', `repos/${repo}/releases/${releaseId}/assets?name=latest.json`, '-H', 'Content-Type: application/octet-stream', '--input', file], { inherit: true });
   },
   anonymousCheck = (urls) => assertAnonymousDownloads(urls, { fetchImpl }),
   log = (line) => console.log(line),
 } = {}) {
-  if (!tag) throw new Error('release tag is required (RELEASE_TAG or VERSION)');
-  const releaseUrl = `https://api.github.com/repos/${repository}/releases/tags/${encodeURIComponent(tag)}`;
+  if (!releaseId) throw new Error('release id is required (RELEASE_ID from prepare-release)');
+  if (!/^\d+$/.test(String(releaseId))) throw new Error(`release id must be numeric (got ${JSON.stringify(releaseId)})`);
+  // 只按 release id 鉴权查找：draft 的 tag 端点 GET /releases/tags/{tag} 不可靠，
+  // 也避免「同 tag 多个对象」时读错一个。
+  const releaseUrl = `https://api.github.com/repos/${repository}/releases/${releaseId}`;
 
   // 1) fresh 回读 release，用真实资产做唯一映射
   const release = await fetchJson(fetchImpl, releaseUrl, token);
+  tag = tag || release.tag_name;
   if (release.draft === false && !release.assets?.length) throw new Error(`release ${tag}: has no assets`);
   const before = await fetchLatestJson(fetchImpl, release, token, repository, tag);
   const normalized = normalizeManifestAssetUrls(before.manifest, release, { repository, tag });
   const version = normalized.manifest.version;
 
+  const draft = release.draft !== false;
   const summary = {
     tag,
+    releaseId: Number(releaseId),
+    draft,
     version,
     changed: normalized.changed,
+    anonymousChecked: false,
     platforms: normalized.platforms.map((entry) => entry.name),
     beforeSha256: createHash('sha256').update(before.bytes).digest('hex'),
     afterSha256: '',
@@ -208,10 +228,15 @@ export async function normalizeReleaseManifest({
   };
 
   if (!normalized.changed) {
-    log(`latest.json already uses public download URLs (${tag}, version ${version}, sha256 ${summary.beforeSha256}); nothing to upload`);
+    log(`latest.json already uses public download URLs (release ${releaseId}, ${tag}, version ${version}, sha256 ${summary.beforeSha256}); nothing to upload`);
     summary.afterSha256 = summary.beforeSha256;
-    summary.anonymous = await anonymousCheck(normalized.platforms.map((entry) => normalized.manifest.platforms[entry.name].url));
-    log(`anonymous download check passed for ${summary.anonymous.length} unique urls`);
+    if (draft) {
+      log('draft release: skipping the anonymous download check (draft assets are not publicly reachable; the post-publish drift guard re-checks them)');
+    } else {
+      summary.anonymous = await anonymousCheck(normalized.platforms.map((entry) => normalized.manifest.platforms[entry.name].url));
+      summary.anonymousChecked = true;
+      log(`anonymous download check passed for ${summary.anonymous.length} unique urls`);
+    }
     return summary;
   }
 
@@ -220,8 +245,13 @@ export async function normalizeReleaseManifest({
   const file = join(dir, latestJsonAssetName);
   const text = `${JSON.stringify(normalized.manifest, null, 2)}\n`;
   writeFileSync(file, text);
-  log(`uploading normalized latest.json for ${tag} (version ${version})`);
-  upload(file, tag, repository);
+  log(`uploading normalized latest.json to release ${releaseId} (${tag}, version ${version})`);
+  upload({
+    file,
+    releaseId,
+    repository,
+    existingAssetIds: (release.assets ?? []).filter((asset) => asset?.name === latestJsonAssetName).map((asset) => asset.id),
+  });
 
   // 3) 回读 + 断言：五个平台 URL 必须都是公共下载链接
   const afterRelease = await fetchJson(fetchImpl, releaseUrl, token);
@@ -232,8 +262,13 @@ export async function normalizeReleaseManifest({
   }
   if (verified.changed) throw new Error(`latest.json still carries asset API urls after upload (${tag})`);
   summary.afterSha256 = createHash('sha256').update(after.bytes).digest('hex');
-  summary.anonymous = await anonymousCheck(verified.platforms.map((entry) => verified.manifest.platforms[entry.name].url));
-  log(`latest.json now public for ${tag}: version ${version}, sha256 ${summary.afterSha256}, ${summary.anonymous.length} unique urls anonymous-checked`);
+  if (draft) {
+    log(`latest.json now carries final public urls (release ${releaseId}, ${tag}): version ${version}, sha256 ${summary.afterSha256}; anonymous check deferred to post-publish`);
+  } else {
+    summary.anonymous = await anonymousCheck(verified.platforms.map((entry) => verified.manifest.platforms[entry.name].url));
+    summary.anonymousChecked = true;
+    log(`latest.json now public for ${tag}: version ${version}, sha256 ${summary.afterSha256}, ${summary.anonymous.length} unique urls anonymous-checked`);
+  }
   return summary;
 }
 
@@ -242,7 +277,8 @@ if (isMain) {
   const repository = process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY;
   const version = process.env.VERSION || '';
   const tag = process.env.RELEASE_TAG || (version ? `desktop-v${version}` : '');
-  normalizeReleaseManifest({ repository, tag, token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '' })
+  const releaseId = process.env.RELEASE_ID || '';
+  normalizeReleaseManifest({ repository, tag, releaseId, token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '' })
     .then((summary) => {
       for (const entry of summary.anonymous) console.log(`  ${entry.status} ${entry.bytes}B ${entry.url}`);
     })

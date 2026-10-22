@@ -27,7 +27,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # 一个 tag 只允许一个 release 对象，决定权只在这个 job：
+  #   published → fail（要重发请 bump 版本号）；0 draft → 创建并输出 release_id；
+  #   1 draft → 复用；>1 draft → fail-closed。
+  # 后面所有 matrix job 只认这个 release_id，禁止再按 tag 各自创建/删除。
+  prepare-release:
+    if: inputs.publish == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_id: ${{ steps.prepare.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Reuse or create the single draft release for this tag
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          export VERSION="$version"
+          node scripts/prepare-desktop-release.mjs
+
   build-release:
+    needs: [prepare-release]
+    if: inputs.publish == true
     environment: macos-signing
     strategy:
       fail-fast: false
@@ -452,42 +482,7 @@ jobs:
           bash -n "$RUNNER_TEMP/retry-macos-dmg.sh"
           chmod +x "$RUNNER_TEMP/retry-macos-dmg.sh"
 
-      # 一个 tag 只留一个 release 对象。
-      #
-      # 事故(2026-10-21 实测,来自发版速度分析):同一个 tag 上出现了**两个** release
-      # (desktop-v0.2.274:一个 draft、一个 published)—— tauri-action 每次跑都新建,
-      # 重跑就多一个草稿;最近 20 个 release 里 9 个是**从未发布**的草稿,
-      # 用户和更新器看到的是残缺版本,latest.json 也可能指向半个版本。
-      #
-      # 这里在构建之前先清掉同 tag 的**草稿**(已发布的不动:它带着已下载的资产,
-      # 删掉会毁掉用户的更新记录),让重跑变成「更新同一个 release」。
-      - name: Remove stale draft releases for this tag (idempotent release creation)
-        if: inputs.publish == true
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          version=$(node -p 'require("./package.json").version')
-          tag="desktop-v$version"
-          drafts=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
-            --jq ".[] | select(.tag_name == \"$tag\" and .draft == true) | .id")
-          for id in $drafts; do
-            echo "deleting stale draft release $id for $tag"
-            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
-          done
-          echo "idempotent-release: $tag has no stale draft left"
-          # 已经**发布**过的 tag,不许再发一次。
-          # 只删草稿还不够:重发同一个已发布版本时,tauri-action 仍可能再造一个新对象
-          # (desktop-v0.2.274 就是 published 09:33 + draft 09:45 并存)。
-          # 这里直接 fail-fast:要重发就 bump 版本号,别在同一个 tag 上叠第二条。
-          published=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
-            --jq ".[] | select(.tag_name == \"$tag\" and .draft == false) | .id")
-          if [ -n "$published" ]; then
-            echo "::error::$tag 已经发布过了(release id: $published)。重发请先 bump 版本号。"
-            exit 1
-          fi
-
+      # 草稿的唯一性由 prepare-release 保证：这里不再按 tag 删除或创建 release。
       - uses: tauri-apps/tauri-action@944946e3e4cac6603d1fe8f514171e9ecd3c78aa # v1
         if: inputs.publish == true
         env:
@@ -505,6 +500,7 @@ jobs:
           tauriScript: ${{ runner.os == 'macOS' && format('bash {0}/retry-macos-dmg.sh', runner.temp) || '' }}
           tagName: desktop-v__VERSION__
           releaseName: ANet Desktop v__VERSION__
+          releaseId: ${{ needs.prepare-release.outputs.release_id }}
           releaseBody: |-
             Signed and notarized update for macOS (Apple Silicon), and signed update for Windows (x64). Ubuntu 24.04 (amd64) is included only when its installer is listed in this release.
 
@@ -2052,7 +2048,7 @@ jobs:
           if-no-files-found: error
 
   verify-draft:
-    needs: build-release
+    needs: [prepare-release, build-release]
     if: inputs.publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -2067,6 +2063,7 @@ jobs:
       - name: Require selected platform draft assets, updater entries, and checksums
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.prepare-release.outputs.release_id }}
           EXPECTED_COMMIT: ${{ inputs.commit }}
           INCLUDE_LINUX: ${{ inputs.include_linux }}
         run: node scripts/verify-desktop-release-draft.mjs
@@ -2157,7 +2154,7 @@ jobs:
   # browser_download_url，上传替换后**重新下载**断言五个 URL 都是公共下载链接、
   # 且能匿名 HEAD 到内容。缺映射/歧义/非公开链接一律 fail-closed，不静默带坏 URL 发布。
   normalize-updater-manifest:
-    needs: [attach-android-apk]
+    needs: [prepare-release, attach-android-apk]
     if: inputs.publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -2172,6 +2169,7 @@ jobs:
       - name: Normalize latest.json platform URLs to public download links
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.prepare-release.outputs.release_id }}
         run: |
           set -euo pipefail
           # 与 attach-android-apk 同一个来源：这次发布的版本号就是 package.json 的版本。

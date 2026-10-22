@@ -79,7 +79,8 @@ check('publish defaults to creating the draft and can be turned off',
   && workflow.includes('inputs.publish == false')
   && workflow.includes('Build signed bundles without uploading a release'));
 check('draft verification runs only when publishing',
-  workflow.includes('verify-desktop-release-draft.mjs') && workflow.includes('needs: build-release'));
+  workflow.includes('verify-desktop-release-draft.mjs')
+  && /verify-draft:[\s\S]{0,120}needs: \[prepare-release, build-release\]/.test(workflow));
 check('linux reuses the existing updater key and adds no secret',
   secretSet.join() === [
     'APPLE_API_ISSUER',

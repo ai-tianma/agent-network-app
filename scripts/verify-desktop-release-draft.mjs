@@ -116,7 +116,23 @@ function main() {
   const repository = process.env.GITHUB_REPOSITORY || 'sleep2agi/agent-network-app';
   const config = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
   const tag = `desktop-v${config.version}`;
-  const release = ghJson(['release', 'view', tag, '--repo', repository, '--json', 'isDraft,targetCommitish,assets']);
+  // 只按 release id 鉴权回读：draft 阶段的 `GET /releases/tags/{tag}` 不可靠
+  // （同 tag 可能有多个对象），prepare-release 已经把唯一 id 传下来。
+  const releaseId = process.env.RELEASE_ID || '';
+  if (!/^\d+$/.test(releaseId)) throw new Error('RELEASE_ID must be a numeric release id from prepare-release');
+  const rawRelease = ghJson(['api', `repos/${repository}/releases/${releaseId}`]);
+  const rawAssets = ghJson(['api', `repos/${repository}/releases/${releaseId}/assets?per_page=100`, '--paginate']);
+  const release = {
+    isDraft: rawRelease.draft,
+    targetCommitish: rawRelease.target_commitish,
+    assets: (Array.isArray(rawAssets) ? rawAssets : []).map((asset) => ({
+      name: asset.name,
+      state: asset.state,
+      digest: asset.digest,
+      apiUrl: asset.url,
+      url: asset.browser_download_url,
+    })),
+  };
   const latest = release.assets.find((asset) => asset.name === 'latest.json');
   if (!latest?.apiUrl) throw new Error(`${tag} has no latest.json asset`);
   const assetId = latest.apiUrl.split('/').pop();
