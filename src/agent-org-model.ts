@@ -117,7 +117,10 @@ export function parentCandidates(data: AgentOrgData, editing?: Department): { ro
   if (!data.departmentsApi || !permissioned) {
     return { root: true, departmentIds: new Set(data.departments.map(d => d.id)) };
   }
-  const root = data.departments.some(d => d.viewer_can?.manage === true);
+  // Root is owner/admin-only. A department head also gets manage=true on STRICT sub-departments,
+  // so `some(manage)` would wrongly open root; only a global signal (every department manageable)
+  // identifies owner/admin. Heads have manage=false on their own department.
+  const root = data.departments.every(d => d.viewer_can?.manage === true && d.viewer_can?.create_child === true);
   const departmentIds = new Set(data.departments.filter(d => d.viewer_can?.create_child === true).map(d => d.id));
   if (editing) for (const id of subtreeIds(orgTree(data), editing.id)) departmentIds.delete(id);
   return { root, departmentIds };

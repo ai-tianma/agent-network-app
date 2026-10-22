@@ -284,6 +284,12 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
   ck('parent picker: owner/admin can pick root and every department', admin.root && admin.departmentIds.has('a') && admin.departmentIds.has('b'));
   const head = parentCandidates(data([mk('own', null, { manage: false, create_child: true }), mk('other', null, { manage: false, create_child: false })]));
   ck('parent picker: department head cannot pick root and only sees create_child departments', !head.root && head.departmentIds.has('own') && !head.departmentIds.has('other'));
+  const headOfChild = parentCandidates(data([
+    mk('parent', null, { manage: false, create_child: true }),
+    mk('child', 'parent', { manage: true, create_child: true }),
+    mk('peer', null, { manage: true, create_child: false }),
+  ]));
+  ck('parent picker: manage on a strict sub-department does not open the network root', !headOfChild.root && headOfChild.departmentIds.has('parent') && headOfChild.departmentIds.has('child') && !headOfChild.departmentIds.has('peer'));
   const old = parentCandidates(data([mk('a'), mk('b')]));
   ck('parent picker: old Hub without viewer_can keeps the legacy list', old.root && old.departmentIds.size === 2);
   const editing = parentCandidates(data([mk('p', null, { manage: true, create_child: true }), mk('c', 'p', { manage: true, create_child: true }), mk('d', null, { manage: true, create_child: true })]), mk('p', null, { manage: true, create_child: true }));
