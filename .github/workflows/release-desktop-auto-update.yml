@@ -66,7 +66,8 @@ jobs:
             build-essential pkg-config patchelf libssl-dev libdbus-1-dev \
             libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
             librsvg2-dev libxdo-dev file \
-            gnome-keyring dbus-x11 xvfb
+            gnome-keyring dbus-x11 xvfb \
+            libsecret-tools
           command -v dpkg-deb
           command -v gnome-keyring-daemon
           command -v dbus-run-session
