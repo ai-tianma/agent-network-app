@@ -111,12 +111,13 @@ const measureTree = () => {
   return { rows, tabBar: !!tabBar && visible(tabBar) };
 };
 
+// 这一页是已知的「非卡片」布局（b78a5d60 之后）。按页名直接走树分支，并显式等树出现：
+// 之前用「先看树在不在」判分流，浅色通过、深色仍会因树晚一拍落到卡片分支量出 0。
+// 若树在 8 s 内没出现，下面的「至少一行」会红——那是真实问题（该页没渲染），不是被等待掩盖。
+const TREE_PAGES = new Set(['agentTeams']);
+
 const checkPage = async (page, name, theme) => {
-  // 先等内容（卡片或树任一）出现再分流：只判「树在不在」会因为树比子页容器晚一拍照样落到卡片分支，
-  // 于是又量出 0 卡片——这正是 CI 上复现的那条。8 s 是上限，不是放宽断言。
-  await page.locator('[data-testid="settings-kit-card"], [data-testid="agent-org-tree"]')
-    .first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
-  if (await page.locator(TREE).count()) {
+  if (TREE_PAGES.has(name) || await page.locator(TREE).count()) {
     await page.locator(TREE_ROW).first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(150);
     if (OUT) await page.screenshot({ path: `${OUT}/phone-${name}-${theme}.png`, fullPage: true });
