@@ -275,7 +275,7 @@ export function ChangelogPhone({ entries, online }: { entries: ChangelogEntry[];
             >
               <View style={styles.cardHeadPhone}>
                 {selecting ? <View testID={`changelog-check-${e.version}`}><Check on={on} /></View> : null}
-                <View style={styles.titleBox}>
+                <View style={styles.titleBox} testID={`changelog-titlestack-${e.version}`}>
                   <View style={styles.titleLine}>
                     <Text style={styles.versionPhone} testID={`changelog-version-${e.version}`}>v{e.version}</Text>
                     {e.version === APP_VERSION ? <View style={styles.badge}><Text style={styles.badgeText}>{tr('changelog.current')}</Text></View> : null}

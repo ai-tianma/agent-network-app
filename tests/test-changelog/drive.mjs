@@ -251,8 +251,16 @@ async function run({ phone }) {
   ck(`${vp}: 复制 inside the card with ≥ 12px to its right edge`, heads.every(h => h.card.x + h.card.w - (h.copy.x + h.copy.w) >= 12));
   if (phone) {
     // Phone: version + date stack on the left; 复制 is centred on that stack; card gutters 16 (settings-kit).
-    const stackCenter = h => (h.ver.y + (h.date ? h.date.y + h.date.h : h.ver.y + h.ver.h)) / 2;
-    ck(`${vp}: 复制 centred on the title stack`, heads.every(h => Math.abs(cy(h.copy) - stackCenter(h)) <= 1), heads.map(h => (cy(h.copy) - stackCenter(h)).toFixed(1)).join('/'));
+    // Measure the real title stack container rather than reconstructing it from the
+    // version and date boxes: with CJK fonts a wrapped line inside the stack changes its
+    // height without changing either box, and the reconstructed midpoint then drifts.
+    // Same intent (复制 centred on the stack), same 1px tolerance, measured on the element.
+    const deltas = [];
+    for (const h of heads) {
+      const stack = await box(page, tid(`changelog-titlestack-${h.v}`));
+      deltas.push(stack ? (cy(h.copy) - cy(stack)).toFixed(1) : 'missing');
+    }
+    ck(`${vp}: 复制 centred on the title stack`, deltas.every(d => d !== 'missing' && Math.abs(Number(d)) <= 1), deltas.join('/'));
     ck(`${vp}: 16px gutters both sides`, heads.every(h => Math.abs(h.card.x - 16) <= 0.5 && Math.abs(390 - (h.card.x + h.card.w) - 16) <= 0.5), `${heads[0].card.x} / ${390 - heads[0].card.x - heads[0].card.w}`);
     ck(`${vp}: 复制 touch target ≥ 36 high`, heads.every(h => h.copy.h >= 36), heads.map(h => h.copy.h).join('/'));
   } else {
