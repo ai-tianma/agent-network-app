@@ -53,6 +53,39 @@ const extraStub = () => {
       default: return invoke(cmd, args);
     }
   };
+  // #2051: the org page must measure at least one **named** department row. Without an answer for these
+  // two endpoints the harness catch-all returns { ok: true }, the tree only renders the synthetic
+  // `agent-org-dept-unassigned` row, and a page whose real department rows are all broken still passes.
+  // Fixtures are representative names/ids (no production data); the drive-only route override keeps
+  // other layout drives on the old generic stub.
+  const orgDepartments = [
+    { id: 'dept-eng', name: 'Engineering', parent_id: null, leader_user_id: null, sort: 0, member_count: 1 },
+    { id: 'dept-design', name: 'Design', parent_id: null, leader_user_id: null, sort: 1, member_count: 1 },
+  ];
+  window.__routeOverride = (u, bodyText, method) => {
+    const p = u.pathname;
+    if ((method || 'GET') === 'GET' && /^\/api\/networks\/[^/]+\/departments$/.test(p)) {
+      return {
+        ok: true,
+        departments: orgDepartments,
+        members: [
+          { user_id: 'u-eng-1', department_id: 'dept-eng' },
+          { user_id: 'u-des-1', department_id: 'dept-design' },
+        ],
+      };
+    }
+    if (p === '/api/requirements/people/directory') {
+      return {
+        ok: true, has_more: false, next_offset: null, agent_department_supported: true,
+        people: [
+          { user_id: 'u-eng-1', username: 'eng_lead', display_name: 'Eng Lead', department: { id: 'dept-eng', name: 'Engineering' }, agents: [{ node_id: 'n_eng_1', alias: 'eng-agent', department_id: 'dept-eng' }] },
+          { user_id: 'u-des-1', username: 'design_lead', display_name: 'Design Lead', department: { id: 'dept-design', name: 'Design' }, agents: [{ node_id: 'n_des_1', alias: 'design-agent', department_id: 'dept-design' }] },
+        ],
+        agents_without_owner: [],
+      };
+    }
+    return undefined;
+  };
 };
 
 // 在页内量:每张卡片的左右边距、每行的标签左边缘 / 高度 / › ✓ 右边缘 / 开关右边缘。
@@ -101,11 +134,25 @@ const TREE = '[data-testid="agent-org-tree"]';
 const TREE_ROW = '[data-testid^="agent-org-dept-"][role="button"]';
 const measureTree = () => {
   const visible = (el) => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0; };
+  // #2051: textContent alone passes zero-width/clipped labels. Mirror harness `paintedText`: intersect the
+  // label box with every overflow-hidden ancestor, and require the painted box to be ≥ 1×1.
+  const painted = (el) => {
+    const b = el.getBoundingClientRect();
+    let w = b.width, h = b.height;
+    for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      const r = a.getBoundingClientRect();
+      w = Math.min(w, Math.max(0, Math.min(b.right, r.right) - Math.max(b.left, r.left)));
+      h = Math.min(h, Math.max(0, Math.min(b.bottom, r.bottom) - Math.max(b.top, r.top)));
+    }
+    return w >= 1 && h >= 1;
+  };
   const rows = [...document.querySelectorAll('[data-testid^="agent-org-dept-"][role="button"]')]
     .filter(visible)
     .map(el => {
       const label = el.querySelector('[data-testid$="-label"]');
-      return { id: el.getAttribute('data-testid'), h: el.getBoundingClientRect().height, text: (label?.textContent || '').trim() };
+      return { id: el.getAttribute('data-testid'), h: el.getBoundingClientRect().height, text: (label?.textContent || '').trim(), painted: label ? painted(label) : false };
     });
   const tabBar = document.querySelector('[data-testid="mobile-tab-bar"]');
   return { rows, tabBar: !!tabBar && visible(tabBar) };
@@ -123,11 +170,13 @@ const checkPage = async (page, name, theme) => {
     if (OUT) await page.screenshot({ path: `${OUT}/phone-${name}-${theme}.png`, fullPage: true });
     const m = await page.evaluate(measureTree);
     const minH = m.rows.length ? Math.min(...m.rows.map(r => r.h)) : 0;
-    const blank = m.rows.filter(r => !r.text).map(r => r.id);
+    const blank = m.rows.filter(r => !r.text || !r.painted).map(r => r.id);
+    const named = m.rows.filter(r => r.id !== 'agent-org-dept-unassigned' && r.text && r.painted);
     table.push({ page: name, theme, layout: 'agent-org-tree', rows: m.rows.length, minRowH: minH, tabBar: m.tabBar });
     ck(`${theme} ${name}: 至少有部门/成员行`, m.rows.length > 0, String(m.rows.length));
     ck(`${theme} ${name}: 行高 ≥ 44(该页 departmentRow minHeight)`, m.rows.length > 0 && minH >= 44 - 0.5, `${minH.toFixed(1)} over ${m.rows.length}`);
     ck(`${theme} ${name}: 每行都有可读标签`, blank.length === 0, blank.join(',') || 'all labelled');
+    ck(`${theme} ${name}: 至少一行命名真实部门`, named.length > 0, named.map(r => r.text).join(',') || 'only unassigned');
     ck(`${theme} ${name}: 没有底部 tab 栏`, !m.tabBar);
     return m;
   }
