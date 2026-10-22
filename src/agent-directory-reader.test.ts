@@ -164,5 +164,30 @@ const statusBody = {
     assert.equal(dir.rows.length, 0, 'an empty expected scope fails closed');
   });
 
+  await check('a session row with identity but no alias makes the snapshot incomplete', async () => {
+    const { impl } = fakeFetch(url => (url.endsWith('/api/nodes')
+      ? { body: { ok: true, nodes: [{ node_id: 'n_a', network_id: 'net_a', alias: '知识库牛' }] } }
+      : { body: { ok: true, sessions: [{ node_id: 'n_a', network_id: 'net_a' }] } }));
+    const read = await fetchAgentDirectory(cfg, { scopeKey, fetchImpl: impl });
+    assert.equal(read.sessions.result, 'ok');
+    assert.equal(read.sessions.result === 'ok' ? read.sessions.complete : null, false);
+    const dir = buildAgentDirectory(read);
+    const kb = dir.rows.find(r => r.kind === 'registered');
+    assert.equal(kb?.association, 'unknown', 'incomplete evidence must not become "no session"');
+  });
+
+  await check('a node row whose alias is not a string makes the node snapshot incomplete', async () => {
+    const { impl } = fakeFetch(url => (url.endsWith('/api/nodes')
+      ? { body: { ok: true, nodes: [{ node_id: 'n_a', network_id: 'net_a', alias: 42 }] } }
+      : { body: { ok: true, sessions: [] } }));
+    const read = await fetchAgentDirectory(cfg, { scopeKey, fetchImpl: impl });
+    assert.equal(read.nodes.result === 'ok' ? read.nodes.complete : null, false);
+  });
+
+  await check('default transport is the app transport, not global fetch', async () => {
+    const src = await import('node:fs').then(fs => fs.readFileSync(new URL('./agent-directory-reader.ts', import.meta.url), 'utf8'));
+    assert.ok(/opts\.fetchImpl \?\? \(appFetch/.test(src), 'production must not fall back to global fetch');
+  });
+
   console.log(`${passed}/${passed} passed`);
 })();

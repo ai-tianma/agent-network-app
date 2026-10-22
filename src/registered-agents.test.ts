@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import type { AgentDirectoryRow } from './agent-directory';
-import { registeredAgentRows, registeredAgentSummary } from './registered-agents';
+import { registeredAgentRows, registeredAgentSummary, sessionIdentities } from './registered-agents';
 
 let passed = 0;
 const check = (name: string, run: () => void) => { run(); passed++; console.log(`PASS: ${name}`); };
@@ -54,5 +54,20 @@ check('summary separates certain no-session from unknown', () => {
 });
 check('matched and session-only rows never reach the block', () => {
   assert.equal(registeredAgentRows([matched, sessionOnly]).length, 0);
+});
+
+check('same alias in another network is NOT excluded (identity, not name)', () => {
+  const exclude = sessionIdentities([{ network_id: 'net_a', node_id: 'n_a' }]);
+  const otherNet = node({ association: 'no_session_record', session: null,
+    node: { node_id: 'n_a', network_id: 'net_b', alias: '知识库牛', node_name: null, runtime: null } }) as AgentDirectoryRow;
+  assert.equal(registeredAgentRows([otherNet], { excludeIdentities: exclude }).length, 1);
+});
+check('exact identity already shown as a session is excluded', () => {
+  const exclude = sessionIdentities([{ network_id: 'net_a', node_id: 'n_a' }]);
+  assert.equal(registeredAgentRows([noSession], { excludeIdentities: exclude }).length, 0);
+});
+check('legacy session without identity does not exclude anything', () => {
+  const exclude = sessionIdentities([{ network_id: 'net_a', node_id: null }, {} as never]);
+  assert.equal(registeredAgentRows([noSession], { excludeIdentities: exclude }).length, 1);
 });
 console.log(`${passed}/${passed} passed`);

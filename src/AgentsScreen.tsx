@@ -38,7 +38,7 @@ import { fetchStatus, fetchUserMessages, takeStatusPrefetch, type HubConfig, typ
 import { loadSessionsCache, saveSessionsCache } from './storage';
 import RegisteredAgentsSection from './RegisteredAgentsSection';
 import { useAgentDirectory } from './agent-directory-hook';
-import { registeredAgentRows } from './registered-agents';
+import { registeredAgentRows, sessionIdentities } from './registered-agents';
 import { colors, onThemeChange, radius, spacing, statusColor, themeMode, type, weight } from './theme';
 import { shadowOnly } from './elevation';
 import { ds, fs, listText, uiScale } from './ui-scale';
@@ -478,9 +478,13 @@ export default function AgentsScreen({
   // #725: only rows that prove a registered identity, minus aliases the list already
   // shows as real sessions (double-rendering the same name would be worse than hiding it).
   const registeredRows = useMemo(() => {
-    const sessionAliases = new Set(sessions.map(s => s.alias));
-    return registeredAgentRows(agentDirectory.rows, { query, match: pinyinMatch })
-      .filter(row => !sessionAliases.has(row.alias));
+    // Dedupe by exact (network_id, node_id) only: a shared alias across networks is
+    // a different node, and a legacy session without identity proves nothing.
+    return registeredAgentRows(agentDirectory.rows, {
+      query,
+      match: pinyinMatch,
+      excludeIdentities: sessionIdentities(sessions),
+    });
   }, [agentDirectory.rows, sessions, query]);
   const shownCount = countShown(sections);
   const shownSections = useMemo(() => applyCollapsed(sections, collapsed, query), [sections, collapsed, query]);

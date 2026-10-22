@@ -19,12 +19,28 @@ export type RegisteredAgentRow = {
   actionable: false;
 };
 
+/**
+ * Identities the list already renders as real sessions. Only rows whose exact
+ * (network_id, node_id) is in this set are skipped: a bare alias match is NOT
+ * evidence of the same node (two networks can legitimately share a name).
+ */
+export function sessionIdentities(sessions: readonly { network_id?: string | null; node_id?: string | null }[]): Set<string> {
+  const out = new Set<string>();
+  for (const s of sessions) {
+    if (typeof s.network_id === 'string' && s.network_id && typeof s.node_id === 'string' && s.node_id) {
+      out.add(JSON.stringify([s.network_id, s.node_id]));
+    }
+  }
+  return out;
+}
+
 export function registeredAgentRows(
   rows: readonly AgentDirectoryRow[],
-  opts: { query?: string; match?: Matcher } = {},
+  opts: { query?: string; match?: Matcher; excludeIdentities?: Set<string> } = {},
 ): RegisteredAgentRow[] {
   const match = opts.match ?? substringMatch;
   const q = (opts.query ?? '').trim();
+  const exclude = opts.excludeIdentities;
   const out: RegisteredAgentRow[] = [];
   const seen = new Set<string>();
   for (const row of rows) {
@@ -38,6 +54,7 @@ export function registeredAgentRows(
     if (!node.node_id || !node.network_id) continue;
     const key = `node:${JSON.stringify([node.network_id, node.node_id])}`;
     if (seen.has(key)) continue;
+    if (exclude?.has(JSON.stringify([node.network_id, node.node_id]))) continue;
     seen.add(key);
     if (q && !match(alias, q)) continue;
     out.push({

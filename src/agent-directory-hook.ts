@@ -2,7 +2,16 @@
 //
 // Kept deliberately separate from the 10 s status poll: the full /api/status
 // projection is far heavier than `light=1`, so this refreshes slowly and never
-// blocks the chat list. A failed read leaves the previous rows alone.
+// blocks the chat list.
+//
+// Failure policy (this is the part that is easy to get wrong):
+//   - a *transient* failure (one endpoint unavailable / aborted / non-JSON) must
+//     NOT overwrite known rows with an empty directory, and must not claim the
+//     rows are current — it marks them stale and keeps them;
+//   - a *first* read that never succeeded keeps the block hidden (loaded=false),
+//     so nothing claims "no registered nodes";
+//   - a scope change (different profile/account/hub) resets everything, because
+//     rows from another authorization must never be reused.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { HubConfig } from './api';
 import { buildAgentDirectory, type AgentDirectory, type AgentDirectoryRow } from './agent-directory';
@@ -12,30 +21,57 @@ const REFRESH_MS = 120_000;
 
 export type AgentDirectoryState = {
   rows: AgentDirectoryRow[];
-  /** false until one authorized read finished; the block must not claim "none" before that. */
+  /** True only after an authorized read produced a usable directory. */
   loaded: boolean;
+  /** True when the last attempt failed and `rows` are from an earlier successful read. */
+  stale: boolean;
   nodesRead: AgentDirectory['nodesRead'] | null;
   sessionsRead: AgentDirectory['sessionsRead'] | null;
 };
 
+const EMPTY: AgentDirectoryState = { rows: [], loaded: false, stale: false, nodesRead: null, sessionsRead: null };
+
+/** Authorization scope identity. Changing any of these invalidates cached rows. */
+export function directoryScope(cfg: HubConfig): string {
+  return [cfg.serverUrl, cfg.profileId ?? 'legacy', cfg.username ?? ''].join('\u0000');
+}
+
 export function useAgentDirectory(cfg: HubConfig | null, enabled: boolean): AgentDirectoryState {
-  const [state, setState] = useState<AgentDirectoryState>({ rows: [], loaded: false, nodesRead: null, sessionsRead: null });
+  const [state, setState] = useState<AgentDirectoryState>(EMPTY);
   const generation = useRef(0);
+  const scopeRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     if (!cfg || !enabled) return;
+    const scope = directoryScope(cfg);
+    // Authorization scope changed: drop rows from the previous authorization
+    // instead of showing them under the new one.
+    if (scopeRef.current !== scope) {
+      scopeRef.current = scope;
+      setState(EMPTY);
+    }
     const gen = ++generation.current;
-    // The scope key binds account scope + this generation, so a late reply from
-    // an older read cannot answer the current question.
-    const scopeKey = `agents-directory:${cfg.profileId ?? 'legacy'}:${gen}`;
+    const scopeKey = `agents-directory:${scope}:${gen}`;
     try {
       const read = await fetchAgentDirectory(cfg, { scopeKey });
       if (gen !== generation.current) return;
       const dir = buildAgentDirectory(read);
-      setState({ rows: dir.rows, loaded: true, nodesRead: dir.nodesRead, sessionsRead: dir.sessionsRead });
+      // A read is only usable when both endpoints answered. Otherwise keep what we
+      // had (marked stale) and never present an empty directory as the truth.
+      const usable = dir.nodesRead === 'ok' && dir.sessionsRead === 'ok';
+      setState(prev => usable
+        ? { rows: dir.rows, loaded: true, stale: false, nodesRead: dir.nodesRead, sessionsRead: dir.sessionsRead }
+        : {
+            ...prev,
+            // First-ever failure: stay unloaded (hidden), do not claim "none".
+            loaded: prev.loaded,
+            stale: prev.loaded,
+            nodesRead: dir.nodesRead,
+            sessionsRead: dir.sessionsRead,
+          });
     } catch {
-      // keep the previous rows; never turn a failure into "nothing registered"
-      if (gen === generation.current) setState(prev => ({ ...prev }));
+      if (gen !== generation.current) return;
+      setState(prev => ({ ...prev, stale: prev.loaded }));
     }
   }, [cfg, enabled]);
 
@@ -44,7 +80,12 @@ export function useAgentDirectory(cfg: HubConfig | null, enabled: boolean): Agen
     let alive = true;
     void load();
     const timer = setInterval(() => { if (alive) void load(); }, REFRESH_MS);
-    return () => { alive = false; clearInterval(timer); };
+    return () => {
+      alive = false;
+      // Invalidate in-flight replies so a late answer cannot land on a later scope.
+      generation.current++;
+      clearInterval(timer);
+    };
   }, [cfg, enabled, load]);
 
   return state;

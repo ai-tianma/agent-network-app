@@ -26,14 +26,14 @@ export default function RegisteredAgentsSection(props: {
       <Pressable
         testID="registered-agents-header"
         accessibilityRole="button"
-        accessibilityLabel={`已登记未启动 ${rows.length} 个节点，${collapsed ? '已折叠' : '已展开'}`}
+        accessibilityLabel={`已登记节点 ${rows.length} 个，${collapsed ? '已折叠' : '已展开'}`}
         accessibilityState={{ expanded: !collapsed }}
         onPress={onToggle}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 34, paddingHorizontal: spacing.md, backgroundColor: compact ? colors.listBg : colors.bg }}
       >
         <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={12} color={colors.textMuted} />
         <Text selectable={false} numberOfLines={1} style={{ flex: 1, color: colors.textMuted, fontSize: 12 }}>
-          已登记 · 未启动
+          已登记节点
         </Text>
         <Text selectable={false} testID="registered-agents-count" style={{ color: colors.textMuted, fontSize: 12 }}>
           {rows.length}
