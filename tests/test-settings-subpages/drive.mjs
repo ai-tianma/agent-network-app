@@ -93,7 +93,44 @@ const titleIs = async (page, want) => {
 };
 
 const table = [];
+// b78a5d60 把「成员/团队」子页从 settings-kit 卡片改成自定义树（AgentOrgScreen）：
+// 该页不再产出 settings-kit-card，但自己的行契约还在（departmentRow 的 minHeight 44）。
+// 所以按结构分流：有卡片的页量卡片；agent-org-tree 量树行。两种都仍然要求
+// 「有内容 + 行高够 + 每行有可读标签」，不是删断言、也不是放宽到「有节点就行」。
+const TREE = '[data-testid="agent-org-tree"]';
+const TREE_ROW = '[data-testid^="agent-org-dept-"][role="button"]';
+const measureTree = () => {
+  const visible = (el) => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0; };
+  const rows = [...document.querySelectorAll('[data-testid^="agent-org-dept-"][role="button"]')]
+    .filter(visible)
+    .map(el => {
+      const label = el.querySelector('[data-testid$="-label"]');
+      return { id: el.getAttribute('data-testid'), h: el.getBoundingClientRect().height, text: (label?.textContent || '').trim() };
+    });
+  const tabBar = document.querySelector('[data-testid="mobile-tab-bar"]');
+  return { rows, tabBar: !!tabBar && visible(tabBar) };
+};
+
+// 这一页是已知的「非卡片」布局（b78a5d60 之后）。按页名直接走树分支，并显式等树出现：
+// 之前用「先看树在不在」判分流，浅色通过、深色仍会因树晚一拍落到卡片分支量出 0。
+// 若树在 8 s 内没出现，下面的「至少一行」会红——那是真实问题（该页没渲染），不是被等待掩盖。
+const TREE_PAGES = new Set(['agentTeams']);
+
 const checkPage = async (page, name, theme) => {
+  if (TREE_PAGES.has(name) || await page.locator(TREE).count()) {
+    await page.locator(TREE_ROW).first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(150);
+    if (OUT) await page.screenshot({ path: `${OUT}/phone-${name}-${theme}.png`, fullPage: true });
+    const m = await page.evaluate(measureTree);
+    const minH = m.rows.length ? Math.min(...m.rows.map(r => r.h)) : 0;
+    const blank = m.rows.filter(r => !r.text).map(r => r.id);
+    table.push({ page: name, theme, layout: 'agent-org-tree', rows: m.rows.length, minRowH: minH, tabBar: m.tabBar });
+    ck(`${theme} ${name}: 至少有部门/成员行`, m.rows.length > 0, String(m.rows.length));
+    ck(`${theme} ${name}: 行高 ≥ 44(该页 departmentRow minHeight)`, m.rows.length > 0 && minH >= 44 - 0.5, `${minH.toFixed(1)} over ${m.rows.length}`);
+    ck(`${theme} ${name}: 每行都有可读标签`, blank.length === 0, blank.join(',') || 'all labelled');
+    ck(`${theme} ${name}: 没有底部 tab 栏`, !m.tabBar);
+    return m;
+  }
   await page.waitForTimeout(500);
   if (OUT) await page.screenshot({ path: `${OUT}/phone-${name}-${theme}.png`, fullPage: true });
   const m = await page.evaluate(measure);
