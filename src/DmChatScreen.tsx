@@ -470,7 +470,7 @@ export default function DmChatScreen({ cfg, networkId, peer: peerProp, group, on
             <Text style={styles.back}>‹</Text>
           </Pressable>
         ) : null}
-        {isGroup ? <GroupAvatar size={32} /> : <HumanAvatar hubUrl={cfg.serverUrl} person={peer} size={32} testID="dm-peer-avatar" />}
+        {isGroup ? <GroupAvatar size={32} /> : <HumanAvatar hubUrl={cfg.serverUrl} token={cfg.token} person={peer} size={32} testID="dm-peer-avatar" />}
         <View style={styles.headerTitleCol}>
           <Text style={styles.title} numberOfLines={1} testID="dm-header-title">{name}</Text>
           <Text style={styles.subtitle} numberOfLines={1} testID="dm-header-subtitle">
@@ -498,7 +498,7 @@ export default function DmChatScreen({ cfg, networkId, peer: peerProp, group, on
               <View style={styles.bubbleWrap} testID={`dm-msg-${out ? 'out' : 'in'}`}>
                 {showHeader && item.created_at ? <ChatTimePill time={formatChatHeader(item.created_at)} boxStyle={styles.timePill} textStyle={styles.timePillText} testID="dm-time-pill" /> : null}
                 <View style={[styles.messageRow, out ? styles.sentRow : styles.replyRow]}>
-                  {out ? null : isGroup ? <AliasAvatar alias={from.username} size={36} /> : <HumanAvatar hubUrl={cfg.serverUrl} person={peer} size={36} testID="dm-incoming-avatar" />}
+                  {out ? null : isGroup ? <AliasAvatar alias={from.username} size={36} /> : <HumanAvatar hubUrl={cfg.serverUrl} token={cfg.token} person={peer} size={36} testID="dm-incoming-avatar" />}
                   <View style={[styles.messageContent, out && styles.sentContent, !out && bubbleCap]}>
                     <ChatMetaLine name={out ? me : from.name} time={item.created_at ? formatChatHeader(item.created_at) : ''} textStyle={styles.messageAuthor} style={styles.authorRow} testID="dm-author" />
                     <View style={[styles.bubble, !out && styles.replyBubble, !out && desktop && styles.replyBubbleDesktop]} testID="dm-bubble">

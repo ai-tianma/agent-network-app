@@ -39,6 +39,21 @@ export const agentOrgTranslations = {
   'agentOrg.searchOptions': ['搜索名称', 'Search by name'],
   'agentOrg.noResults': ['没有匹配结果，试试其他关键词', 'No matches. Try another search.'],
   'agentOrg.close': ['关闭', 'Close'],
+  'agentOrg.newDepartment': ['新建根部门', 'New root department'],
+  'agentOrg.newChild': ['新建子部门', 'New child department'],
+  'agentOrg.renameDepartment': ['重命名部门', 'Rename department'],
+  'agentOrg.reparentDepartment': ['调整上级部门', 'Change parent department'],
+  'agentOrg.sharedTree': ['这里编辑的是与人类成员共用的部门树，不是独立的 Agent 部门树。新建、改名和调整层级也会影响人员组织架构；Agent 归属仍需单独保存。权限由 Hub 校验。', 'This is the department tree shared with human members, not a separate Agent tree. Creating, renaming or reparenting departments also changes the people organization. Agent placement is saved separately. The Hub enforces permissions.'],
+  'agentOrg.departmentName': ['部门名称', 'Department name'],
+  'agentOrg.departmentNameInvalid': ['请输入 1–40 个字的部门名称', 'Enter a department name of 1–40 characters'],
+  'agentOrg.parentDepartment': ['上级部门', 'Parent department'],
+  'agentOrg.networkRoot': ['网络根级（无上级部门）', 'Network root (no parent department)'],
+  'agentOrg.departmentForbidden': ['没有权限修改此部门或目标层级，请联系管理员；部门负责人只能修改授权范围。', 'You cannot edit this department or target hierarchy. Contact an admin; department heads can only edit within their authorized scope.'],
+  'agentOrg.departmentUnsupported': ['当前 Hub 不支持部门编辑，请先升级 Hub。', 'This Hub does not support department editing. Upgrade the Hub.'],
+  'agentOrg.departmentConflict': ['同一上级下已有同名部门，或数据发生冲突。请修改名称或重新打开后再试。', 'A sibling department already has this name, or the data conflicts. Change the name or reopen and retry.'],
+  'agentOrg.departmentHierarchyInvalid': ['不能移到自己或下级部门下面，且部门最多 10 层。', 'A department cannot be moved under itself or its descendants. The maximum depth is 10.'],
+  'agentOrg.departmentRefreshFailed': ['Hub 已确认保存，但刷新失败。请重试刷新，不会重复提交。', 'The Hub confirmed the save, but refresh failed. Retry refresh; the change will not be submitted again.'],
+  'agentOrg.retryRefresh': ['重试刷新', 'Retry refresh'],
 } as const;
 
 registerTranslations(agentOrgTranslations);

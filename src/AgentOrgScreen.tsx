@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, View, type PressableStateCallbackType } from 'react-native';
 import { Text, TextInput } from './ui-text';
 import { colors, onThemeChange, spacing, type as typeScale, radius } from './theme';
@@ -9,7 +9,8 @@ import { listenEscapeClose } from './escape-close';
 import type { HubConfig } from './api';
 import { loadAgentOrg, moveAgentDepartment } from './agent-org-api';
 import { agentCount, agentsDirectlyIn, orgTree, placeAgents, type AgentOrgData, type DemoMove, type PlacedAgent } from './agent-org-model';
-import { childrenOf, flattenTree } from './org-model';
+import { childrenOf, deptPathLabel, flattenTree, subtreeIds, type Department } from './org-model';
+import { createDepartment, updateDepartment, OrgRequestError } from './org-api';
 import { SettingsButton, SettingsChoiceRow, SettingsGroup, SettingsRow } from './settings-kit';
 import { useTranslation } from './i18n-react';
 import './i18n-agent-org';
@@ -43,6 +44,8 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
   const [pickDept, setPickDept] = useState<string | null | undefined>(undefined);
   const [adjustNote, setAdjustNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deptEditor, setDeptEditor] = useState<{ dept?: Department; parent: string | null; mode: 'create' | 'rename' | 'reparent' } | null>(null);
+  const [deptNote, setDeptNote] = useState('');
 
   useEffect(() => {
     let live = true;
@@ -71,6 +74,15 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
 
   return (
     <View>
+      {data ? <View style={styles.actions} testID="agent-org-department-actions">
+        <SettingsButton label={t('agentOrg.newDepartment')} disabled={!data.departmentsApi || saving} testID="agent-org-new-department" onPress={() => { setDeptNote(''); setDeptEditor({ mode: 'create', parent: null }); }} />
+        {focus && data.departments.find(d => d.id === focus)?.viewer_can?.create_child !== false ? <SettingsButton label={t('agentOrg.newChild')} disabled={!data.departmentsApi || saving} testID="agent-org-new-child" onPress={() => { setDeptNote(''); setDeptEditor({ mode: 'create', parent: focus }); }} /> : null}
+        {focus && data.departments.find(d => d.id === focus)?.viewer_can?.manage !== false ? <>
+          <SettingsButton label={t('agentOrg.renameDepartment')} disabled={!data.departmentsApi || saving} testID="agent-org-rename-department" onPress={() => { const dept = data.departments.find(d => d.id === focus); if (dept) { setDeptNote(''); setDeptEditor({ mode: 'rename', dept, parent: dept.parent_id }); } }} />
+          <SettingsButton label={t('agentOrg.reparentDepartment')} disabled={!data.departmentsApi || saving} testID="agent-org-reparent-department" onPress={() => { const dept = data.departments.find(d => d.id === focus); if (dept) { setDeptNote(''); setDeptEditor({ mode: 'reparent', dept, parent: dept.parent_id }); } }} />
+        </> : null}
+      </View> : null}
+      {deptNote ? <Text accessibilityLiveRegion="polite" testID="agent-org-department-result" style={[styles.note, { padding: spacing.md }]}>{deptNote}</Text> : null}
       {phase.kind === 'loading' ? (
         <SettingsGroup testID="agent-org-loading"><SettingsRow label={t('agentOrg.loading')} /></SettingsGroup>
       ) : null}
@@ -116,7 +128,7 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
           pickAgent={pickAgent}
           pickDept={pickDept}
           note={adjustNote}
-          saving={saving}
+          saving={saving || !!deptEditor}
           onPickAgent={setPickAgent}
           onPickDept={setPickDept}
           onApply={() => {
@@ -144,8 +156,78 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
           }}
         />
       ) : null}
+      {data && deptEditor ? <DepartmentEditor cfg={p.cfg} networkId={p.networkId} data={data} editor={deptEditor} onClose={() => setDeptEditor(null)} onSaved={async department => {
+        const refreshed = await loadAgentOrg(p.cfg, p.networkId);
+        if (!refreshed?.departmentsApi || !refreshed.departments.some(d => d.id === department.id)) throw new Error('refresh');
+        setPhase({ kind: 'ready', data: refreshed });
+        setMoves([]);
+        setFocus(department.id);
+        setDeptNote(t('agentOrg.saved'));
+        setDeptEditor(null);
+      }} /> : null}
     </View>
   );
+}
+
+function DepartmentEditor(p: { cfg: HubConfig; networkId: string; data: AgentOrgData; editor: { dept?: Department; parent: string | null; mode: 'create' | 'rename' | 'reparent' }; onClose: () => void; onSaved: (dept: Department) => Promise<void> }) {
+  const { t } = useTranslation();
+  const [name, setName] = useState(p.editor.dept?.name ?? '');
+  const [parent, setParent] = useState(p.editor.parent);
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState<Department | null>(null);
+  const pending = useRef(false);
+  const close = () => { if (!pending.current) p.onClose(); };
+  useEffect(() => listenEscapeClose(close), [p.onClose]);
+  const tree = orgTree(p.data);
+  const excluded = p.editor.dept ? subtreeIds(tree, p.editor.dept.id) : new Set<string>();
+  const validName = !!name.trim() && [...name.trim()].length <= 40;
+  const validParent = !parent || (!excluded.has(parent) && p.data.departments.some(d => d.id === parent));
+  const save = async () => {
+    if (pending.current || !validName || !validParent) return;
+    pending.current = true;
+    setBusy(true); setError('');
+    let confirmed = saved;
+    try {
+      if (!confirmed) {
+        // Omitted leader/sort fields are preserved by the Hub, including concurrent changes.
+        const result = p.editor.dept
+          ? await updateDepartment(p.cfg, p.networkId, p.editor.dept.id, p.editor.mode === 'rename' ? { name: name.trim() } : { parent_id: parent })
+          : await createDepartment(p.cfg, p.networkId, { name: name.trim(), parent_id: parent });
+        if (!result || typeof result.id !== 'string' || !result.id.trim() || typeof result.name !== 'string' || !result.name.trim() || (p.editor.dept && result.id !== p.editor.dept.id)) throw new Error('invalid response');
+        confirmed = result;
+        setSaved(result);
+      }
+      await p.onSaved(confirmed);
+    } catch (e) {
+      setError(t(confirmed ? 'agentOrg.departmentRefreshFailed'
+        : e instanceof OrgRequestError && (e.status === 401 || e.status === 403) ? 'agentOrg.departmentForbidden'
+        : e instanceof OrgRequestError && (e.status === 405 || e.status === 501 || (e.status === 404 && e.code !== 'department_not_found')) ? 'agentOrg.departmentUnsupported'
+        : e instanceof OrgRequestError && e.status === 409 ? 'agentOrg.departmentConflict'
+        : e instanceof OrgRequestError && (e.code === 'department_cycle' || e.code === 'department_too_deep') ? 'agentOrg.departmentHierarchyInvalid'
+        : e instanceof OrgRequestError && (e.code === 'parent_not_found' || e.code === 'department_not_found') ? 'agentOrg.saveNoDepartment'
+        : 'agentOrg.saveFailed'));
+    } finally { pending.current = false; setBusy(false); }
+  };
+  const rows = flattenTree(tree).filter(row => !excluded.has(row.dept.id));
+  return <DialogFrame title={t(p.editor.mode === 'create' ? (p.editor.parent ? 'agentOrg.newChild' : 'agentOrg.newDepartment') : p.editor.mode === 'rename' ? 'agentOrg.renameDepartment' : 'agentOrg.reparentDepartment')} closeLabel={t('agentOrg.close')} onClose={close} height={p.editor.mode === 'rename' ? undefined : 640} testID="agent-org-department-editor"
+    footer={<SettingsButton label={t(busy ? 'agentOrg.saving' : saved ? 'agentOrg.retryRefresh' : 'agentOrg.demoApply')} disabled={busy || !validName || !validParent} onPress={() => void save()} testID="agent-org-department-save" />}>
+    <Text testID="agent-org-shared-tree-note" style={styles.note}>{t('agentOrg.sharedTree')}</Text>
+    {p.editor.mode !== 'reparent' ? <>
+      <Text style={styles.note}>{t('agentOrg.departmentName')}</Text>
+      <View style={styles.search}><TextInput autoFocus editable={!busy && !saved} testID="agent-org-department-name" value={name} onChangeText={setName} accessibilityLabel={t('agentOrg.departmentName')} placeholder={t('agentOrg.departmentName')} placeholderTextColor={colors.textMuted} style={styles.searchInput} /></View>
+      {!validName ? <Text style={styles.note} testID="agent-org-department-validation">{t('agentOrg.departmentNameInvalid')}</Text> : null}
+    </> : <Text style={styles.title}>{name}</Text>}
+    {p.editor.mode !== 'rename' ? <>
+      <Text style={styles.note}>{t('agentOrg.parentDepartment')}</Text>
+      <Text testID="agent-org-department-parent-value" style={styles.note}>{parent ? deptPathLabel(tree, parent) : t('agentOrg.networkRoot')}</Text>
+      <View style={styles.search}><TextInput value={query} onChangeText={setQuery} accessibilityLabel={t('agentOrg.searchOptions')} placeholder={t('agentOrg.searchOptions')} placeholderTextColor={colors.textMuted} style={styles.searchInput} testID="agent-org-department-parent-search" /></View>
+      <SettingsChoiceRow label={t('agentOrg.networkRoot')} selected={parent === null} disabled={busy || !!saved} onPress={() => setParent(null)} testID="agent-org-parent-root" />
+      {rows.filter(row => deptPathLabel(tree, row.dept.id).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(row => <SettingsChoiceRow key={row.dept.id} label={deptPathLabel(tree, row.dept.id)} selected={parent === row.dept.id} disabled={busy || !!saved} onPress={() => setParent(row.dept.id)} testID={`agent-org-parent-${row.dept.id}`} />)}
+    </> : null}
+    {error ? <Text accessibilityRole="alert" testID="agent-org-department-error" style={[styles.note, { color: colors.failed }]}>{error}</Text> : null}
+  </DialogFrame>;
 }
 
 function DepartmentTree(p: { data: AgentOrgData; placed: PlacedAgent[]; focus: string | null | undefined; onFocus: (id: string | null) => void }) {
@@ -317,6 +399,7 @@ function StructureSelector(p: { title: string; options: { id: string | null; lab
 }
 
 const makeStyles = () => StyleSheet.create({
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, padding: spacing.md },
   workspace: { marginHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.surface, backgroundColor: colors.card, overflow: 'hidden' },
   sectionLabel: { color: colors.textMuted, fontSize: typeScale.small, fontWeight: '600', padding: spacing.sm, marginBottom: spacing.xs },
   departmentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, paddingRight: spacing.sm, marginBottom: 2, borderRadius: radius.item },

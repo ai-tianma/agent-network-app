@@ -721,7 +721,7 @@ export default function AgentsScreen({
           ]}
         >
           <View style={styles.avatarWrap}>
-            <HumanAvatar hubUrl={cfg.serverUrl} person={p} size={34} />
+            <HumanAvatar hubUrl={cfg.serverUrl} token={cfg.token} person={p} size={34} />
             {presence ? (
               <View
                 testID={`person-dot-${p.username}`}
@@ -747,7 +747,7 @@ export default function AgentsScreen({
         style={({ pressed }) => [rowStyles.row, { backgroundColor: selected ? colors.rowActive : pressed ? colors.rowHover : colors.bg }]}
       >
         <View style={rowStyles.avatar}>
-          <HumanAvatar hubUrl={cfg.serverUrl} person={p} size={rowGeom().avatar} fixedSize />
+          <HumanAvatar hubUrl={cfg.serverUrl} token={cfg.token} person={p} size={rowGeom().avatar} fixedSize />
           {presence ? (
             <View
               testID={`person-dot-${p.username}`}

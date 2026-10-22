@@ -4,6 +4,11 @@ import { registerTranslations } from './i18n';
 registerTranslations({
   'users.title': ['用户管理', 'User management'],
   'users.members': ['成员', 'Members'],
+  'users.searchMembers': ['搜索姓名或用户名', 'Search name or username'],
+  'users.allRoles': ['全部', 'All'],
+  'users.noMemberMatch': ['没有匹配的成员，试试其他关键词或角色', 'No matching members. Try another name or role.'],
+  'users.noMembers': ['这个网络还没有成员', 'This network has no members yet'],
+  'users.editMember': ['编辑 {name} 的成员设置', 'Edit member settings for {name}'],
   'users.newUser': ['新建用户', 'New user'],
   'users.you': ['（你）', ' (you)'],
   'users.role.owner': ['所有者', 'Owner'],
