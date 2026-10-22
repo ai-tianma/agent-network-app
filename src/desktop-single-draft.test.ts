@@ -219,5 +219,14 @@ ck('创建/复用 release 之前先跑 exact-merged-commit 门',
   /prepare-release:[\s\S]{0,900}- name: Require exact merged commit[\s\S]{0,1200}node scripts\/prepare-desktop-release\.mjs/.test(wf));
 ck('prepare 的 checkout 有完整历史', /prepare-release:[\s\S]{0,400}fetch-depth: 0/.test(wf));
 
+
+// 5. #1037 的「只认本次 run 新建的草稿」：0.2.287 run 39827091918 里 Windows 绑到了上一单
+// 残留的旧草稿 420987662，macOS 后来把它删掉，Windows 上传就 Not Found。
+// #1034 的最终形态不再靠 created_at 猜：prepare-release 在构建前就确定唯一 release_id，
+// 所有 matrix 只认它，因此这里断言「不再有按 run_started/created_at 的等待步」。
+ck('不再按 run_started/created_at 猜草稿归属', !wf.includes('run_started_at') && !wf.includes('created_at >'));
+ck('prepare-release 是唯一的创建入口',
+  !/Remove stale draft releases for this tag/.test(wf) && /node scripts\/prepare-desktop-release\.mjs/.test(wf));
+
 console.log(`\n${p}/${t} passed`);
 if (p !== t) process.exit(1);
