@@ -43,5 +43,14 @@ ck('草稿计数按行数取（跨页只得到一个整数）',
 ck('草稿计数不再直接比较 paginate 的 length 输出',
   !/count=\$\(gh api[\s\S]{0,200}?\|\s*length"\)/.test(wf));
 
+
+// 5. 等待步必须只认「本次 run 新建的」草稿。上一单残留的草稿同样带 darwin 资产：
+// 0.2.287 run 39827091918 里 Windows 在 18:03:12Z 绑到旧的 420987662，macOS 18:09
+// 清理时把它删掉，Windows 上传直接 `Not Found - .../releases/assets`。
+ck('等待步按 run_started_at 过滤旧草稿',
+  /run_started=\$\(gh api[^\n]*actions\/runs\/\$GITHUB_RUN_ID[^\n]*run_started_at/.test(wf));
+ck('等待步要求 draft.created_at 晚于本次 run',
+  /\.draft == true and \.created_at > \\"\$run_started\\"/.test(wf));
+
 console.log(`\n${p}/${t} passed`);
 if (p !== t) process.exit(1);

@@ -505,9 +505,14 @@ jobs:
           version=$(node -p 'require("./package.json").version')
           tag="desktop-v$version"
           mac_asset="ANet_${version}_aarch64.app.tar.gz"
+          # 只认本次 run 期间新建的草稿。上一单的残留草稿也带着 darwin 资产，
+          # 0.2.287 run 39827091918 就是这样：Windows 在 18:03:12Z 绑到旧的
+          # 420987662，macOS 18:09 清理时把它删了，Windows 上传时报
+          # `Not Found - .../releases/assets`。run_started_at 之前的草稿一律跳过。
+          run_started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .run_started_at)
           for attempt in $(seq 1 120); do
             id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
-              --jq ".[] | select(.tag_name == \"$tag\" and .draft == true) | .id" | head -1)
+              --jq ".[] | select(.tag_name == \"$tag\" and .draft == true and .created_at > \"$run_started\") | .id" | head -1)
             if [ -n "$id" ]; then
               has_mac=$(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" \
                 --jq ".[] | select(.name == \"$mac_asset\") | .id" | head -1)
