@@ -132,17 +132,12 @@ export function prepareReleaseDraft({
     }
     const pages = listAssets(plan.releaseId);
     const assets = (Array.isArray(pages) ? pages : []).flat();
-    const stale = staleAssetsFor(assets, { includeLinux });
-    // include_linux=false 时旧 latest.json 可能仍带 linux 条目，即使 .deb/.sig
-    // 已被上一次失败尝试删掉也必须独立回收，让本次构建重写它。
-    const staleManifests = includeLinux
-      ? []
-      : assets.filter((candidate) => candidate?.name === 'latest.json')
-        .map((asset) => ({ id: asset.id, name: asset.name }));
-    const removedAssets = [...stale, ...staleManifests];
+    // 旧 draft 可能来自上一次 run，即使 target commit 相同也不能把其中的
+    // macOS / Windows / Linux / manifest 任一资产当成本次产物。只复用 release id，
+    // 构建前清空全部旧资产，由本次 matrix 完整重传。
+    const removedAssets = assets.map((asset) => ({ id: asset.id, name: asset.name }));
     for (const asset of removedAssets) {
-      const reason = asset.name === 'latest.json' ? 'so this run rewrites it' : `because include_linux=${includeLinux}`;
-      log(`${tag}: removing stale asset ${asset.name} (id ${asset.id}) ${reason}`);
+      log(`${tag}: removing prior-run asset ${asset.name} (id ${asset.id}) before rebuilding the reused draft`);
       deleteAsset(asset.id);
     }
     log(`${tag}: reusing draft release ${plan.releaseId}${removedAssets.length ? ` after removing ${removedAssets.length} stale asset(s)` : ''}`);

@@ -71,6 +71,7 @@ ck('release 列表用 --slurp 分页再摊平', (() => {
       return [{ id: 1, tag_name: 'desktop-v0.2.287', draft: true }];
     },
     listAssets: () => [[{ id: 3, name: 'ANet_0.2.287_x64_en-US.msi' }]],
+    deleteAsset: () => ({}),
     log: () => {},
   });
   return calls.length === 1;
@@ -214,6 +215,27 @@ ck('include_linux=false 时即使只剩 latest.json 也回收并如实返回 rem
   });
   return deleted.join(',') === '34'
     && JSON.stringify(result.removedAssets) === JSON.stringify([{ id: 34, name: 'latest.json' }]);
+})());
+ck('上一次 run 的 partial draft 即使 commit 相同也全量清空，不静默沿用 mac/windows/manifest', (() => {
+  const priorAssets = [
+    { id: 41, name: 'ANet_0.2.287_aarch64.app.tar.gz' },
+    { id: 42, name: 'ANet_0.2.287_x64-setup.exe' },
+    { id: 43, name: 'latest.json' },
+  ];
+  const deleted: number[] = [];
+  const result = prepareReleaseDraft({
+    version: '0.2.287',
+    commit: 'a'.repeat(40),
+    listReleases: () => [{ id: 99, tag_name: tag, draft: true, target_commitish: 'a'.repeat(40) }],
+    listAssets: () => [priorAssets],
+    deleteAsset: (id: number) => { deleted.push(id); return {}; },
+    includeLinux: true,
+    log: () => {},
+  });
+  return result.action === 'reuse'
+    && result.releaseId === 99
+    && JSON.stringify(result.removedAssets) === JSON.stringify(priorAssets)
+    && deleted.join(',') === '41,42,43';
 })());
 ck('创建/复用 release 之前先跑 exact-merged-commit 门',
   /prepare-release:[\s\S]{0,900}- name: Require exact merged commit[\s\S]{0,1200}node scripts\/prepare-desktop-release\.mjs/.test(wf));
