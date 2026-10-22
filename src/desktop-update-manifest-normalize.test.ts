@@ -4,6 +4,7 @@ import {
   assertAnonymousDownloads,
   fileNameFromPublicUrl,
   isPublicDownloadUrl,
+  latestJsonUploadArgs,
   normalizeManifestAssetUrls,
   normalizeReleaseManifest,
   publicDownloadUrl,
@@ -62,6 +63,10 @@ check('public download url for another tag is rejected',
   !isPublicDownloadUrl(publicDownloadUrl(repository, 'desktop-v0.2.286', 'a.zip'), { repository, tag }));
 check('file name is recovered from a public download url',
   fileNameFromPublicUrl(publicDownloadUrl(repository, tag, assetNames.win), { repository, tag }) === assetNames.win);
+const uploadArgs = latestJsonUploadArgs({ repository, releaseId, file: '/tmp/latest.json' });
+check('latest.json upload uses the complete uploads.github.com release-assets url',
+  uploadArgs.includes(`https://uploads.github.com/repos/${repository}/releases/${releaseId}/assets?name=latest.json`));
+check('latest.json upload never relies on gh api --hostname', !uploadArgs.includes('--hostname'));
 
 // 1) 正确映射：API URL → 公共下载链接，签名等其它字段原样保留
 const normalized = normalizeManifestAssetUrls(generatedManifest, release, { repository, tag });
