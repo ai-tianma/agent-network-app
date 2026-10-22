@@ -49,7 +49,7 @@ export default function RegisteredAgentsSection(props: {
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}
         >
           {/* Grey dot: the node has no session, so it must not look online. */}
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.rest }} />
+          <View style={{ width: 8, height: 8, borderRadius: radius.mark, backgroundColor: colors.rest }} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text selectable={false} numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 13 }}>{row.alias}</Text>
             <Text selectable={false} numberOfLines={1} style={{ color: colors.textMuted, fontSize: 11 }}>

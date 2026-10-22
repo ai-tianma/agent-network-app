@@ -1097,7 +1097,7 @@ export default function AgentsScreen({
         </View>
       }
       renderItem={({ item }) => (compact ? renderCompactRow(item) : renderPhoneRow(item))}
-      ListHeaderComponent={registeredRows.length > 0 || groupsVisible || peopleShown.visible || (compact && managedDepts.ids.length) ? (<>
+      ListHeaderComponent={groupsVisible || peopleShown.visible || (compact && managedDepts.ids.length) || registeredRows.length > 0 ? (<>
         <RegisteredAgentsSection
           rows={registeredRows}
           loaded={agentDirectory.loaded}
