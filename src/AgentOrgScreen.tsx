@@ -55,10 +55,11 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
       if (!live) return;
       setPhase({ kind: 'ready', data });
       const initialAgents = data ? placeAgents(data, []) : [];
+      // #2025：有未归属 Agent 时右栏直接落在「未归属」，不再先落在某个部门上。
+      const unowned = data ? agentCount(initialAgents, data, null) : 0;
       const populated = data ? flattenTree(orgTree(data)).find(row => agentsDirectlyIn(initialAgents, row.dept.id).length > 0) : undefined;
-      const fallback = data?.directory || initialAgents.some(agent => agent.departmentId === null)
-        ? null : (data?.departments[0]?.id ?? null);
-      setFocus(p.phone ? undefined : (populated?.dept.id ?? fallback));
+      const fallback = data?.directory || unowned > 0 ? null : (data?.departments[0]?.id ?? null);
+      setFocus(p.phone ? undefined : (unowned > 0 ? null : (populated?.dept.id ?? fallback)));
     }, () => { if (live) setPhase({ kind: 'error' }); });
     return () => { live = false; };
   }, [p.cfg.serverUrl, p.cfg.token, p.networkId, p.phone, attempt]);
@@ -81,10 +82,15 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
       {phase.kind === 'ready' && data === null ? (
         <SettingsGroup testID="agent-org-empty-hub"><SettingsRow label={t('agentOrg.oldHub')} /></SettingsGroup>
       ) : null}
+      {data ? (
+        <View testID="agent-org-summary" style={styles.summary}>
+          <Text style={styles.note}>{t('agentOrg.summary', { departments: data.departments.length, unowned: agentCount(placed, data, null) })}</Text>
+        </View>
+      ) : null}
       {data && (showTree || showDetail) ? (
         <View testID="agent-org-tree" style={[styles.workspace, !p.phone && { flexDirection: 'row', minHeight: 440 }]}>
           {showTree ? (
-            <View style={!p.phone ? { width: 240, borderRightWidth: 1, borderRightColor: colors.border, backgroundColor: colors.listBg } : undefined}>
+            <View style={!p.phone ? { width: 300, borderRightWidth: 1, borderRightColor: colors.border, backgroundColor: colors.listBg } : undefined}>
               <DepartmentTree data={data} placed={placed} focus={focus} onFocus={setFocus} />
             </View>
           ) : null}
@@ -192,6 +198,11 @@ function DepartmentDetail(p: { data: AgentOrgData; placed: PlacedAgent[]; focus:
   const agents = agentsDirectlyIn(p.placed, p.focus);
   const needle = query.trim().toLocaleLowerCase();
   const filtered = agents.filter(agent => `${agent.alias} ${agent.ownerName ?? ''} ${agent.nodeId}`.toLocaleLowerCase().includes(needle));
+  // Codex P2：一个部门可能有几百个 Agent，整组一次性铺出来会拖慢首屏；只先渲染前 60 行，
+  // 其余靠上面的搜索缩小范围（不是隐藏数据：搜索范围仍是全部 filtered）。
+  const ROW_CAP = 60;
+  const shown = filtered.slice(0, ROW_CAP);
+  const hidden = filtered.length - shown.length;
   const children = p.focus ? childrenOf(orgTree(p.data), p.focus) : [];
   return (
     <View testID="agent-org-detail-card" style={styles.detail}>
@@ -207,7 +218,7 @@ function DepartmentDetail(p: { data: AgentOrgData; placed: PlacedAgent[]; focus:
         <Ionicons name="search-outline" size={17} color={colors.textMuted} />
         <TextInput testID="agent-org-member-search" value={query} onChangeText={setQuery} placeholder={t('agentOrg.searchAgents')} accessibilityLabel={t('agentOrg.searchAgents')} placeholderTextColor={colors.textMuted} style={styles.searchInput} />
       </View>
-      {p.phone ? children.map(child => (
+      {children.map(child => (
         <SettingsRow
           key={child.id}
           testID={`agent-org-child-${child.id}`}
@@ -215,12 +226,13 @@ function DepartmentDetail(p: { data: AgentOrgData; placed: PlacedAgent[]; focus:
           value={t('agentOrg.agentsCount', { count: agentCount(p.placed, p.data, child.id) })}
           onPress={() => p.onFocus(child.id)}
         />
-      )) : null}
+      ))}
       <ScrollView style={{ maxHeight: 480 }} keyboardShouldPersistTaps="handled">
-        {filtered.length ? filtered.map(agent => <AgentLine key={agent.nodeId} agent={agent} />) : <View testID={agents.length ? 'agent-org-no-results' : 'agent-org-no-agents'} style={styles.empty}>
+        {filtered.length ? shown.map(agent => <AgentLine key={agent.nodeId} agent={agent} />) : <View testID={agents.length ? 'agent-org-no-results' : 'agent-org-no-agents'} style={styles.empty}>
           <Ionicons name={agents.length ? 'search-outline' : 'people-outline'} size={30} color={colors.textMuted} />
           <Text style={styles.note}>{t(agents.length ? 'agentOrg.noResults' : 'agentOrg.noAgents')}</Text>
         </View>}
+        {hidden > 0 ? <Text testID="agent-org-more" style={[styles.note, { paddingVertical: spacing.md }]}>{t('agentOrg.moreAgents', { count: hidden })}</Text> : null}
       </ScrollView>
     </View>
   );
@@ -313,6 +325,7 @@ const makeStyles = () => StyleSheet.create({
   detailHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   title: { color: colors.text, fontSize: typeScale.heading, fontWeight: '600' },
   note: { color: colors.textMuted, fontSize: typeScale.small, lineHeight: 20 },
+  summary: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
   info: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.subtleFill, borderRadius: radius.control },
   search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, backgroundColor: colors.inputBg, paddingHorizontal: spacing.md },
   searchInput: { flex: 1, minWidth: 0, minHeight: 42, color: colors.text, fontSize: typeScale.small, paddingVertical: spacing.sm },

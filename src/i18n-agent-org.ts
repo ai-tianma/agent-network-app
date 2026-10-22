@@ -33,6 +33,8 @@ export const agentOrgTranslations = {
   'agentOrg.demoNeedPick': ['先选一个 Agent 和目标部门', 'Choose an agent and a target department first'],
   'agentOrg.departments': ['部门', 'Departments'],
   'agentOrg.directMembers': ['直属 Agent · 部门计数包含下级', 'Direct agents · sidebar counts include subdepartments'],
+  'agentOrg.summary': ['{departments} 个部门 · {unowned} 个未归属', '{departments} departments · {unowned} unassigned'],
+  'agentOrg.moreAgents': ['还有 {count} 个，用上面的搜索缩小范围', '{count} more. Narrow it with the search above.'],
   'agentOrg.searchAgents': ['搜索 Agent 或负责人', 'Search agents or owners'],
   'agentOrg.searchOptions': ['搜索名称', 'Search by name'],
   'agentOrg.noResults': ['没有匹配结果，试试其他关键词', 'No matches. Try another search.'],
