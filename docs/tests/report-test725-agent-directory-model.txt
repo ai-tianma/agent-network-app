@@ -43,3 +43,27 @@ Remaining: authorized same-scope HTTP reader with explicit node identities;
 real HTTP ACL/no-grant/grant/revoke fixtures; list/search and read-only detail
 integration without green dots, fake last-online or implicit lifecycle actions;
 old-product negative control; normal exact-head CI/review and actual release.
+
+Reader slice (same branch, still no UI wiring)
+---------------------------------------------
+src/agent-directory-reader.ts reads the two authorized endpoints and nothing else:
+`GET /api/nodes` (no network filter) and `GET /api/status` (no `light=1`, because the
+light projection omits node_id unless one node is filtered, so it cannot establish
+identity). Bearer auth comes from the caller's HubConfig; this module never widens
+visibility and never mints a scope key — an empty expected scope fails closed.
+
+Only directory facts are copied (node_id, network_id, alias, node_name, runtime /
+alias, status, ids, updated_at, runtime). Capability flags, config snapshots and
+telemetry never enter the directory. Non-object rows are dropped. Non-2xx, ok:false,
+non-JSON, abort/timeout and thrown fetches all become `unavailable`; they never
+degrade into an empty list, so a failed read cannot become "no session".
+
+Targeted verification (offline, injected fetch):
+  docker run ... --entrypoint bun <image> --no-install src/agent-directory-reader.test.ts
+  12/12 passed
+
+Not covered / explicitly not claimed: no real Hub request was made in this slice, so
+real ACL (no-grant/grant/revoke), pagination and Hub-version behaviour are unproven;
+/sapi/status full projection is heavy (no light+node_id for all rows), so wiring it
+into the 10 s AgentsScreen poll without caching would be a cost regression and is not
+done here. UI wiring, the old-product red control and normal CI remain open.
