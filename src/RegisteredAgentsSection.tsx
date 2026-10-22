@@ -4,11 +4,12 @@
 // giving these entries a Session.status would paint them online/green
 // (chat-actions.ts:69, agent-row-model.ts default branch). This block never
 // opens a chat and never offers start/stop/restart/adopt.
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './ui-text';
 import { Ionicons } from './icons';
 import { colors, radius, spacing } from './theme';
-import type { RegisteredAgentRow } from './registered-agents';
+import { REGISTERED_SECTION_LIMIT, registeredSectionVisible, type RegisteredAgentRow } from './registered-agents';
 
 export default function RegisteredAgentsSection(props: {
   rows: RegisteredAgentRow[];
@@ -20,11 +21,11 @@ export default function RegisteredAgentsSection(props: {
   compact?: boolean;
 }) {
   const { rows, loaded, collapsed, onToggle, onExplain, compact } = props;
+  // Explicit expansion, not a silent cap: every registered node stays reachable (#2064).
+  const [showAll, setShowAll] = useState(false);
   if (!loaded || rows.length === 0) return null;
   // 展开时也只铺前 8 条：这一组可能有几十个节点，全铺会把下面的 Agent 列表推走。
-  const VISIBLE = 8;
-  const shown = rows.slice(0, VISIBLE);
-  const hidden = rows.length - shown.length;
+  const { shown, hidden } = registeredSectionVisible(rows, showAll);
   return (
     <View testID="registered-agents-section">
       <Pressable
@@ -66,9 +67,16 @@ export default function RegisteredAgentsSection(props: {
         </Pressable>
       ))}
       {collapsed || hidden === 0 ? null : (
-        <Text selectable={false} testID="registered-agents-more" style={{ color: colors.textMuted, fontSize: 11, paddingHorizontal: spacing.md, paddingVertical: 6 }}>
-          还有 {hidden} 个已登记节点
-        </Text>
+        <Pressable testID="registered-agents-more" accessibilityRole="button" onPress={() => setShowAll(true)}
+          style={{ paddingHorizontal: spacing.md, paddingVertical: 8 }}>
+          <Text selectable={false} style={{ color: colors.accent, fontSize: 11 }}>显示其余 {hidden} 个已登记节点</Text>
+        </Pressable>
+      )}
+      {collapsed || !showAll || rows.length <= REGISTERED_SECTION_LIMIT ? null : (
+        <Pressable testID="registered-agents-less" accessibilityRole="button" onPress={() => setShowAll(false)}
+          style={{ paddingHorizontal: spacing.md, paddingVertical: 8 }}>
+          <Text selectable={false} style={{ color: colors.textMuted, fontSize: 11 }}>收起</Text>
+        </Pressable>
       )}
     </View>
   );

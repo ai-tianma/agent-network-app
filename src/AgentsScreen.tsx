@@ -38,7 +38,7 @@ import { fetchStatus, fetchUserMessages, takeStatusPrefetch, type HubConfig, typ
 import { loadSessionsCache, saveSessionsCache } from './storage';
 import RegisteredAgentsSection from './RegisteredAgentsSection';
 import { useAgentDirectory } from './agent-directory-hook';
-import { registeredAgentRows, sessionIdentities } from './registered-agents';
+import { registeredAgentRows, registeredSectionCollapsed, sessionIdentities } from './registered-agents';
 import { colors, onThemeChange, radius, spacing, statusColor, themeMode, type, weight } from './theme';
 import { shadowOnly } from './elevation';
 import { ds, fs, listText, uiScale } from './ui-scale';
@@ -1106,8 +1106,9 @@ export default function AgentsScreen({
         <RegisteredAgentsSection
           rows={registeredRows}
           loaded={agentDirectory.loaded}
-          collapsed={registeredCollapsed}
-          onToggle={() => setRegisteredCollapsed(v => !v)}
+          // A search result must be visible: collapse is ignored while `query` is non-empty (#2064).
+          collapsed={registeredSectionCollapsed(registeredCollapsed, query)}
+          onToggle={() => { if (!query.trim()) setRegisteredCollapsed(v => !v); }}
           compact={compact}
         />
         {compact && managedDepts.ids.length ? (

@@ -70,6 +70,20 @@ export function registeredAgentRows(
   return out;
 }
 
+/** How many rows the expanded block paints before offering "show all". */
+export const REGISTERED_SECTION_LIMIT = 8;
+
+/** Expanded search must show every match, not keep the user's manual collapse (#2064). */
+export function registeredSectionCollapsed(collapsed: boolean, query: string): boolean {
+  return query.trim() ? false : collapsed;
+}
+
+/** Cap the default block but keep every row reachable through the explicit show-all action. */
+export function registeredSectionVisible<T>(rows: readonly T[], showAll: boolean): { shown: T[]; hidden: number } {
+  const shown = showAll ? [...rows] : rows.slice(0, REGISTERED_SECTION_LIMIT);
+  return { shown, hidden: rows.length - shown.length };
+}
+
 /** The block is only worth a header when it has something certain to say. */
 export function registeredAgentSummary(rows: readonly RegisteredAgentRow[]): {
   total: number;

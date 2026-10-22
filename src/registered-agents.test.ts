@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert';
 import type { AgentDirectoryRow } from './agent-directory';
-import { registeredAgentRows, registeredAgentSummary, sessionIdentities } from './registered-agents';
+import { readFileSync } from 'node:fs';
+import { REGISTERED_SECTION_LIMIT, registeredAgentRows, registeredAgentSummary, registeredSectionCollapsed, registeredSectionVisible, sessionIdentities, type RegisteredAgentRow } from './registered-agents';
 
 let passed = 0;
 const check = (name: string, run: () => void) => { run(); passed++; console.log(`PASS: ${name}`); };
@@ -70,4 +71,27 @@ check('legacy session without identity does not exclude anything', () => {
   const exclude = sessionIdentities([{ network_id: 'net_a', node_id: null }, {} as never]);
   assert.equal(registeredAgentRows([noSession], { excludeIdentities: exclude }).length, 1);
 });
+check('search expands the registered section regardless of manual collapse', () => {
+  assert.equal(registeredSectionCollapsed(true, 'n_9'), false);
+  assert.equal(registeredSectionCollapsed(true, '   '), true);
+  assert.equal(registeredSectionCollapsed(false, ''), false);
+});
+check('expanded block caps at eight but the show-all path reveals every row', () => {
+  const rows = Array.from({ length: 9 }, (_, i) => ({ key: String(i), alias: `node-${i}`, node_id: `n_${i}`, network_id: 'net_a', runtime: null, hint: '未启动（Hub无会话记录）', actionable: false } as RegisteredAgentRow));
+  assert.equal(REGISTERED_SECTION_LIMIT, 8);
+  assert.deepEqual(registeredSectionVisible(rows, false).shown.map(r => r.alias).slice(-1), ['node-7']);
+  assert.equal(registeredSectionVisible(rows, false).hidden, 1);
+  assert.equal(registeredSectionVisible(rows, true).shown.length, 9);
+  assert.equal(registeredSectionVisible(rows, true).hidden, 0);
+});
+check('section renders a real show-all action and the list passes the query-aware collapse', () => {
+  const section = readFileSync(new URL('./RegisteredAgentsSection.tsx', import.meta.url), 'utf8');
+  const screen = readFileSync(new URL('./AgentsScreen.tsx', import.meta.url), 'utf8');
+  assert(section.includes('testID="registered-agents-more"'));
+  assert(section.includes('onPress={() => setShowAll(true)}'));
+  assert(section.includes('registeredSectionVisible(rows, showAll)'));
+  assert(screen.includes('registeredSectionCollapsed(registeredCollapsed, query)'));
+  assert(screen.includes("if (!query.trim()) setRegisteredCollapsed"));
+});
+
 console.log(`${passed}/${passed} passed`);
