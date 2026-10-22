@@ -4,6 +4,7 @@ import { agentCount, agentsDirectlyIn, placeAgents, type AgentOrgData, type OrgO
 import { DIRECTORY_MAX_PAGES, loadAgentOrg, moveAgentDepartment, parseDirectoryPage } from './agent-org-api';
 import { agentOrgTranslations } from './i18n-agent-org';
 import type { Department } from './org-model';
+import { createDepartment, updateDepartment, OrgRequestError } from './org-api';
 
 let p = 0, t = 0;
 const ck = (n: string, c: boolean) => { t++; if (c) { p++; console.log(`  ✓ ${n}`); } else console.log(`  ✗ ${n}`); };
@@ -84,13 +85,13 @@ const legacyData = (patch: Partial<AgentOrgData> = {}): AgentOrgData =>
 
 const original = globalThis.fetch;
 const cfg = { serverUrl: 'https://hub.example', token: 'tok', networkId: 'net 1' };
-type Call = { url: string; method: string };
+type Call = { url: string; method: string; body?: string };
 async function withFetch(handler: (url: string, method: string) => Response, body: () => Promise<void>) {
   const calls: Call[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = (init?.method ?? 'GET').toUpperCase();
-    calls.push({ url, method });
+    calls.push({ url, method, body: typeof init?.body === 'string' ? init.body : undefined });
     return handler(url, method);
   }) as typeof fetch;
   try { await body(); } finally { globalThis.fetch = original; }
@@ -238,8 +239,16 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
   const screen = code(read('./AgentOrgScreen.tsx'));
   const settings = code(read('./SettingsScreen.tsx'));
   const phone = code(read('./SettingsPhonePages.tsx'));
-  const forbidden = ['createDepartment', 'setMemberDepartment', 'updateDepartment', 'deleteDepartment', 'appFetch', 'fetchOrg', 'listRequirementPeople', "method: 'POST'", "method: 'PUT'", "method: 'PATCH'", "method: 'DELETE'", 'AgentTeamsEntry'];
-  ck('页面不写 Hub、不走团队接口', forbidden.every(s => !screen.includes(s)));
+  const forbidden = ['setMemberDepartment', 'deleteDepartment', 'appFetch', 'fetchOrg', 'listRequirementPeople', "method: 'POST'", "method: 'PUT'", "method: 'PATCH'", "method: 'DELETE'", 'AgentTeamsEntry'];
+  ck('department edits reuse shared APIs, never move people or delete', forbidden.every(s => !screen.includes(s)) && screen.includes('await createDepartment(') && screen.includes('await updateDepartment('));
+  ck('root, child, rename and reparent actions are exposed', ['agent-org-new-department', 'agent-org-new-child', 'agent-org-rename-department', 'agent-org-reparent-department'].every(id => screen.includes(`testID="${id}"`)));
+  ck('editor uses bounded keyboard-safe frame with pinned save and shared-tree warning', screen.includes('testID="agent-org-department-editor"') && screen.includes('footer={<SettingsButton') && screen.includes('testID="agent-org-shared-tree-note"'));
+  ck('editor validates Unicode name length and excludes entire subtree', screen.includes('[...name.trim()].length <= 40') && screen.includes('subtreeIds(tree, p.editor.dept.id)') && screen.includes('filter(row => !excluded.has(row.dept.id))'));
+  ck('patches preserve leader and sort by omission', screen.includes("? { name: name.trim() } : { parent_id: parent }") && !screen.includes('leader_user_id:') && !screen.includes('sort:'));
+  ck('Hub viewer_can restrictions are respected', screen.includes('viewer_can?.manage !== false') && screen.includes('viewer_can?.create_child !== false'));
+  ck('confirmed saves refresh real data and focus returned department', screen.includes('await loadAgentOrg(p.cfg, p.networkId)') && screen.includes('setFocus(department.id)') && screen.includes('result.id !== p.editor.dept.id') && screen.includes('setSaved(result)'));
+  ck('refresh retry does not repeat a confirmed mutation', screen.includes('let confirmed = saved') && screen.includes('if (!confirmed)') && screen.includes('await p.onSaved(confirmed)'));
+  ck('department errors and shared warning have both languages', ['sharedTree', 'departmentForbidden', 'departmentUnsupported', 'departmentConflict', 'departmentHierarchyInvalid', 'departmentRefreshFailed'].every(key => (agentOrgTranslations as Record<string, readonly string[]>)[`agentOrg.${key}`]?.length === 2));
   ck('调整按钮调用真实写接口,失败回滚', screen.includes('moveAgentDepartment(p.cfg, p.networkId, nodeId, pickDept)') && screen.includes('previous ? [...rest, previous] : rest'));
   ck('页面根始终在,且不再有演示条', screen.includes('testID="agent-org-page"') && !screen.includes('return null') && !screen.includes('agent-org-demo-banner'));
   ck('桌面和手机都挂这页,并带上已保存的网络', settings.includes('<AgentOrgScreen cfg={cfg} networkId={me.networkId || cfg.networkId} phone={false} />') && settings.includes('renderAgentOrg: () => <AgentOrgScreen cfg={cfg} networkId={me.networkId || cfg.networkId} phone />') && phone.includes("case 'agentTeams': return <>{ctx.renderAgentOrg()}</>"));
@@ -247,6 +256,25 @@ const json = (status: number, body: unknown) => new Response(body == null ? '' :
   ck('手机列表行会进入子页', settings.includes('onPress={() => openPage(cat.key)}'));
   ck('不再有演示文案,标题/hint 指向真实保存', !('agentOrg.demoBanner' in agentOrgTranslations) && agentOrgTranslations['agentOrg.demoTitle'][0] === '调整结构' && agentOrgTranslations['agentOrg.demoHint'][0].includes('写入 Hub'));
   ck('失败态有 403/400/404/旧Hub 可读文案', ['agentOrg.saveForbidden', 'agentOrg.saveNoDepartment', 'agentOrg.saveNoNode', 'agentOrg.saveUnsupported'].every(k => (agentOrgTranslations as Record<string, readonly string[]>)[k]?.length === 2));
+}
+
+{
+  const returned = { ...dept('new 1', 'New department', 'eng'), leader_user_id: 'leader', sort: 9 };
+  const calls = await withFetch(() => json(201, { ok: true, department: returned }), async () => {
+    ck('create returns authoritative department', (await createDepartment(cfg, 'net 1', { name: 'New department', parent_id: 'eng' })).id === returned.id);
+    ck('rename returns preserved leader and sort', (await updateDepartment(cfg, 'net 1', 'new 1', { name: 'Renamed' })).leader_user_id === 'leader');
+    ck('reparent returns authoritative sort', (await updateDepartment(cfg, 'net 1', 'new 1', { parent_id: null })).sort === 9);
+  });
+  ck('create uses exact department POST contract', calls[0].method === 'POST' && calls[0].url.endsWith('/networks/net%201/departments') && calls[0].body === JSON.stringify({ name: 'New department', parent_id: 'eng' }));
+  ck('rename PATCH does not overwrite leader, sort or parent', calls[1].method === 'PATCH' && calls[1].url.endsWith('/departments/new%201') && calls[1].body === JSON.stringify({ name: 'Renamed' }));
+  ck('root reparent PATCH sends explicit null only', calls[2].method === 'PATCH' && calls[2].body === JSON.stringify({ parent_id: null }));
+  for (const [status, error] of [[403, 'department_scope_denied'], [409, 'department_name_taken'], [405, 'unsupported'], [400, 'department_cycle']] as const) {
+    await withFetch(() => json(status, { ok: false, error }), async () => {
+      let caught: unknown;
+      try { await updateDepartment(cfg, 'net 1', 'eng', { parent_id: 'fe' }); } catch (e) { caught = e; }
+      ck(`department failure ${status} preserves status/code, never succeeds`, caught instanceof OrgRequestError && caught.status === status && caught.code === error);
+    });
+  }
 }
 
 console.log(`${p}/${t} passed`);

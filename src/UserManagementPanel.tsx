@@ -48,6 +48,15 @@ export default function UserManagementPanel({ cfg, me, networkId, phone }: { cfg
   const [notice, setNotice] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<NetworkMember | null>(null);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [memberRole, setMemberRole] = useState<MemberRole | 'all'>('all');
+  const [panelWidth, setPanelWidth] = useState(0);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const compactMembers = !!phone || (panelWidth > 0 && panelWidth < 600);
+  const query = memberQuery.trim().toLowerCase();
+  const shownMembers = (members ?? []).filter(m =>
+    (memberRole === 'all' || m.role === memberRole) &&
+    (!query || m.username.toLowerCase().includes(query) || (m.display_name ?? '').toLowerCase().includes(query)));
   // Agent 分组(RFC-038 §8):undefined = 读取中,null = 这个 Hub 没有分组接口(旧 Hub,整块不显示)。
   const [agentGroups, setAgentGroups] = useState<HubAgentGroup[] | null | undefined>(undefined);
   const [editingGroup, setEditingGroup] = useState<HubAgentGroup | 'new' | null>(null);
@@ -97,36 +106,83 @@ export default function UserManagementPanel({ cfg, me, networkId, phone }: { cfg
     return <GroupPage cfg={cfg} networkId={networkId} group={editingGroup === 'new' ? null : editingGroup} onDone={doneGroup} />;
   }
   return (
-    <View testID="user-management">
+    <View testID="user-management" onLayout={e => setPanelWidth(e.nativeEvent.layout.width)}>
       <SettingsGroup
-        title={tr('users.members')}
         footer={loadError ? `${tr('users.loadFailed')}: ${loadError}` : notice || tr('users.footer')}
         footerTone={loadError ? 'danger' : notice ? 'accent' : 'muted'}
         testID="user-management-members"
+        separators={false}
       >
+        <View style={styles.membersHeader}>
+          <View style={styles.membersHeading}>
+            <Text accessibilityRole="header" style={styles.membersTitle} testID="settings-kit-group-title">{tr('users.members')}</Text>
+            {members !== null ? <Text style={styles.membersCount} testID="user-management-count">{members.length}</Text> : null}
+          </View>
+          <Pressable accessibilityRole="button" onPress={() => { setNotice(''); setCreating(true); }} style={({ pressed }) => [styles.membersNew, pressed && styles.pressed]} testID="user-management-new">
+            <Ionicons name="add" size={18} color={colors.onAccent} />
+            <Text style={styles.btnPrimaryText}>{tr('users.newUser')}</Text>
+          </Pressable>
+        </View>
+        <View style={styles.membersTools}>
+          <View style={[styles.memberSearch, searchFocused && styles.memberSearchFocused]}>
+            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+            <TextInput value={memberQuery} onChangeText={setMemberQuery} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} placeholder={tr('users.searchMembers')} accessibilityLabel={tr('users.searchMembers')} placeholderTextColor={colors.textMuted} autoCapitalize="none" autoCorrect={false} style={styles.memberSearchInput} testID="user-management-search" />
+            {memberQuery ? <Pressable accessibilityRole="button" accessibilityLabel={tr('users.clearSearch')} onPress={() => setMemberQuery('')} style={styles.memberClear} testID="user-management-search-clear"><Ionicons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
+          </View>
+          <View style={styles.memberFilters} accessibilityLabel={tr('users.role')} testID="user-management-role-filters">
+            {(['all', 'owner', 'admin', 'member', 'viewer'] as const).map(r => (
+              <Pressable key={r} accessibilityRole="button" accessibilityState={{ selected: memberRole === r }} aria-pressed={memberRole === r} onPress={() => setMemberRole(r)} style={({ pressed }) => [styles.memberFilter, memberRole === r && styles.memberFilterOn, pressed && styles.pressed]} testID={`user-management-filter-${r}`}>
+                <Text style={[styles.memberFilterText, memberRole === r && styles.memberFilterTextOn]}>{r === 'all' ? tr('users.allRoles') : roleLabel(r)}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+        {!compactMembers ? <View style={styles.memberColumns} testID="user-management-columns">
+          <Text style={[styles.memberColumnText, styles.memberIdentity]}>{tr('users.member')}</Text>
+          <Text style={[styles.memberColumnText, styles.memberRoleColumn]}>{tr('users.role')}</Text>
+          <Text style={[styles.memberColumnText, styles.memberAccessColumn]}>{tr('users.agents')}</Text>
+          <View style={styles.memberAccessory} />
+        </View> : null}
         {members === null && !loadError ? (
           <SettingsRow label={tr('users.loading')} busy testID="user-management-loading" />
         ) : null}
         {loadError ? <SettingsRow label={tr('users.retry')} tone="accent" onPress={load} testID="user-management-retry" /> : null}
-        {(members ?? []).map(m => {
+        {members !== null && !loadError && !shownMembers.length ? <Text style={styles.membersEmpty} testID="user-management-empty">{members.length ? tr('users.noMemberMatch') : tr('users.noMembers')}</Text> : null}
+        {shownMembers.map(m => {
           const summary = accessSummaryText(memberAccessSummary(m));
           const value = tr(summary.key, summary.params);
           const acts = memberActions(me, networkId, m);
           const editable = acts.editAccess || acts.editRole || acts.remove;
+          const label = `${m.display_name || m.username}${m.user_id === myId ? tr('users.you') : ''}`;
+          const badge = <View style={[styles.memberBadge, (m.role === 'owner' || m.role === 'admin') && styles.memberBadgeElevated]}><Text style={[styles.memberBadgeText, (m.role === 'owner' || m.role === 'admin') && styles.memberBadgeTextElevated]}>{roleLabel(m.role)}</Text></View>;
+          const access = <Text style={[styles.memberAccessText, summary.empty && styles.memberAccessEmpty]} numberOfLines={compactMembers ? 2 : undefined} testID={`user-row-${m.username}-value`}>{value}</Text>;
           return (
-            <SettingsRow
+            <Pressable
               key={m.user_id}
               testID={`user-row-${m.username}`}
-              label={`${m.display_name || m.username}${m.user_id === myId ? tr('users.you') : ''}`}
-              subtitle={`${m.username} · ${roleLabel(m.role)}`}
-              value={value}
-              valueTone={summary.empty ? 'danger' : 'muted'}
+              accessibilityRole={editable ? 'button' : undefined}
+              accessibilityLabel={`${label}, ${roleLabel(m.role)}, ${tr('users.agents')}: ${value}`}
+              accessibilityHint={editable ? tr('users.editMember', { name: m.display_name || m.username }) : undefined}
+              disabled={!editable}
               onPress={editable ? () => openMember(m) : undefined}
-            />
+              style={({ pressed }) => [styles.memberRow, compactMembers && styles.memberRowCompact, pressed && styles.memberRowActive]}
+            >
+              <View style={styles.memberIdentity}>
+                <AliasAvatar alias={m.username} size={36} />
+                <View style={styles.memberIdentityText}>
+                  <Text style={styles.memberName} numberOfLines={1} testID={`user-row-${m.username}-label`}>{label}</Text>
+                  {m.display_name && m.display_name !== m.username ? <Text style={styles.memberUsername} numberOfLines={1}>{m.username}</Text> : null}
+                  {compactMembers ? <View style={styles.memberMetadata}>{badge}{access}</View> : null}
+                </View>
+              </View>
+              {!compactMembers ? <><View style={styles.memberRoleColumn}>{badge}</View><View style={styles.memberAccessColumn}>{access}</View></> : null}
+              <View style={styles.memberAccessory} testID={`user-row-${m.username}-accessory`}>
+                {editable ? <Ionicons name={compactMembers ? 'chevron-forward' : 'create-outline'} size={18} color={colors.textMuted} /> : null}
+              </View>
+            </Pressable>
           );
         })}
       </SettingsGroup>
-      <SettingsButton label={tr('users.newUser')} onPress={() => { setNotice(''); setCreating(true); }} testID="user-management-new" />
       {Array.isArray(agentGroups) ? (
         <>
           <SettingsGroup title={tr('users.agentGroups')} footer={tr('users.agentGroupsFooter')} testID="agent-groups">
@@ -563,6 +619,41 @@ function GroupPage({ cfg, networkId, group, onDone }: { cfg: HubConfig; networkI
 }
 
 const makeStyles = () => StyleSheet.create({
+  membersHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.sm, padding: spacing.lg, paddingBottom: spacing.md },
+  membersHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  membersTitle: { color: colors.text, fontSize: 17, fontWeight: '600' },
+  membersCount: { color: colors.textSecondary, backgroundColor: colors.subtleFill, borderRadius: radius.control, paddingHorizontal: spacing.sm, paddingVertical: 3, fontSize: 12, fontWeight: '600' },
+  membersNew: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radius.control, backgroundColor: colors.accent },
+  membersTools: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm },
+  memberSearch: { width: '100%', maxWidth: 360, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, backgroundColor: colors.inputBg },
+  memberSearchFocused: { borderColor: colors.accent },
+  memberSearchInput: { flex: 1, minWidth: 0, minHeight: 44, paddingVertical: spacing.sm, paddingRight: spacing.sm, color: colors.text, fontSize: 14 },
+  memberClear: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  memberFilters: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+  memberFilter: { minHeight: 44, paddingHorizontal: spacing.md, justifyContent: 'center', borderRadius: radius.control },
+  memberFilterOn: { backgroundColor: colors.tonalBg },
+  memberFilterText: { color: colors.textSecondary, fontSize: 13 },
+  memberFilterTextOn: { color: colors.accent, fontWeight: '600' },
+  memberColumns: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.subtleFill },
+  memberColumnText: { color: colors.textMuted, fontSize: 12, fontWeight: '500' },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 72, paddingLeft: spacing.lg, paddingRight: spacing.lg, paddingVertical: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  memberRowCompact: { gap: spacing.sm, paddingRight: spacing.sm },
+  memberRowActive: { backgroundColor: colors.rowActive },
+  memberIdentity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  memberIdentityText: { flex: 1, minWidth: 0, gap: 3 },
+  memberName: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  memberUsername: { color: colors.textMuted, fontSize: 12 },
+  memberRoleColumn: { width: 100, alignItems: 'flex-start' },
+  memberAccessColumn: { flex: 0.8, minWidth: 0 },
+  memberBadge: { alignSelf: 'flex-start', borderRadius: radius.control, backgroundColor: colors.subtleFill, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  memberBadgeElevated: { backgroundColor: colors.tonalBg },
+  memberBadgeText: { color: colors.textSecondary, fontSize: 12, fontWeight: '500' },
+  memberBadgeTextElevated: { color: colors.accent },
+  memberAccessText: { color: colors.textSecondary, fontSize: 12, lineHeight: 18, flexShrink: 1 },
+  memberAccessEmpty: { color: colors.failed },
+  memberAccessory: { width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  memberMetadata: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
+  membersEmpty: { color: colors.textMuted, fontSize: 13, lineHeight: 20, padding: spacing.lg, textAlign: 'center' },
   field: { gap: 6 },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
   fieldHint: { color: colors.textMuted, fontSize: 12, fontWeight: '400' },

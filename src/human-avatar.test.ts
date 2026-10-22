@@ -11,6 +11,8 @@ for (const value of [undefined, null, '', {}, '/avatars/../private', '/avatars/i
 check('bundled pool value', humanAvatarPlan('user-a', '/avatars/avatar-03.webp'), { file: 'avatar-03.webp' });
 check('HTTP image', humanAvatarPlan('user-a', ' http://example.test/avatar.png '), { uri: 'http://example.test/avatar.png' });
 check('HTTPS image', humanAvatarPlan('user-a', 'https://example.test/avatar.png'), { uri: 'https://example.test/avatar.png' });
+check('uploaded avatar keeps relative dedicated route for authenticated rendering', humanAvatarPlan('user-a', '/api/users/user-a/avatar/v_123.png'), { uri: '/api/users/user-a/avatar/v_123.png' });
+check('another identity cannot supply the protected avatar path', humanAvatarPlan('user-a', '/api/users/other/avatar/v.png'), { file: poolFileNameForAlias('user-a') });
 const rows = peopleRows([{ user_id: 'a', username: 'same', avatar_url: '/avatars/avatar-03.webp' }, { user_id: 'b', username: 'same', avatar_url: '/avatars/avatar-04.webp' }], [], 'self');
 check('same-name people preserve their own Hub values', rows.map(p => humanAvatarPlan(p.user_id, p.avatar_url)), [{ file: 'avatar-03.webp' }, { file: 'avatar-04.webp' }]);
 console.log(`${n}/${n} passed`);

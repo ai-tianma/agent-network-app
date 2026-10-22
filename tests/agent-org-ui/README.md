@@ -34,7 +34,7 @@ Append `&theme=dark` for dark mode. Narrow the viewport to 390px for mobile.
   129 agents have no owner. Human department TMWork must not assign Agent location.
 - `POST /__fixture/reset?populated=1` seeds three Alpha agents, 326 unassigned.
 - `POST /__fixture/deny` rejects moves with 403; `?value=0` permits moves.
-- Only the exact Agent department PUT contract can mutate fixture data. State,
+- The exact Agent department PUT and department POST/PATCH contracts mutate fixture data. State,
   attempted writes, status codes, and request logs are at `/__fixture/state`.
 - Reuses the scheduler Tauri/profile bootstrap without modifying it. The local
   extension implements window enumeration and maps the App's requested Settings
@@ -79,3 +79,32 @@ Representative screenshots:
 Screenshots are visual evidence reviewed manually, not pixel-baseline assertions.
 This is a browser/Web export test with mocked Tauri IPC, not native OS window or
 mobile keyboard testing.
+
+## Department Editor Regression
+
+```sh
+/Users/vansin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node tests/agent-org-ui/departments.mjs
+```
+
+Runs full App Settings navigation in desktop/mobile light/dark against the existing
+export, without building. Latest result: **94/94 checks, 24 screenshots** in
+`artifacts/departments/`. The original `verify.mjs` remains unchanged and passes
+**128/128 checks, 28 screenshots** with the extended server.
+
+Covers blank-name validation, root/child POST responses shaped as `{ department }`,
+rename and reparent PATCH payloads, exclusion of self/descendants, parent search,
+shared human/Agent tree warning, persisted reload, server failure, revoked
+permission (403), `viewer_can.manage/create_child` denial without writes,
+post-write refresh failure and retry without duplicate POST, bounded dialogs,
+and document overflow. Mobile uses Android browser emulation and simulated
+32px/24px safe areas, not an actual native device.
+
+`POST /__fixture/mode?fail=1` makes department writes fail; `?refreshFail=1`
+makes department reads fail; `?restricted=1` supplies a viewer identity and
+false department permission flags. An empty query clears all three switches.
+Root creation has no permission field in the department wire contract; its
+button is not hidden by these per-department flags. The fixture still rejects
+unauthorized writes. Tests do not fabricate a root-permission response field.
+
+Each run records bundle hashes, request bodies/statuses, errors and screenshot
+paths in its report. Screenshots are evidence, not pixel-baseline comparisons.

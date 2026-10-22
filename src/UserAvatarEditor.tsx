@@ -10,6 +10,9 @@ import { colors, avatarRadius, radius } from './theme';
 import { useTranslation } from './i18n-react';
 import { t } from './i18n';
 import './i18n-user-avatar';
+import { pickUserAvatar, prepareUserAvatar, uploadLocalUserAvatar } from './user-avatar-local';
+import { uploadUserAvatarWith, UserAvatarFileError, UserAvatarUnsupportedError, userAvatarPath } from './user-avatar-upload';
+import UserAvatarImage from './UserAvatarImage';
 
 // Remount on account/Hub/token change. An old request can finish for its original
 // account, but its disposed editor must never update the new account's UI.
@@ -25,6 +28,7 @@ function Editor({ cfg }: { cfg: HubConfig }) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState('userAvatar.busy');
   const [message, setMessage] = useState('');
   const [imageError, setImageError] = useState(false);
   const load = async () => {
@@ -44,7 +48,7 @@ function Editor({ cfg }: { cfg: HubConfig }) {
   useEffect(() => { setImageError(false); }, [user?.avatar]);
   const apply = async (value: string | null) => {
     if (!user || busyRef.current) return;
-    busyRef.current = true; setBusy(true); setMessage('');
+    busyRef.current = true; setBusy(true); setStage('userAvatar.busy'); setMessage('');
     try {
       const avatar = await putUserAvatar(cfg, user.id, value);
       if (live.current) { setUser({ ...user, avatar }); setMessage('userAvatar.saved'); }
@@ -52,17 +56,37 @@ function Editor({ cfg }: { cfg: HubConfig }) {
       if (live.current) setMessage(e instanceof HubRequestError && [404, 405].includes(e.status) ? 'userAvatar.unsupported' : 'userAvatar.failed');
     } finally { busyRef.current = false; if (live.current) setBusy(false); }
   };
+  const upload = async () => {
+    if (!user || busyRef.current) return;
+    busyRef.current = true; setBusy(true); setStage('userAvatar.selecting'); setMessage('');
+    try {
+      const avatar = await uploadUserAvatarWith(cfg, user.id, {
+        pick: pickUserAvatar, prepare: prepareUserAvatar,
+        upload: uploadLocalUserAvatar, active: () => live.current,
+        stage: value => { if (live.current) setStage(`userAvatar.${value}`); },
+      });
+      if (live.current && avatar !== undefined) { setUser({ ...user, avatar }); setMessage('userAvatar.saved'); }
+    } catch (e) {
+      if (live.current) setMessage(e instanceof UserAvatarFileError ? `userAvatar.file.${e.key}`
+        : e instanceof UserAvatarUnsupportedError ? 'userAvatar.uploadUnsupported' : 'userAvatar.failed');
+    } finally { busyRef.current = false; if (live.current) setBusy(false); }
+  };
   const avatar = user?.avatar;
-  // Only bundled files or validated http(s). Never consult node alias maps.
+  // Bundled files, dedicated protected avatar paths, or validated public URLs; never node alias maps.
   const source = avatar?.startsWith('/avatars/') ? sourceForFile(avatar.slice(9))
-    : avatar && validateCustomAvatarUrl(avatar).ok ? { uri: avatar }
+    : avatar && (userAvatarPath(avatar) || validateCustomAvatarUrl(avatar).ok) ? { uri: avatar }
     : user ? sourceForFile(poolFileNameForAlias(user.id)) : null;
   return <SettingsGroup title={t('userAvatar.title')} testID="user-avatar-editor">
     <SettingsCardContent>
       <Text testID="user-avatar-hint" style={{ color: colors.text, lineHeight: 20 }}>{t('userAvatar.hint')}</Text>
-      {source && !imageError ? <Image testID="user-avatar-preview" source={source} onError={() => setImageError(true)} style={{ width: 56, height: 56, borderRadius: avatarRadius(56), marginVertical: 12 }} /> : <Text style={{ color: colors.text }} testID="user-avatar-fallback">{cfg.username || '·'}</Text>}
+      <View style={{ width: 56, height: 56, marginVertical: 12, justifyContent: 'center' }}>
+        <Text style={{ color: colors.text }} testID="user-avatar-fallback">{cfg.username || '·'}</Text>
+        {source && !imageError ? avatar && !avatar.startsWith('/avatars/') ? <UserAvatarImage key={avatar} value={avatar} hubUrl={cfg.serverUrl} token={cfg.token} testID="user-avatar-preview" onError={() => setImageError(true)} style={{ position: 'absolute', width: 56, height: 56, borderRadius: avatarRadius(56) }} /> : <Image testID="user-avatar-preview" source={source} onError={() => setImageError(true)} style={{ position: 'absolute', width: 56, height: 56, borderRadius: avatarRadius(56) }} /> : null}
+      </View>
       {loading ? <Text style={{ color: colors.textSecondary }}>{t('userAvatar.loading')}</Text> : null}
       {user ? <>
+        <SettingsButton testID="user-avatar-upload" label={t('userAvatar.upload')} disabled={busy || loading} onPress={() => void upload()} />
+        <Text testID="user-avatar-upload-hint" style={{ color: colors.textMuted, marginVertical: 8 }}>{t('userAvatar.uploadHint')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {POOL_FILENAMES.map((file, i) => <Pressable key={file} accessibilityRole="button" accessibilityLabel={t('userAvatar.pick', { n: i + 1 })} testID={`user-avatar-pick-${i + 1}`} disabled={busy || loading} onPress={() => void apply(`/avatars/${file}`)} style={{ padding: 6, opacity: busy ? 0.5 : 1 }}>
             <Image source={sourceForFile(file)!} style={{ width: 36, height: 36, borderRadius: avatarRadius(36) }} />
@@ -76,7 +100,7 @@ function Editor({ cfg }: { cfg: HubConfig }) {
         }} />
         <SettingsButton testID="user-avatar-reset" variant="plain" label={t('userAvatar.reset')} disabled={busy || loading} onPress={() => void apply(null)} />
       </> : !loading ? <SettingsButton label={t('userAvatar.retry')} testID="user-avatar-retry" onPress={() => void load()} /> : null}
-      {busy ? <Text style={{ color: colors.textSecondary }}>{t('userAvatar.busy')}</Text> : null}
+      {busy ? <Text testID="user-avatar-progress" accessibilityLiveRegion="polite" style={{ color: colors.textSecondary }}>{t(stage)}</Text> : null}
       {message ? <Text style={{ color: colors.text, marginTop: 12, lineHeight: 20 }} testID="user-avatar-message" accessibilityLiveRegion="polite">{t(message)}</Text> : null}
     </SettingsCardContent>
   </SettingsGroup>;
