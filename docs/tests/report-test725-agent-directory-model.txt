@@ -1,0 +1,45 @@
+#725 directory model, local prerequisite only
+===========================================
+Base: app main b9a3e1ec9e7f7a2677790632501f0edba5ed7151.
+Source/contract review: requirement events 30442 and 30444.
+
+This slice adds a pure read-model and its tests. It is NOT wired to the reader,
+Agent list/search UI, or NodeDetailScreen and is NOT an end-to-end fix/release.
+
+Inputs must already be authorized Hub reads. A caller-generated scopeKey must
+bind the current account/auth epoch, requested scope and logical read generation.
+The model is not an authorization oracle and complete=true is a reader claim,
+not proof that HTTP collection really finished. The future reader must establish
+both facts and ignore obsolete requests before supplying these snapshots.
+
+Registered rows have a discriminated source, not an invented Session.status.
+Only exact (network_id, node_id) identities can consume a genuine session.
+Missing/ambiguous identity, unsuccessful or incomplete reads, or mismatched scope
+cannot establish no-session. Existing session-only rows are preserved. Unknown
+node records do not inherit a default network or an alias/hostname binding.
+Returned directory node facts exclude capabilities, config and online timestamps.
+No lifecycle request, persistence, network fetch, session write, or credential access.
+
+Targeted verification:
+docker run --rm --network none --read-only \
+  --mount type=bind,src=<worktree>,dst=/src,readonly --workdir /src \
+  --entrypoint bun \
+  sha256:ebabd0066419315ce1d7bbe899999b07beb1aa01b896b548b439c2d7682da028 \
+  --no-install src/agent-directory.test.ts
+
+23/23 cases cover nodes-only visibility/search, precise identity matching,
+cross-network/same-alias isolation, real session preservation, legacy identity,
+duplicate/ambiguous data, failed/incomplete/mismatched-scope reads, pinyin matcher
+injection, no invented runtime/capability fields and immutable inputs.
+
+This is a cached Bun image, not an npm-ci/frozen-lock Node 22 acceptance run.
+Its provided node wrapper cannot report a genuine Node 22 version (the --version
+probe exits nonzero), so no matching-runtime project typecheck is claimed.
+The fixture does not call existing AgentsScreen, so these passes do not prove
+the old sessions-only UI has been fixed or constitute an old-product red control.
+No full test suite, native/browser matrix, CI rerun or production probe was run.
+
+Remaining: authorized same-scope HTTP reader with explicit node identities;
+real HTTP ACL/no-grant/grant/revoke fixtures; list/search and read-only detail
+integration without green dots, fake last-online or implicit lifecycle actions;
+old-product negative control; normal exact-head CI/review and actual release.
