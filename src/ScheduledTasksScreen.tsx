@@ -980,16 +980,30 @@ function NodeFilterSheet({ visible, options, selectedId, allCount, onSelect, onC
   const [query, setQuery] = useState('');
   useEffect(() => { if (visible) setQuery(''); }, [visible]);
   const shown = useMemo(() => filterNodeOptions(options, query, pinyinMatch), [options, query]);
+  const labelCounts = new Map<string, number>();
+  for (const option of options) labelCounts.set(option.label, (labelCounts.get(option.label) ?? 0) + 1);
+  const keyboardSelect = (id: string) => Platform.OS === 'web' ? {
+    onKeyDown: (event: any) => {
+      if (event.key !== ' ') return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!event.repeat) onSelect(id);
+    },
+  } : {};
   return (
-    <ScheduleModal visible={visible} onClose={onClose} sheet testID="schedule-node-picker" title="筛选节点">
+    <ScheduleModal visible={visible} onClose={onClose} sheet compact testID="schedule-node-picker" title="筛选节点">
       <View style={s.pickerBody}>
         <View style={s.pickerSearchWrap}>
-          <View style={s.searchField}>
+          <View style={s.pickerHelper}>
+            <Text style={s.pickerHint}>选择节点，查看对应计划</Text>
+            <Text style={s.pickerHint}>{options.length} 个节点</Text>
+          </View>
+          <View style={s.pickerSearchField}>
             <Ionicons name="search-outline" size={16} color={colors.textMuted} />
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="搜索节点"
+              placeholder="搜索名称、拼音或节点 ID"
               placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
@@ -997,34 +1011,58 @@ function NodeFilterSheet({ visible, options, selectedId, allCount, onSelect, onC
               style={[s.searchInput, { outlineStyle: 'none' } as object]}
               testID="schedule-node-picker-search"
             />
+            {query ? <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="清除节点搜索"
+              testID="schedule-node-picker-search-clear"
+              onPress={() => setQuery('')}
+              style={({ hovered, pressed }: any) => [s.pickerClear, (hovered || pressed) && s.pickerRowHover]}
+            ><Ionicons name="close-circle" size={17} color={colors.textMuted} /></Pressable> : null}
           </View>
         </View>
-        <ScrollView style={s.flex} keyboardShouldPersistTaps="handled" contentContainerStyle={s.pickerList}>
+        <View style={s.pickerPinned}>
           <Pressable
             testID="schedule-node-option-all"
-            accessibilityRole="button"
-            accessibilityState={{ selected: !selectedId }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: !selectedId, checked: !selectedId }}
+            aria-checked={!selectedId}
+            {...keyboardSelect('')}
+            accessibilityLabel={`全部节点，${allCount} 个计划`}
             onPress={() => onSelect('')}
-            style={[s.pickerRow, !selectedId && s.pickerRowOn]}
+            style={({ hovered, pressed }: any) => [s.pickerRow, (hovered || pressed) && s.pickerRowHover, !selectedId && s.pickerRowOn]}
           >
+            <View style={s.pickerAllIcon}><Ionicons name="layers-outline" size={18} color={!selectedId ? colors.accent : colors.textSecondary} /></View>
             <Text style={s.pickerLabel} numberOfLines={1}>全部节点</Text>
-            <Text style={s.pickerCount}>{allCount}</Text>
+            <Text style={[s.pickerCount, !selectedId && s.pickerCountOn]} accessibilityLabel={`${allCount} 个计划`}>{allCount}</Text>
             {!selectedId ? <Ionicons name="checkmark" size={18} color={colors.accent} /> : <View style={s.pickerCheck} />}
           </Pressable>
-          {shown.length === 0 ? <Text style={[s.muted, s.pickerEmpty]}>没有匹配的节点</Text> : shown.map(option => {
+        </View>
+        <ScrollView style={s.pickerScroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.pickerList}>
+          {shown.length === 0 ? <View style={s.pickerEmpty}>
+            <Ionicons name="search-outline" size={24} color={colors.textMuted} />
+            <Text style={s.pickerEmptyTitle}>{query.trim() ? '没有匹配的节点' : '暂无可筛选的节点'}</Text>
+            <Text style={s.pickerEmptyHint}>{query.trim() ? '试试其他名称、拼音或节点 ID，也可清除搜索。' : '节点有计划后会显示在这里，可先查看全部节点。'}</Text>
+          </View> : shown.map(option => {
             const selected = option.id === selectedId;
+            const duplicate = (labelCounts.get(option.label) ?? 0) > 1;
             return (
               <Pressable
                 key={option.id}
                 testID={`schedule-node-option-${option.id}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`${option.label}，${option.count} 个计划`}
+                accessibilityRole="radio"
+                accessibilityState={{ selected, checked: selected }}
+                aria-checked={selected}
+                {...keyboardSelect(option.id)}
+                accessibilityLabel={`${option.label}${duplicate ? `，${option.id}` : ''}，${option.count} 个计划`}
                 onPress={() => onSelect(option.id)}
-                style={[s.pickerRow, selected && s.pickerRowOn]}
+                style={({ hovered, pressed }: any) => [s.pickerRow, (hovered || pressed) && s.pickerRowHover, selected && s.pickerRowOn]}
               >
-                <Text style={s.pickerLabel} numberOfLines={1}>{option.label}</Text>
-                <Text style={s.pickerCount}>{option.count}</Text>
+                <AliasAvatar alias={option.label} size={30} fixedSize />
+                <View style={s.pickerIdentity}>
+                  <Text style={[s.pickerLabel, selected && s.pickerLabelOn]} numberOfLines={1}>{option.label}</Text>
+                  {duplicate ? <Text style={s.pickerNodeId} numberOfLines={1}>{option.id}</Text> : null}
+                </View>
+                <Text style={[s.pickerCount, selected && s.pickerCountOn]} accessibilityLabel={`${option.count} 个计划`}>{option.count}</Text>
                 {selected ? <Ionicons name="checkmark" size={18} color={colors.accent} /> : <View style={s.pickerCheck} />}
               </Pressable>
             );
@@ -1074,15 +1112,29 @@ function makeStyles() { return StyleSheet.create({
   nodeButtonOn: { borderColor: colors.accent, backgroundColor: colors.tonalBg },
   nodeButtonMain: { flexShrink: 1, minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm },
   nodeButtonLabel: { flexShrink: 1, color: colors.text, fontSize: fontSize.small },
-  pickerBody: { flex: 1 },
-  pickerSearchWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
-  pickerList: { paddingBottom: spacing.xl },
-  pickerRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  pickerRowOn: { backgroundColor: colors.rowActive },
-  pickerLabel: { flex: 1, color: colors.text, fontSize: fontSize.body },
-  pickerCount: { color: colors.textMuted, fontSize: fontSize.small },
+  pickerBody: { flex: 1, minHeight: 0, overflow: 'hidden' },
+  pickerSearchWrap: { flexShrink: 0, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md, gap: spacing.md },
+  pickerHelper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' },
+  pickerHint: { color: colors.textMuted, fontSize: fontSize.small },
+  pickerSearchField: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.md, paddingRight: spacing.xs, borderRadius: radius.control, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.border },
+  pickerClear: { width: 36, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: radius.item },
+  pickerPinned: { flexShrink: 0, marginHorizontal: spacing.lg, paddingBottom: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  pickerScroll: { flex: 1, minHeight: 0 },
+  pickerList: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.lg, gap: spacing.xs },
+  pickerRow: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.control, borderWidth: 1, borderColor: 'transparent' },
+  pickerRowHover: { backgroundColor: colors.rowHover },
+  pickerRowOn: { backgroundColor: colors.tonalBg, borderColor: colors.accent },
+  pickerAllIcon: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.subtleFill, borderRadius: radius.item },
+  pickerIdentity: { flex: 1, minWidth: 0 },
+  pickerLabel: { flexShrink: 1, color: colors.text, fontSize: fontSize.body },
+  pickerLabelOn: { color: colors.accent, fontWeight: weight.strong },
+  pickerNodeId: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  pickerCount: { color: colors.textSecondary, fontSize: fontSize.small, minWidth: 28, textAlign: 'center', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.subtleFill, marginLeft: 'auto' },
+  pickerCountOn: { color: colors.accent, backgroundColor: colors.card },
   pickerCheck: { width: 18 },
-  pickerEmpty: { padding: spacing.lg },
+  pickerEmpty: { paddingVertical: spacing.xl, paddingHorizontal: spacing.md, alignItems: 'center', gap: spacing.sm },
+  pickerEmptyTitle: { color: colors.text, fontSize: fontSize.body, fontWeight: weight.strong },
+  pickerEmptyHint: { color: colors.textMuted, fontSize: fontSize.small, textAlign: 'center', lineHeight: 20 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 6, minHeight: 32 },
   chipActive: { backgroundColor: colors.text, borderColor: colors.text },
   chipText: { color: colors.textSecondary, fontSize: fontSize.small },

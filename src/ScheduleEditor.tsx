@@ -533,7 +533,7 @@ export default function ScheduleEditor({ cfg, nodes: nodesProp, visible, editing
  * 两种手机外壳的顶栏都是「取消 · 标题 · 保存」(iOS 导航栏的形状)。
  * testID 各形态相同:`${testID}` 是面板,`-header` / `-title` / `-cancel` / `-save` 各是那一格。
  */
-export function ScheduleModal({ visible, onClose, testID = 'schedule-modal', title, primary, cancelLabel = '取消', sheet = false, children }: {
+export function ScheduleModal({ visible, onClose, testID = 'schedule-modal', title, primary, cancelLabel = '取消', sheet = false, compact = false, children }: {
   visible: boolean;
   onClose: () => void;
   testID?: string;
@@ -543,6 +543,8 @@ export function ScheduleModal({ visible, onClose, testID = 'schedule-modal', tit
   cancelLabel?: string;
   /** 手机上画成全高底部 sheet(编辑器);默认整屏 pageSheet。 */
   sheet?: boolean;
+  /** Compact desktop picker; native presentation is unchanged. */
+  compact?: boolean;
   children: ReactNode;
 }) {
   const s = useMemo(makeStyles, [visible]);
@@ -555,7 +557,9 @@ export function ScheduleModal({ visible, onClose, testID = 'schedule-modal', tit
     <View testID={`${testID}-header`} style={s.modalHeader}><Pressable testID={`${testID}-cancel`} onPress={onClose} style={s.headerSide}><Text style={s.link}>{primary ? cancelLabel : '关闭'}</Text></Pressable><Text testID={`${testID}-title`} style={s.modalTitle} numberOfLines={1}>{title}</Text>{primary ? <Pressable testID={`${testID}-save`} disabled={primary.disabled} onPress={primary.onPress} style={[s.headerSide, s.headerSideEnd]}><Text style={[s.link, primary.disabled && s.linkDisabled]}>{primary.label}</Text></Pressable> : <View style={s.headerSide} />}</View>
   );
   if (pointerUi()) {
-    const size = scheduleDialogSize(width, height);
+    const size = compact
+      ? { width: Math.max(0, Math.min(440, width - safe.paddingLeft - safe.paddingRight - spacing.lg * 2)), height: Math.max(0, Math.min(560, height - safe.paddingTop - safe.paddingBottom - spacing.lg * 2)) }
+      : scheduleDialogSize(width, height);
     return <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={[s.dialogOverlay, withBasePadding(safe, spacing.lg)]}>
         <Pressable testID={`${testID}-backdrop`} accessibilityLabel="关闭" focusable={false} onPress={onClose} style={[StyleSheet.absoluteFill, s.dialogBackdrop]} />
@@ -567,7 +571,7 @@ export function ScheduleModal({ visible, onClose, testID = 'schedule-modal', tit
             </Pressable>
           </View>
           {children}
-          <View testID={`${testID}-footer`} style={s.dialogFooter}>
+          {!compact || primary ? <View testID={`${testID}-footer`} style={s.dialogFooter}>
             <Pressable accessibilityRole="button" testID={`${testID}-cancel`} onPress={onClose} style={({ hovered }: any) => [s.dialogBtn, hovered && s.dialogBtnHover]}>
               <Text style={s.dialogBtnText}>{primary ? cancelLabel : '关闭'}</Text>
             </Pressable>
@@ -576,7 +580,7 @@ export function ScheduleModal({ visible, onClose, testID = 'schedule-modal', tit
                 <Text style={s.dialogPrimaryText}>{primary.label}</Text>
               </Pressable>
             ) : null}
-          </View>
+          </View> : null}
         </View>
       </View>
     </Modal>;

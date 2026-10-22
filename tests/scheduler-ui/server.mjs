@@ -6,7 +6,6 @@ import { createHash } from 'node:crypto';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = resolve(here, '../../dist');
-const index = readFileSync(resolve(dist, 'index.html'), 'utf8');
 const base = {
   network_id: 'net-fixture', target_node_id: 'node-fixture-a', target_alias: 'demo-inspector',
   task_content: 'Inspect the fixture nodes and summarize availability. This task is local demo data only.',
@@ -26,17 +25,25 @@ const runs = id => [
   { run_id: `${id}-skipped`, status: 'skipped', error_code: 'previous_run_active', scheduled_for: '2026-10-19T03:30:00Z', created_at: '2026-10-19T03:30:00Z', completed_at: null },
 ].map(r => ({ ...r, schedule_id: id }));
 const nodes = ['inspector', 'reporter'].map((name, i) => ({ node_id: `node-fixture-${i ? 'b' : 'a'}`, alias: `demo-${name}`, runtime: 'claude-code', lifecycle_state: 'active' }));
+const denseNodes = Array.from({ length: 44 }, (_, i) => ({
+  node_id: `node-dense-${String(i).padStart(2, '0')}`,
+  alias: i < 2 ? 'duplicate-worker' : i === 2 ? `long-alias-${'regional-inspection-worker-'.repeat(8)}` : `dense-worker-${String(i).padStart(2, '0')}`,
+  runtime: 'claude-code', lifecycle_state: 'active',
+}));
+const denseSeed = () => [...seed(), ...denseNodes.map(n => ({ ...base, schedule_id: `dense-${n.node_id}`, name: `Plan ${n.node_id}`, target_node_id: n.node_id, target_alias: n.alias, status: 'paused', next_run_at: null }))];
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.ttf': 'font/ttf', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
 
 export async function startServer(port = 0) {
-  let schedules = seed();
+  const index = readFileSync(resolve(dist, 'index.html'), 'utf8');
+  let dense = process.env.SCHEDULER_DENSE === '1';
+  let schedules = dense ? denseSeed() : seed();
   const requests = [], writes = [], unhandled = [];
   const server = createServer(async (req, res) => {
     const u = new URL(req.url, 'http://127.0.0.1');
     const p = u.pathname;
     const json = (body, status = 200) => { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
-    if (p === '/__fixture/reset' && req.method === 'POST') { schedules = seed(); requests.length = writes.length = unhandled.length = 0; return json({ ok: true }); }
-    if (p === '/__fixture/state') return json({ schedules, requests, writes, unhandled, dist, indexSha256: createHash('sha256').update(index).digest('hex') });
+    if (p === '/__fixture/reset' && req.method === 'POST') { dense = u.searchParams.get('dense') === '1'; schedules = dense ? denseSeed() : seed(); requests.length = writes.length = unhandled.length = 0; return json({ ok: true, dense }); }
+    if (p === '/__fixture/state') return json({ schedules, requests, writes, unhandled, dense, dist, indexSha256: createHash('sha256').update(index).digest('hex') });
     if (p.startsWith('/api/')) {
       const entry = { method: req.method, path: p, query: u.search };
       requests.push(entry);
@@ -45,8 +52,8 @@ export async function startServer(port = 0) {
         if (p === '/api/scheduled-tasks') return json({ ok: true, schedules });
         const run = p.match(/^\/api\/scheduled-tasks\/([^/]+)\/runs$/);
         if (run) return json({ ok: true, runs: runs(run[1]) });
-        if (p === '/api/nodes') return json({ ok: true, nodes });
-        if (p === '/api/status') return json({ ok: true, sessions: nodes.map(n => ({ ...n, agent: n.runtime, status: 'idle', updated_at: '2026-10-21T04:00:00Z', last_seen_at: '2026-10-21T04:00:00Z' })) });
+        if (p === '/api/nodes') return json({ ok: true, nodes: dense ? [...nodes, ...denseNodes] : nodes });
+        if (p === '/api/status') return json({ ok: true, sessions: (dense ? [...nodes, ...denseNodes] : nodes).map(n => ({ ...n, agent: n.runtime, status: 'idle', updated_at: '2026-10-21T04:00:00Z', last_seen_at: '2026-10-21T04:00:00Z' })) });
         if (p === '/api/tasks' && u.searchParams.has('task_id')) {
           const task = { task_id: u.searchParams.get('task_id'), status: 'replied', content: base.task_content, result: '## Fixture inspection complete\n\nAll **2** demo nodes are healthy. No production systems were contacted.', from_name: 'scheduler', to_name: 'demo-inspector', created_at: '2026-10-21T03:30:00Z', completed_at: '2026-10-21T03:32:12Z' };
           return json({ ok: true, task, tasks: [task] });

@@ -31,6 +31,12 @@ export const agentOrgTranslations = {
   'agentOrg.saveUnsupported': ['当前 Hub 版本还不支持调整部门，请先升级 Hub', 'This Hub version cannot move agents yet. Upgrade the Hub.'],
   'agentOrg.demoNoAgents': ['通讯录里还没有可调整的 Agent', 'The directory has no agents to move'],
   'agentOrg.demoNeedPick': ['先选一个 Agent 和目标部门', 'Choose an agent and a target department first'],
+  'agentOrg.departments': ['部门', 'Departments'],
+  'agentOrg.directMembers': ['直属 Agent · 部门计数包含下级', 'Direct agents · sidebar counts include subdepartments'],
+  'agentOrg.searchAgents': ['搜索 Agent 或负责人', 'Search agents or owners'],
+  'agentOrg.searchOptions': ['搜索名称', 'Search by name'],
+  'agentOrg.noResults': ['没有匹配结果，试试其他关键词', 'No matches. Try another search.'],
+  'agentOrg.close': ['关闭', 'Close'],
 } as const;
 
 registerTranslations(agentOrgTranslations);

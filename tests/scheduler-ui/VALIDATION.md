@@ -1,5 +1,21 @@
 # Scheduler UI Validation
 
+## Node Picker Redesign (2026-10-22)
+
+- Typecheck and production Expo export passed.
+- Actual compiled-App checks passed 262/262 across desktop/mobile, light/dark,
+  and a dense fixture with 46 nodes and 49 plans.
+- Search measured 42px high; desktop panel measured 440x560. The old exported
+  layout was also exercised and failed the geometry/clear-control assertions.
+- Verified alias and node-ID search, clear/no-match, single checked radio,
+  scoped counts, selection persistence, reset, duplicate labels, long names,
+  list scrolling, and the pinned all-nodes option. No production writes.
+- Full regression suite passed 432/432 test files with Bash 5 on PATH.
+- Modal screenshots are under `artifacts/`, including
+  `desktop-light-node-picker-dense.png` and `mobile-light-node-picker.png`.
+
+## Earlier Baseline Validation
+
 Validated on macOS on 2026-10-21 against the compiled Expo web application.
 The preview uses an in-memory fixture Hub, not a production account or service.
 

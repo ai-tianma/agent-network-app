@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
-import { Text } from './ui-text';
-import { colors, spacing, type as typeScale } from './theme';
+import { FlatList, Pressable, ScrollView, StyleSheet, View, type PressableStateCallbackType } from 'react-native';
+import { Text, TextInput } from './ui-text';
+import { colors, onThemeChange, spacing, type as typeScale, radius } from './theme';
+import { Ionicons } from './icons';
+import AliasAvatar from './AliasAvatar';
+import DialogFrame from './DialogFrame';
+import { listenEscapeClose } from './escape-close';
 import type { HubConfig } from './api';
 import { loadAgentOrg, moveAgentDepartment } from './agent-org-api';
 import { agentCount, agentsDirectlyIn, orgTree, placeAgents, type AgentOrgData, type DemoMove, type PlacedAgent } from './agent-org-model';
@@ -13,6 +17,8 @@ import './i18n-agent-org';
 type Props = { cfg: HubConfig; networkId?: string; phone: boolean };
 
 export default function AgentOrgScreen(p: Props) {
+  const [, refreshTheme] = useState(0);
+  useEffect(() => onThemeChange(() => refreshTheme(n => n + 1)), []);
   return (
     <View testID="agent-org-page">
       {p.networkId
@@ -48,7 +54,11 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
     void loadAgentOrg(p.cfg, p.networkId).then(data => {
       if (!live) return;
       setPhase({ kind: 'ready', data });
-      setFocus(p.phone ? undefined : (data?.departments[0]?.id ?? null));
+      const initialAgents = data ? placeAgents(data, []) : [];
+      const populated = data ? flattenTree(orgTree(data)).find(row => agentsDirectlyIn(initialAgents, row.dept.id).length > 0) : undefined;
+      const fallback = data?.directory || initialAgents.some(agent => agent.departmentId === null)
+        ? null : (data?.departments[0]?.id ?? null);
+      setFocus(p.phone ? undefined : (populated?.dept.id ?? fallback));
     }, () => { if (live) setPhase({ kind: 'error' }); });
     return () => { live = false; };
   }, [p.cfg.serverUrl, p.cfg.token, p.networkId, p.phone, attempt]);
@@ -72,19 +82,26 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
         <SettingsGroup testID="agent-org-empty-hub"><SettingsRow label={t('agentOrg.oldHub')} /></SettingsGroup>
       ) : null}
       {data && (showTree || showDetail) ? (
-        <View testID="agent-org-tree" style={!p.phone ? { flexDirection: 'row', alignItems: 'flex-start', minHeight: 440 } : undefined}>
+        <View testID="agent-org-tree" style={[styles.workspace, !p.phone && { flexDirection: 'row', minHeight: 440 }]}>
           {showTree ? (
-            <View style={!p.phone ? { width: 240 } : undefined}>
-              <DepartmentTree data={data} placed={placed} onFocus={setFocus} />
+            <View style={!p.phone ? { width: 240, borderRightWidth: 1, borderRightColor: colors.border, backgroundColor: colors.listBg } : undefined}>
+              <DepartmentTree data={data} placed={placed} focus={focus} onFocus={setFocus} />
             </View>
           ) : null}
           {showDetail ? (
             <View style={!p.phone ? { flex: 1, minWidth: 0 } : undefined} testID="agent-org-detail">
-              <DepartmentDetail data={data} placed={placed} focus={focus ?? null} phone={p.phone} onFocus={setFocus} onBack={() => setFocus(undefined)} />
+              <DepartmentDetail key={focus ?? 'unassigned'} data={data} placed={placed} focus={focus ?? null} phone={p.phone} onFocus={setFocus} onBack={() => setFocus(undefined)} />
             </View>
           ) : null}
         </View>
       ) : null}
+      {data ? <View testID="agent-org-info" style={styles.info}>
+        <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          {data.agentDepartmentSupported ? <Text testID="agent-org-independent-note" style={styles.note}>{t('agentOrg.independent')}</Text> : null}
+          <Text style={styles.note}>{!data.directory ? t('agentOrg.directoryMissing') : !data.departmentsApi ? t('agentOrg.noTree') : t('agentOrg.readOnly')}</Text>
+        </View>
+      </View> : null}
       {phase.kind === 'ready' ? (
         <DemoAdjust
           data={data}
@@ -125,47 +142,71 @@ function OrgBody(p: { cfg: HubConfig; networkId: string; phone: boolean }) {
   );
 }
 
-function DepartmentTree(p: { data: AgentOrgData; placed: PlacedAgent[]; onFocus: (id: string | null) => void }) {
+function DepartmentTree(p: { data: AgentOrgData; placed: PlacedAgent[]; focus: string | null | undefined; onFocus: (id: string | null) => void }) {
   const { t } = useTranslation();
   const rows = flattenTree(orgTree(p.data));
-  const footer = !p.data.directory ? t('agentOrg.directoryMissing') : !p.data.departmentsApi ? t('agentOrg.noTree') : t('agentOrg.readOnly');
-  // #1976 —— 人类部门树与 Agent 归属是两件事:Agent 只认显式归属,不按负责人部门推断。
-  const independent = p.data.agentDepartmentSupported ? t('agentOrg.independent') : '';
   return (
-    <SettingsGroup footer={footer} testID="agent-org-departments">
+    <View testID="agent-org-departments" style={{ padding: spacing.sm }}>
+      <Text style={styles.sectionLabel}>{t('agentOrg.departments')}</Text>
+      <ScrollView style={{ maxHeight: 560 }}>
       {rows.length ? rows.map(row => (
-        <SettingsRow
+        <DepartmentRow
           key={row.dept.id}
           testID={`agent-org-dept-${row.dept.id}`}
-          label={`${'\u2003'.repeat(row.depth)}${row.dept.name}`}
-          value={t('agentOrg.agentsCount', { count: agentCount(p.placed, p.data, row.dept.id) })}
+          label={row.dept.name}
+          depth={row.depth}
+          selected={p.focus === row.dept.id}
+          count={agentCount(p.placed, p.data, row.dept.id)}
           onPress={() => p.onFocus(row.dept.id)}
         />
       )) : <SettingsRow label={t('agentOrg.empty')} testID="agent-org-empty" />}
       {p.data.directory || agentCount(p.placed, p.data, null) > 0 ? (
-        <SettingsRow
+        <DepartmentRow
           testID="agent-org-dept-unassigned"
           label={t('agentOrg.unowned')}
-          value={t('agentOrg.agentsCount', { count: agentCount(p.placed, p.data, null) })}
+          selected={p.focus === null}
+          count={agentCount(p.placed, p.data, null)}
           onPress={() => p.onFocus(null)}
         />
       ) : null}
-      {independent ? (
-        <Text testID="agent-org-independent-note" style={{ color: colors.textMuted, fontSize: typeScale.small, marginTop: spacing.sm }}>{independent}</Text>
-      ) : null}
-    </SettingsGroup>
+      </ScrollView>
+    </View>
   );
+}
+
+function DepartmentRow(p: { testID: string; label: string; depth?: number; selected: boolean; count: number; onPress: () => void }) {
+  const { t } = useTranslation();
+  return <Pressable testID={p.testID} accessibilityRole="button" accessibilityLabel={`${p.label}, ${t('agentOrg.agentsCount', { count: p.count })}`} accessibilityState={{ selected: p.selected }} aria-selected={p.selected} onPress={p.onPress}
+    style={({ pressed, hovered }: PressableStateCallbackType & { hovered?: boolean }) => [styles.departmentRow, { paddingLeft: spacing.sm + (p.depth ?? 0) * 16 }, (pressed || hovered) && { backgroundColor: colors.rowHover }, p.selected && { backgroundColor: colors.railActiveBg }]}>
+    <Ionicons name={p.testID === 'agent-org-dept-unassigned' ? 'file-tray-outline' : 'folder-outline'} size={17} color={p.selected ? colors.accent : colors.textMuted} />
+    <Text testID={`${p.testID}-label`} numberOfLines={1} style={{ flex: 1, minWidth: 0, color: p.selected ? colors.accent : colors.text, fontSize: typeScale.small, fontWeight: p.selected ? '600' : '400' }}>{p.label}</Text>
+    <Text testID={`${p.testID}-value`} style={[styles.count, { flexShrink: 0 }]}>{p.count}</Text>
+  </Pressable>;
 }
 
 function DepartmentDetail(p: { data: AgentOrgData; placed: PlacedAgent[]; focus: string | null; phone: boolean; onFocus: (id: string) => void; onBack: () => void }) {
   const { t } = useTranslation();
+  const [query, setQuery] = useState('');
   const dept = p.focus ? p.data.departments.find(d => d.id === p.focus) : undefined;
   const title = p.focus === null ? t('agentOrg.unowned') : (dept?.name ?? t('agentOrg.unowned'));
   const agents = agentsDirectlyIn(p.placed, p.focus);
+  const needle = query.trim().toLocaleLowerCase();
+  const filtered = agents.filter(agent => `${agent.alias} ${agent.ownerName ?? ''} ${agent.nodeId}`.toLocaleLowerCase().includes(needle));
   const children = p.focus ? childrenOf(orgTree(p.data), p.focus) : [];
   return (
-    <SettingsGroup title={title} testID="agent-org-detail-card">
+    <View testID="agent-org-detail-card" style={styles.detail}>
       {p.phone ? <SettingsRow label={t('agentOrg.back')} onPress={p.onBack} testID="agent-org-back" /> : null}
+      <View style={styles.detailHeading}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={2} style={styles.title}>{title}</Text>
+          <Text style={styles.note}>{t('agentOrg.directMembers')}</Text>
+        </View>
+        <Text style={styles.count}>{t('agentOrg.agentsCount', { count: agents.length })}</Text>
+      </View>
+      <View style={styles.search}>
+        <Ionicons name="search-outline" size={17} color={colors.textMuted} />
+        <TextInput testID="agent-org-member-search" value={query} onChangeText={setQuery} placeholder={t('agentOrg.searchAgents')} accessibilityLabel={t('agentOrg.searchAgents')} placeholderTextColor={colors.textMuted} style={styles.searchInput} />
+      </View>
       {p.phone ? children.map(child => (
         <SettingsRow
           key={child.id}
@@ -175,8 +216,13 @@ function DepartmentDetail(p: { data: AgentOrgData; placed: PlacedAgent[]; focus:
           onPress={() => p.onFocus(child.id)}
         />
       )) : null}
-      {agents.length ? agents.map(agent => <AgentLine key={agent.nodeId} agent={agent} />) : <SettingsRow label={t('agentOrg.noAgents')} testID="agent-org-no-agents" />}
-    </SettingsGroup>
+      <ScrollView style={{ maxHeight: 480 }} keyboardShouldPersistTaps="handled">
+        {filtered.length ? filtered.map(agent => <AgentLine key={agent.nodeId} agent={agent} />) : <View testID={agents.length ? 'agent-org-no-results' : 'agent-org-no-agents'} style={styles.empty}>
+          <Ionicons name={agents.length ? 'search-outline' : 'people-outline'} size={30} color={colors.textMuted} />
+          <Text style={styles.note}>{t(agents.length ? 'agentOrg.noResults' : 'agentOrg.noAgents')}</Text>
+        </View>}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -184,7 +230,13 @@ function AgentLine(p: { agent: PlacedAgent }) {
   const { t } = useTranslation();
   const agent = p.agent;
   const subtitle = agent.ownerName ? t('agentOrg.owner', { name: agent.ownerName }) : t('agentOrg.noOwner');
-  return <SettingsRow testID={`agent-org-agent-${agent.nodeId}`} label={agent.alias} subtitle={subtitle} />;
+  return <View testID={`agent-org-agent-${agent.nodeId}`} style={styles.agentRow}>
+    <AliasAvatar alias={agent.alias} size={36} />
+    <View style={{ flex: 1, minWidth: 0, gap: spacing.xs }}>
+      <Text testID={`agent-org-agent-${agent.nodeId}-label`} numberOfLines={1} style={{ color: colors.text, fontSize: typeScale.body, fontWeight: '500' }}>{agent.alias}</Text>
+      <Text numberOfLines={1} style={styles.note}>{subtitle}</Text>
+    </View>
+  </View>;
 }
 
 function DemoAdjust(p: {
@@ -200,36 +252,75 @@ function DemoAdjust(p: {
   onApply: () => void;
 }) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const [selector, setSelector] = useState<'agent' | 'department' | null>(null);
   const departments = p.data?.departments ?? [];
   return (
-    <View testID="agent-org-demo">
-      <SettingsGroup title={t('agentOrg.demoTitle')} footer={t('agentOrg.demoHint')}>
+    <View testID="agent-org-demo" style={styles.adjust}>
+      <Pressable testID="agent-org-adjust-toggle" accessibilityRole="button" accessibilityState={{ expanded }} aria-expanded={expanded} onPress={() => setExpanded(v => !v)} style={styles.adjustToggle}>
+        <Ionicons name="options-outline" size={18} color={colors.textSecondary} />
+        <Text style={{ flex: 1, color: colors.text, fontSize: typeScale.body, fontWeight: '500' }}>{t('agentOrg.demoTitle')}</Text>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+      </Pressable>
+      {expanded ? <View style={{ padding: spacing.md, paddingTop: 0, gap: spacing.md }}>
+      <Text style={styles.note}>{t('agentOrg.demoHint')}</Text>
         {p.placed.length === 0 ? <SettingsRow label={t('agentOrg.demoNoAgents')} testID="agent-org-demo-empty" /> : null}
-      </SettingsGroup>
       {p.placed.length ? (
-        <SettingsGroup title={t('agentOrg.demoPickAgent')}>
-          {p.placed.map(agent => (
-            <SettingsChoiceRow
-              key={agent.nodeId}
-              testID={`agent-org-demo-agent-${agent.nodeId}`}
-              label={agent.alias}
-              subtitle={agent.ownerName ? agent.ownerName : t('agentOrg.noOwner')}
-              selected={p.pickAgent === agent.nodeId}
-              onPress={() => p.onPickAgent(agent.nodeId)}
-            />
-          ))}
-        </SettingsGroup>
+        <View style={styles.selectField}>
+          <SettingsRow testID="agent-org-pick-agent" label={t('agentOrg.demoPickAgent')} subtitle={p.placed.find(a => a.nodeId === p.pickAgent)?.alias} disabled={p.saving} onPress={() => setSelector('agent')} />
+        </View>
       ) : null}
       {p.placed.length ? (
-        <SettingsGroup title={t('agentOrg.demoPickDept')}>
-          <SettingsChoiceRow testID="agent-org-demo-dept-unassigned" label={t('agentOrg.unowned')} selected={p.pickDept === null} onPress={() => p.onPickDept(null)} />
-          {departments.map(dept => (
-            <SettingsChoiceRow key={dept.id} testID={`agent-org-demo-dept-${dept.id}`} label={dept.name} selected={p.pickDept === dept.id} onPress={() => p.onPickDept(dept.id)} />
-          ))}
-        </SettingsGroup>
+        <View style={styles.selectField}>
+          <SettingsRow testID="agent-org-pick-department" label={t('agentOrg.demoPickDept')} subtitle={p.pickDept === null ? t('agentOrg.unowned') : departments.find(d => d.id === p.pickDept)?.name} disabled={p.saving} onPress={() => setSelector('department')} />
+        </View>
       ) : null}
       {p.placed.length ? <SettingsButton label={p.saving ? t('agentOrg.saving') : t('agentOrg.demoApply')} onPress={p.onApply} disabled={p.saving} testID="agent-org-demo-apply" /> : null}
-      {p.note ? <SettingsGroup><SettingsRow label={p.note} testID="agent-org-demo-result" /></SettingsGroup> : null}
+      {p.note ? <Text accessibilityLiveRegion="polite" testID="agent-org-demo-result" style={styles.note}>{p.note}</Text> : null}
+      </View> : null}
+      {selector ? <StructureSelector key={selector} title={t(selector === 'agent' ? 'agentOrg.demoPickAgent' : 'agentOrg.demoPickDept')} onClose={() => setSelector(null)}
+        options={selector === 'agent' ? p.placed.map(agent => ({ id: agent.nodeId, label: agent.alias, subtitle: agent.ownerName ?? t('agentOrg.noOwner'), testID: `agent-org-demo-agent-${agent.nodeId}` }))
+          : [{ id: null, label: t('agentOrg.unowned'), testID: 'agent-org-demo-dept-unassigned' }, ...flattenTree(orgTree({ departments })).map(row => ({ id: row.dept.id, label: row.dept.name, testID: `agent-org-demo-dept-${row.dept.id}` }))]}
+        selected={selector === 'agent' ? p.pickAgent : p.pickDept}
+        onPick={id => { if (selector === 'agent' && id !== null) p.onPickAgent(id); else if (selector === 'department') p.onPickDept(id); setSelector(null); }} /> : null}
     </View>
   );
 }
+
+function StructureSelector(p: { title: string; options: { id: string | null; label: string; subtitle?: string; testID: string }[]; selected: string | null | undefined; onPick: (id: string | null) => void; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  useEffect(() => listenEscapeClose(p.onClose), [p.onClose]);
+  const needle = query.trim().toLocaleLowerCase();
+  const options = p.options.filter(o => `${o.label} ${o.subtitle ?? ''} ${o.id ?? ''}`.toLocaleLowerCase().includes(needle));
+  return <DialogFrame title={p.title} closeLabel={t('agentOrg.close')} onClose={p.onClose} scroll={false} maxWidth={480} testID="agent-org-selector">
+        <View style={styles.search}>
+          <Ionicons name="search-outline" size={17} color={colors.textMuted} />
+          <TextInput autoFocus value={query} onChangeText={setQuery} testID="agent-org-selector-search" placeholder={t('agentOrg.searchOptions')} accessibilityLabel={t('agentOrg.searchOptions')} placeholderTextColor={colors.textMuted} style={styles.searchInput} />
+        </View>
+        <FlatList data={options} keyExtractor={item => item.testID} style={{ flexGrow: 0, flexShrink: 1, maxHeight: 360 }} keyboardShouldPersistTaps="handled" initialNumToRender={12}
+          renderItem={({ item }) => <SettingsChoiceRow testID={item.testID} label={item.label} subtitle={item.subtitle} selected={p.selected === item.id} onPress={() => p.onPick(item.id)} />}
+          ListEmptyComponent={<Text style={[styles.note, { padding: spacing.lg }]}>{t('agentOrg.noResults')}</Text>} />
+  </DialogFrame>;
+}
+
+const makeStyles = () => StyleSheet.create({
+  workspace: { marginHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.surface, backgroundColor: colors.card, overflow: 'hidden' },
+  sectionLabel: { color: colors.textMuted, fontSize: typeScale.small, fontWeight: '600', padding: spacing.sm, marginBottom: spacing.xs },
+  departmentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, paddingRight: spacing.sm, marginBottom: 2, borderRadius: radius.item },
+  count: { color: colors.textMuted, fontSize: typeScale.small, fontVariant: ['tabular-nums'], backgroundColor: colors.subtleFill, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.item },
+  detail: { padding: spacing.lg, gap: spacing.md },
+  detailHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  title: { color: colors.text, fontSize: typeScale.heading, fontWeight: '600' },
+  note: { color: colors.textMuted, fontSize: typeScale.small, lineHeight: 20 },
+  info: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.subtleFill, borderRadius: radius.control },
+  search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, backgroundColor: colors.inputBg, paddingHorizontal: spacing.md },
+  searchInput: { flex: 1, minWidth: 0, minHeight: 42, color: colors.text, fontSize: typeScale.small, paddingVertical: spacing.sm },
+  agentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  empty: { minHeight: 220, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  adjust: { margin: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, backgroundColor: colors.card, overflow: 'hidden' },
+  adjustToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.md },
+  selectField: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, overflow: 'hidden' },
+});
+let styles = makeStyles();
+onThemeChange(() => { styles = makeStyles(); });
